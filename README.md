@@ -44,3 +44,4 @@
 | `mugunghwa/`, `balloon/`, `byeok/`, `fitness/`, `jegi/` | 게임 (각 폴더 README 참고) |
 | `common/` | 체력왕·제기차기가 같이 쓰는 카메라·몸 인식·소리·꾸밈 도우미 |
 | `planner/` | 공부 플래너 (게임과 따로 쓰는 앱) |
+| `english/` | 여행 영어 첫걸음: 왕초보 단어·말하기·듣기·역할극 회화 (따로 쓰는 앱, https://gkes1211-hash.github.io/kang/english/) |

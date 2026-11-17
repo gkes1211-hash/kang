@@ -1,0 +1,19 @@
+{
+  "name": "여행 영어 첫걸음",
+  "short_name": "여행 영어",
+  "description": "왕초보를 위한 여행 영어: 단어 외우기, 따라 말하기, 듣기, 역할극 회화",
+  "lang": "ko",
+  "id": "./",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#eef3fb",
+  "theme_color": "#1769d6",
+  "categories": ["education"],
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
