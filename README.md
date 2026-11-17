@@ -1,21 +1,33 @@
-# kang
+# kang — 체육시간 🏃
 
-카메라 앞에서 몸으로 하는 아이들 게임 모음이에요.
+카메라 앞에서 몸으로 하는 아이들 게임 모음이에요. 첫 화면(`index.html`)에서 게임을 골라요.
 
 **▶ 체육시간 바로 가기: https://gkes1211-hash.github.io/kang/**
 
 | 게임 | 바로가기 | 설명 |
 | --- | --- | --- |
-| [벽 통과하기](byeok/) | [▶ 하러 가기](https://gkes1211-hash.github.io/kang/byeok/) | 다가오는 벽의 구멍 모양대로 몸을 맞춰 통과하는 몸놀이 게임 |
-| [풍선 터트리기](balloon/) | [▶ 하러 가기](https://gkes1211-hash.github.io/kang/balloon/) | 카메라로 손을 인식해 풍선을 터트리고 폭탄은 피하는 게임 |
 | [무궁화 꽃이 피었습니다](mugunghwa/) | [▶ 하러 가기](https://gkes1211-hash.github.io/kang/mugunghwa/) | 카메라가 술래가 되는 아이들 몸놀이 게임 |
+| [풍선 터트리기](balloon/) | [▶ 하러 가기](https://gkes1211-hash.github.io/kang/balloon/) | 카메라로 손을 인식해 풍선을 터트리고 폭탄은 피하는 게임 |
+| [벽 통과하기](byeok/) | [▶ 하러 가기](https://gkes1211-hash.github.io/kang/byeok/) | 다가오는 벽의 구멍 모양대로 몸을 맞춰 통과하는 몸놀이 게임 |
+
+## 체육시간 앱으로 설치하기
+
+첫 화면을 홈 화면에 설치하면 **체육시간** 앱 하나로 세 게임을 모두 할 수 있어요.
+앱 안에서 게임을 누르면 같은 창에서 열리고, 게임 첫 화면 왼쪽 위 **"← 🏃 체육시간"**을 누르면 게임 고르기로 돌아와요.
+
+- **안드로이드·크롬·엣지**: 첫 화면의 **📲 홈 화면에 설치하기** 버튼, 또는 주소창 메뉴 → "앱 설치"
+- **아이패드·아이폰 사파리**: 공유 버튼 → **홈 화면에 추가**
+- 한 번 연 게임은 기기에 담아 두어서, 다음부터는 인터넷이 없어도 열려요.
 
 > 바로가기 주소는 이 저장소의 **GitHub Pages**가 켜져 있어야 열려요.
 > 저장소 **Settings → Pages → Build and deployment**에서 Source를 **Deploy from a branch**, Branch를 **`main`** / **`/ (root)`**로 두고 Save 하면, 1~2분 뒤 위 주소로 열려요.
 
-## 공부 플래너
+## 파일
 
-| 앱 | 바로가기 | 설명 |
-| --- | --- | --- |
-| [엄마 앱](planner/) | [▶ 열기](https://gkes1211-hash.github.io/kang/planner/) | 요일별 루틴, 숙제, 부모님 확인 도장을 한눈에 보는 학습 플래너 |
-| [아이 앱](planner/kid/) | [▶ 열기](https://gkes1211-hash.github.io/kang/planner/kid/) | 오늘 공부를 체크하고, 다 하면 엄마한테 카톡·문자로 알려요 |
+| 파일 | 하는 일 |
+| --- | --- |
+| `index.html` | 체육시간 첫 화면 (게임 고르기) |
+| `home.js` | 오프라인 준비, 설치 버튼·설치 안내 |
+| `manifest.webmanifest`, `sw.js`, `icons/` | 체육시간 앱 설치·오프라인 |
+| `mugunghwa/`, `balloon/`, `byeok/` | 게임 (각 폴더 README 참고) |
+| `planner/` | 공부 플래너 (게임과 따로 쓰는 앱) |

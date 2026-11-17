@@ -158,3 +158,10 @@ h1 { font-size: clamp(30px, 7vw, 42px); margin: 10px 0 6px; color: var(--violet-
   .logo span { animation: none !important; }
   .banner { transition: opacity 0.2s; }
 }
+
+/* 체육시간(게임 고르기)으로 돌아가기: 홈 화면 앱 안에서는 브라우저 뒤로 가기 버튼이 없어서 둔다 */
+.back-home {
+  display: block; width: fit-content; margin: -6px auto 10px 0; padding: 6px 12px; border-radius: 999px;
+  background: #eeebff; color: #3d2fd6; font-size: 15px; font-weight: 800; text-decoration: none;
+}
+.back-home:active { transform: scale(0.97); }

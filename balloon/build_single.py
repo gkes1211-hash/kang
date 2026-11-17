@@ -27,6 +27,8 @@ js = (here / "game.js").read_text(encoding="utf-8")
 html = re.sub(r'\s*<!--[^>]*?-->\s*<meta http-equiv="Content-Security-Policy"[^>]*>', "", html, flags=re.S)
 html = html.replace('<link rel="stylesheet" href="style.css">', f"<style>\n{css}</style>")
 html = html.replace('<script type="module" src="game.js"></script>', "")
+# 한 파일짜리 판은 따로 열어서 쓰니 '체육시간으로 돌아가기' 링크는 뺀다
+html = html.replace('<a class="back-home" href="../">← 🏃 체육시간</a>', "")
 html = html.replace('href="icon.png"', f'href="data:image/png;base64,{b64(here / "icon.png")}"')
 
 data = "\n".join(
