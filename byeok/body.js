@@ -3,13 +3,14 @@
 // 각도 약속 (모든 팔·다리 마디에 똑같이):
 //   0° = 아래로 축 늘어뜨림, 90° = 몸 바깥쪽으로 수평, 180° = 위로 번쩍,
 //   음수 = 몸 안쪽(가운데) 방향. 왼쪽·오른쪽은 "화면에 보이는 쪽" 기준이다.
+// 몸통 기울기(lean): 0 = 똑바로, + = 윗몸이 화면 오른쪽으로 기울어짐, - = 왼쪽으로.
 // 이렇게 하면 왼쪽 팔과 오른쪽 팔을 같은 숫자로 적을 수 있다 (만세 = 160, 160).
 
 export const ARM_SEGS = ['uL', 'fL', 'uR', 'fR']; // 위팔·아래팔 (화면 왼쪽, 오른쪽)
 export const LEG_SEGS = ['tL', 'sL', 'tR', 'sR']; // 허벅지·종아리
 export const SEG_NAME = {
   uL: '왼팔', fL: '왼팔', uR: '오른팔', fR: '오른팔',
-  tL: '왼다리', sL: '왼다리', tR: '오른다리', sR: '오른다리',
+  tL: '왼다리', sL: '왼다리', tR: '오른다리', sR: '오른다리', lean: '몸통',
 };
 const STANDING_LEGS = [6, 0, 6, 0];
 
@@ -46,6 +47,12 @@ export function measure(pts) {
   seg('uR', R, 1, 'sh', 'el'); seg('fR', R, 1, 'el', 'wr');
   seg('tL', L, -1, 'hip', 'kn'); seg('sL', L, -1, 'kn', 'an');
   seg('tR', R, 1, 'hip', 'kn'); seg('sR', R, 1, 'kn', 'an');
+  // 몸통 기울기: 엉덩이 가운데 → 어깨 가운데
+  if ([11, 12, 23, 24].every((i) => ok(pts, i))) {
+    const sh = mid(pts[11], pts[12]);
+    const hip = mid(pts[23], pts[24]);
+    out.lean = Math.atan2(sh.x - hip.x, hip.y - sh.y) / RAD;
+  } else out.lean = null;
   return out;
 }
 
@@ -83,11 +90,14 @@ export function figure(anchor, S, pose, props = DEFAULT_PROPS) {
   const [uL, fL, uR, fR] = pose.arms;
   const [tL, sL, tR, sR] = pose.legs || STANDING_LEGS;
   const at = (p, d, l) => ({ x: p.x + d.x * l * S, y: p.y + d.y * l * S });
-  const shL = { x: anchor.x - props.shoulder * S, y: anchor.y };
-  const shR = { x: anchor.x + props.shoulder * S, y: anchor.y };
-  const hipC = { x: anchor.x, y: anchor.y + S };
-  const hipL = { x: hipC.x - props.hip * S, y: hipC.y };
-  const hipR = { x: hipC.x + props.hip * S, y: hipC.y };
+  // 몸통이 기울면 어깨·엉덩이 선도 같이 기운다 (팔·다리 각도는 화면 기준 그대로)
+  const lean = (pose.lean || 0) * RAD;
+  const across = { x: Math.cos(lean), y: Math.sin(lean) };
+  const shL = at(anchor, across, -props.shoulder);
+  const shR = at(anchor, across, props.shoulder);
+  const hipC = { x: anchor.x - Math.sin(lean) * S, y: anchor.y + Math.cos(lean) * S };
+  const hipL = at(hipC, across, -props.hip);
+  const hipR = at(hipC, across, props.hip);
   const elL = at(shL, dir(-1, uL), props.upper);
   const wrL = at(elL, dir(-1, fL), props.fore);
   const elR = at(shR, dir(1, uR), props.upper);
@@ -149,6 +159,10 @@ export function judge(pose, meas, tol, useLegs) {
     need.push(...LEG_SEGS);
     Object.assign(target, { tL: pose.legs[0], sL: pose.legs[1], tR: pose.legs[2], sR: pose.legs[3] });
   }
+  if (useLegs && pose.lean != null) {
+    need.push('lean');
+    target.lean = pose.lean;
+  }
   const segs = {};
   let sum = 0;
   let worst = 0;
@@ -159,4 +173,22 @@ export function judge(pose, meas, tol, useLegs) {
     sum += Math.max(0, Math.min(1, 1 - (d - tol * 0.5) / (tol * 1.5)));
   }
   return { pass: worst <= tol, perfect: worst <= tol * 0.55, score: sum / need.length, segs, need };
+}
+
+// 거울처럼 좌우를 바꾼 자세 (둘이서 "거울처럼!" 벽에 쓴다)
+export function mirrorPose(pose) {
+  const [uL, fL, uR, fR] = pose.arms;
+  const out = { ...pose, arms: [uR, fR, uL, fL] };
+  if (pose.legs) {
+    const [tL, sL, tR, sR] = pose.legs;
+    out.legs = [tR, sR, tL, sL];
+  }
+  if (pose.lean != null) out.lean = -pose.lean;
+  return out;
+}
+
+// 두 자세가 사실상 같은가 (좌우가 똑같은 자세는 거울로 바꿔도 같다)
+export function samePose(a, b) {
+  const eq = (x, y) => (!x && !y) || (x && y && x.every((v, i) => angleDiff(v, y[i]) < 5));
+  return eq(a.arms, b.arms) && eq(a.legs, b.legs) && (a.lean || 0) === (b.lean || 0);
 }

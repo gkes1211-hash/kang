@@ -2,7 +2,7 @@
 
 카메라 앞에서 몸으로 하는 아이들 게임 모음이에요.
 
-**▶ 바로 하기: https://gkes1211-hash.github.io/kang/**
+**▶ 체육시간 바로 가기: https://gkes1211-hash.github.io/kang/**
 
 | 게임 | 바로가기 | 설명 |
 | --- | --- | --- |
