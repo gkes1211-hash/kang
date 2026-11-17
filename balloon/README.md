@@ -36,3 +36,12 @@ python3 -m http.server 8000
 ```
 
 그다음 브라우저에서 `http://localhost:8000/balloon/` 을 열어요. (GitHub Pages로 올려도 돼요.)
+
+## 파일 하나로 실행 (서버 없이 더블클릭)
+
+```bash
+python3 balloon/build_single.py
+```
+
+`dist/풍선터트리기.html` (약 30MB) 이 만들어져요. 엔진과 손 모델이 모두 들어 있어서 이 파일만 있으면 돼요.
+크롬이나 엣지에서 더블클릭해 열고, 카메라를 허락하면 바로 시작해요.

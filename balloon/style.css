@@ -50,7 +50,7 @@ button { font: inherit; cursor: pointer; }
   flex-wrap: wrap;
   pointer-events: none;
 }
-#hud[hidden] { display: none; }
+#hud[hidden], .pill[hidden] { display: none; }
 .pill {
   background: rgba(255, 255, 255, 0.92);
   border-radius: 999px;

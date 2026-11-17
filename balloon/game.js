@@ -152,12 +152,38 @@ async function startCamera() {
   if (!video.videoWidth) await new Promise((r) => video.addEventListener('loadedmetadata', r, { once: true }));
 }
 
+// 파일 하나짜리(더블클릭으로 여는) 판에서는 엔진과 모델이 이 HTML 안에 글자(base64)로 들어 있다
+function inlineBytes(id) {
+  const el = document.getElementById(id);
+  if (!el) return null;
+  const s = atob(el.textContent.trim());
+  const out = new Uint8Array(s.length);
+  for (let i = 0; i < s.length; i++) out[i] = s.charCodeAt(i);
+  el.remove();
+  return out;
+}
+function blobUrl(bytes, type) {
+  return URL.createObjectURL(new Blob([bytes], { type }));
+}
+
 async function loadHands() {
   if (landmarker) return landmarker;
-  const { FilesetResolver, HandLandmarker } = await import('../mugunghwa/vendor/vision_bundle.mjs');
-  const fileset = await FilesetResolver.forVisionTasks(new URL('../mugunghwa/vendor/wasm', import.meta.url).href);
+  let HandLandmarker, fileset, model;
+  if (document.getElementById('inline-bundle')) {
+    ({ HandLandmarker } = await import(blobUrl(inlineBytes('inline-bundle'), 'text/javascript')));
+    fileset = {
+      wasmLoaderPath: blobUrl(inlineBytes('inline-loader'), 'text/javascript'),
+      wasmBinaryPath: blobUrl(inlineBytes('inline-wasm'), 'application/wasm'),
+    };
+    model = { modelAssetBuffer: inlineBytes('inline-model') };
+  } else {
+    let FilesetResolver;
+    ({ FilesetResolver, HandLandmarker } = await import('../mugunghwa/vendor/vision_bundle.mjs'));
+    fileset = await FilesetResolver.forVisionTasks(new URL('../mugunghwa/vendor/wasm', import.meta.url).href);
+    model = { modelAssetPath: new URL('./vendor/hand_landmarker.task', import.meta.url).href };
+  }
   const options = (delegate) => ({
-    baseOptions: { modelAssetPath: new URL('./vendor/hand_landmarker.task', import.meta.url).href, delegate },
+    baseOptions: { ...model, delegate },
     runningMode: 'VIDEO',
     numHands: 2,
     minHandDetectionConfidence: 0.5,
