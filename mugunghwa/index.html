@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <!-- 이 페이지는 자기 자신('self') 말고는 어떤 서버에도 연결할 수 없다: 카메라 영상이 밖으로 나갈 길이 없다. -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; media-src 'self' blob: mediastream:; connect-src 'self'; manifest-src 'self'; worker-src 'self'; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'">
+  <meta name="theme-color" content="#ff5c8a">
+  <meta name="description" content="카메라가 술래가 되는 몸놀이 게임">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="무궁화">
+  <title>무궁화 꽃이 피었습니다</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon-192.png" type="image/png">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="stylesheet" href="style.css">
+  <script type="module" src="app.js"></script>
+</head>
+<body>
+  <main id="app">
+    <!-- 첫 화면: 설정 -->
+    <section id="screen-home" class="screen active" aria-labelledby="title">
+      <div class="home-card">
+        <div class="flower" aria-hidden="true">🌺</div>
+        <h1 id="title">무궁화 꽃이<br>피었습니다</h1>
+        <p class="sub">카메라가 술래예요!<br>노래할 때 움직이고, <b>얼음!</b> 하면 딱 멈춰요.</p>
+
+        <div class="setting">
+          <h2>누가 해요?</h2>
+          <div class="choices" data-setting="players" role="radiogroup" aria-label="인원">
+            <button type="button" role="radio" data-value="1"><span>🙋</span>혼자</button>
+            <button type="button" role="radio" data-value="2"><span>👫</span>둘이서</button>
+          </div>
+          <p class="hint" id="players-hint"></p>
+        </div>
+
+        <div class="setting">
+          <h2>술래 눈치</h2>
+          <div class="choices three" data-setting="difficulty" role="radiogroup" aria-label="술래 눈치">
+            <button type="button" role="radio" data-value="easy"><span>😌</span>너그러움</button>
+            <button type="button" role="radio" data-value="normal"><span>🙂</span>보통</button>
+            <button type="button" role="radio" data-value="hawk"><span>🦅</span>매의 눈</button>
+          </div>
+        </div>
+
+        <div class="setting">
+          <h2>술래 목소리</h2>
+          <div class="choices" data-setting="voice" role="radiogroup" aria-label="술래 목소리">
+            <button type="button" role="radio" data-value="on"><span>🔊</span>켜기</button>
+            <button type="button" role="radio" data-value="off"><span>🔇</span>끄기</button>
+          </div>
+        </div>
+
+        <button type="button" id="start" class="big">시작!</button>
+        <p id="error" class="error" role="alert" hidden></p>
+        <p class="privacy">🔒 카메라 영상은 이 기기 안에서만 써요. 저장하지도, 어디로 보내지도 않아요.</p>
+      </div>
+    </section>
+
+    <!-- 게임 화면 -->
+    <section id="screen-game" class="screen" aria-live="polite">
+      <video id="cam" playsinline muted autoplay></video>
+      <div id="divider" aria-hidden="true"></div>
+
+      <div id="tagger" class="back" aria-hidden="true">
+        <svg viewBox="0 0 120 120" width="120" height="120">
+          <circle cx="60" cy="64" r="44" class="skin"/>
+          <path class="hair-back" d="M16 64a44 44 0 0 1 88 0c0 26-20 44-44 44S16 90 16 64z"/>
+          <path class="hair-front" d="M16 60a44 44 0 0 1 88 0c-10-14-30-20-44-20S26 46 16 60z"/>
+          <g class="face">
+            <circle cx="44" cy="66" r="7" class="eye"/>
+            <circle cx="76" cy="66" r="7" class="eye"/>
+            <circle cx="46" cy="64" r="2.5" class="shine"/>
+            <circle cx="78" cy="64" r="2.5" class="shine"/>
+            <circle cx="34" cy="82" r="6" class="cheek"/>
+            <circle cx="86" cy="82" r="6" class="cheek"/>
+            <path d="M52 88q8 6 16 0" class="mouth"/>
+          </g>
+          <circle cx="60" cy="18" r="10" class="bun"/>
+        </svg>
+      </div>
+      <div id="bubble"></div>
+
+      <div id="lanes"></div>
+      <div id="center-msg"></div>
+      <button type="button" id="quit">그만하기</button>
+
+      <div id="result" hidden>
+        <div class="result-card">
+          <div id="result-emoji">🏆</div>
+          <h2 id="result-title"></h2>
+          <p id="result-detail"></p>
+          <div class="result-buttons">
+            <button type="button" id="again" class="big">한 번 더!</button>
+            <button type="button" id="home">처음으로</button>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+</body>
+</html>
