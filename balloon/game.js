@@ -10,7 +10,14 @@ const video = $('cam');
 const app = $('app');
 
 // ---------- 게임 규칙 ----------
-const POINTS = { balloon: 1, small: 2, gold: 5, bomb: -5 };
+// 크기별 점수: 작을수록 점수가 크다. r = 반지름(화면 짧은 쪽 대비)
+const BALLOON_SIZES = [ // 큰 것 → 작은 것
+  { r: 0.10, points: 1 }, { r: 0.088, points: 2 }, { r: 0.076, points: 3 }, { r: 0.065, points: 4 }, { r: 0.055, points: 5 },
+];
+const BOMB_SIZES = [ // 작은 것 → 큰 것
+  { r: 0.04, points: -1 }, { r: 0.05, points: -2 }, { r: 0.06, points: -3 }, { r: 0.07, points: -4 }, { r: 0.08, points: -5 },
+];
+const GOLD = { r: 0.07, points: 10 };
 const COMBO_WINDOW = 1.5; // 이 시간(초) 안에 다음 풍선을 터트리면 콤보가 이어진다
 const COMBO_BONUS_FROM = 5; // 콤보가 이만큼 넘으면 풍선마다 +1점 더
 const BALLOON_COLORS = ['#ff4f6d', '#ff9f1c', '#ffd93d', '#3ddc84', '#38b6ff', '#9b5cff', '#ff6ec7'];
@@ -20,15 +27,15 @@ const PALM_POINTS = [0, 5, 9, 13, 17];
 const LEVELS = {
   easy: {
     name: '쉬움', hint: '천천히 올라오고 폭탄이 적어요',
-    hand: 0.065, speed: 0.75, spawn: 1.25, bomb: [0.08, 0.08], small: 0.15, gold: 0.06,
+    hand: 0.065, speed: 0.75, spawn: 1.25, bomb: [0.08, 0.08], sizes: [3, 3, 2, 1, 1], gold: 0.06,
   },
   normal: {
     name: '보통', hint: '보통 속도, 폭탄도 보통이에요',
-    hand: 0.05, speed: 1, spawn: 1, bomb: [0.12, 0.13], small: 0.25, gold: 0.05,
+    hand: 0.05, speed: 1, spawn: 1, bomb: [0.12, 0.13], sizes: [2, 2, 2, 2, 2], gold: 0.05,
   },
   hard: {
     name: '어려움', hint: '빠르고, 폭탄과 작은 풍선이 많아요. 손 동그라미도 작아요',
-    hand: 0.038, speed: 1.35, spawn: 0.8, bomb: [0.18, 0.17], small: 0.4, gold: 0.04,
+    hand: 0.038, speed: 1.35, spawn: 0.8, bomb: [0.18, 0.17], sizes: [1, 1, 2, 3, 3], gold: 0.04,
   },
 };
 const HAND_BONES = [
@@ -241,28 +248,37 @@ function detectHands(now) {
 }
 
 // ---------- 풍선 · 폭탄 ----------
+function pickWeighted(weights) {
+  let n = Math.random() * weights.reduce((a, b) => a + b, 0);
+  for (let i = 0; i < weights.length; i++) { n -= weights[i]; if (n < 0) return i; }
+  return weights.length - 1;
+}
+
 function spawn() {
   const t = game.elapsed / roundTime; // 0 → 1 로 갈수록 어려워진다
   const L = level();
   const bombChance = L.bomb[0] + L.bomb[1] * t;
   const roll = Math.random();
   if (roll < bombChance) {
-    // 폭탄은 위에서 떨어진다
-    const r = unit * 0.055;
+    // 폭탄은 위에서 떨어진다. 클수록 많이 깎인다
+    const size = BOMB_SIZES[(Math.random() * BOMB_SIZES.length) | 0];
+    const r = unit * size.r;
     objects.push({
-      type: 'bomb', r, x: r + Math.random() * (W - 2 * r), y: -r * 2,
+      type: 'bomb', r, points: size.points, x: r + Math.random() * (W - 2 * r), y: -r * 2,
       vy: unit * (0.22 + 0.18 * t + Math.random() * 0.1) * L.speed, vx: (Math.random() - 0.5) * unit * 0.08,
       spin: (Math.random() - 0.5) * 3, angle: 0, phase: Math.random() * 6,
     });
     return;
   }
   const isGold = roll > 1 - L.gold;
-  const isSmall = !isGold && Math.random() < L.small;
-  const r = unit * (isSmall ? 0.062 : 0.09) * (0.9 + Math.random() * 0.2);
+  const tier = isGold ? -1 : pickWeighted(L.sizes); // 0 = 가장 큰 풍선
+  const size = isGold ? GOLD : BALLOON_SIZES[tier];
+  const r = unit * size.r;
   objects.push({
-    type: isGold ? 'gold' : isSmall ? 'small' : 'balloon',
+    type: isGold ? 'gold' : 'balloon', points: size.points, tier,
     r, x: r + Math.random() * (W - 2 * r), y: H + r * 1.5,
-    vy: -unit * (0.16 + 0.16 * t + Math.random() * 0.08) * (isSmall ? 1.25 : 1) * (isGold ? 1.4 : 1) * L.speed,
+    // 작은 풍선일수록 빨리 올라간다
+    vy: -unit * (0.16 + 0.16 * t + Math.random() * 0.08) * (isGold ? 1.5 : 1 + tier * 0.1) * L.speed,
     color: isGold ? '#ffd23f' : BALLOON_COLORS[(Math.random() * BALLOON_COLORS.length) | 0],
     phase: Math.random() * 6, sway: unit * (0.02 + Math.random() * 0.03),
   });
@@ -305,8 +321,8 @@ function pop(o) {
   game.bestCombo = Math.max(game.bestCombo, game.combo);
   game.popped++;
   const bonus = game.combo >= COMBO_BONUS_FROM ? 1 : 0;
-  addScore(POINTS[o.type] + bonus, o.x, o.y - o.r, o.type === 'gold' ? '#ffb800' : '#ffffff');
-  playPop(o.type === 'small' ? 1.4 : o.type === 'gold' ? 1.8 : 0.9 + Math.random() * 0.3);
+  addScore(o.points + bonus, o.x, o.y - o.r, o.type === 'gold' ? '#ffb800' : '#ffffff');
+  playPop(o.type === 'gold' ? 1.8 : 0.85 + o.tier * 0.15); // 작은 풍선은 높은 소리
   // 조각
   const n = o.type === 'gold' ? 26 : 14;
   for (let i = 0; i < n; i++) {
@@ -324,7 +340,7 @@ function pop(o) {
 function explode(o) {
   game.combo = 0;
   game.bombs++;
-  addScore(POINTS.bomb, o.x, o.y - o.r, '#ff3b3b');
+  addScore(o.points, o.x, o.y - o.r, '#ff3b3b');
   playBoom();
   flash = 1;
   app.classList.remove('shake'); void app.offsetWidth; app.classList.add('shake');
@@ -409,14 +425,15 @@ function drawBalloon(o, time) {
   ctx.beginPath();
   ctx.ellipse(x - r * 0.38, y - ry * 0.42, r * 0.16, r * 0.3, -0.5, 0, Math.PI * 2);
   ctx.fill();
-  if (o.type === 'gold') {
-    ctx.fillStyle = '#fff';
-    ctx.font = `${Math.round(r * 0.8)}px system-ui, sans-serif`;
-    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.globalAlpha = 0.6 + 0.4 * Math.sin(time * 8);
-    ctx.fillText('★', x, y + r * 0.05);
-    ctx.globalAlpha = 1;
-  }
+  // 점수 숫자
+  const label = String(o.points);
+  ctx.font = `900 ${Math.round(r * (label.length > 1 ? 0.7 : 0.85))}px system-ui, sans-serif`;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.lineWidth = Math.max(2, r * 0.1);
+  ctx.strokeStyle = 'rgba(40, 20, 60, 0.45)';
+  ctx.strokeText(label, x, y + r * 0.05);
+  ctx.fillStyle = o.type === 'gold' ? `rgba(255,255,255,${0.7 + 0.3 * Math.sin(time * 8)})` : '#fff';
+  ctx.fillText(label, x, y + r * 0.05);
 }
 
 function drawBomb(o, time) {
@@ -455,9 +472,11 @@ function drawBomb(o, time) {
   ctx.closePath(); ctx.fill();
   // 해골 표시
   ctx.fillStyle = 'rgba(255,255,255,0.85)';
-  ctx.font = `${Math.round(r * 0.8)}px system-ui, sans-serif`;
+  ctx.rotate(-o.angle); // 숫자는 똑바로
+  ctx.font = `900 ${Math.round(r * 0.75)}px system-ui, sans-serif`;
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  ctx.fillText('☠', 0, r * 0.08);
+  ctx.fillStyle = '#ff6b6b';
+  ctx.fillText(String(o.points), 0, r * 0.08);
   ctx.restore();
 }
 
