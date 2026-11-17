@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <!-- 이 페이지는 자기 자신('self') 말고는 어떤 서버에도 연결할 수 없다: 카메라 영상이 밖으로 나갈 길이 없다.
+       'wasm-unsafe-eval' 은 손 인식 엔진(WebAssembly)을 기기 안에서 돌리는 데 필요하다. -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self'; img-src 'self' data: blob:; media-src 'self' blob: mediastream:; connect-src 'self'; worker-src 'self'; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'">
+  <meta name="theme-color" content="#7b5cff">
+  <meta name="description" content="카메라로 내 손을 인식해서 풍선을 터트리는 게임">
+  <title>풍선 터트리기</title>
+  <link rel="icon" href="icon.png" type="image/png">
+  <link rel="stylesheet" href="style.css">
+  <script type="module" src="game.js"></script>
+</head>
+<body>
+  <main id="app">
+    <canvas id="stage" aria-label="게임 화면"></canvas>
+    <video id="cam" playsinline muted autoplay></video>
+
+    <!-- 게임 중 상단 정보 -->
+    <div id="hud" hidden>
+      <div class="hud-player" data-p="0">
+        <div class="pill score-pill"><span class="label tag">점수</span><b class="score">0</b></div>
+        <div class="pill combo-pill" hidden><span class="label">콤보</span><b class="combo">0</b></div>
+      </div>
+      <div class="pill time-pill"><span class="label">남은 시간</span><b id="time">60</b></div>
+      <div class="hud-player" data-p="1" hidden>
+        <div class="pill combo-pill" hidden><span class="label">콤보</span><b class="combo">0</b></div>
+        <div class="pill score-pill"><span class="label tag">점수</span><b class="score">0</b></div>
+      </div>
+      <div class="hud-buttons">
+        <button type="button" id="music-btn" aria-label="배경음악 켜기/끄기">🎵</button>
+        <button type="button" id="quit">그만하기</button>
+      </div>
+    </div>
+
+    <!-- 첫 화면 -->
+    <section id="screen-home" class="overlay">
+      <div class="card">
+        <div class="big-emoji" aria-hidden="true">🎈💥</div>
+        <h1>풍선 터트리기</h1>
+        <p class="sub">카메라 앞에서 손을 움직여 풍선을 터트려요!<br><b>손 전체</b>(손가락·손바닥)가 풍선에 닿으면 터져요.</p>
+        <ul class="rules">
+          <li><span>🎈</span>풍선: 작을수록 점수가 커요 <b>큰 +1 ~ 작은 +5</b></li>
+          <li><span>🌟</span>금색 풍선 <b>+10점</b></li>
+          <li><span>💣</span>폭탄: 클수록 많이 깎여요 <b class="bad">작은 -1 ~ 큰 -5</b></li>
+          <li><span>🔥</span>연속으로 터트리면 콤보 보너스</li>
+        </ul>
+        <div class="setting">
+          <h2>누가 해요?</h2>
+          <div class="choices" role="radiogroup" aria-label="인원">
+            <button type="button" role="radio" data-mode="1"><span>🙋</span>혼자</button>
+            <button type="button" role="radio" data-mode="2"><span>🤜🤛</span>둘이서 대결</button>
+          </div>
+          <p class="hint" id="mode-hint"></p>
+        </div>
+        <div class="setting">
+          <h2>난이도</h2>
+          <div class="choices" role="radiogroup" aria-label="난이도">
+            <button type="button" role="radio" data-level="easy"><span>😊</span>쉬움</button>
+            <button type="button" role="radio" data-level="normal"><span>🙂</span>보통</button>
+            <button type="button" role="radio" data-level="hard"><span>🔥</span>어려움</button>
+          </div>
+          <p class="hint" id="level-hint"></p>
+        </div>
+        <div class="setting-row">
+          <div class="setting">
+            <h2>게임 시간</h2>
+            <div class="choices" role="radiogroup" aria-label="게임 시간">
+              <button type="button" role="radio" data-time="30">30초</button>
+              <button type="button" role="radio" data-time="60">60초</button>
+              <button type="button" role="radio" data-time="90">90초</button>
+            </div>
+          </div>
+          <div class="setting">
+            <h2>배경음악</h2>
+            <div class="choices" role="radiogroup" aria-label="배경음악">
+              <button type="button" role="radio" data-music="on">🎵 켜기</button>
+              <button type="button" role="radio" data-music="off">🔇 끄기</button>
+            </div>
+          </div>
+        </div>
+        <button type="button" id="start" class="big">시작!</button>
+        <p id="status" class="status" role="status"></p>
+        <p id="best-line" class="best"></p>
+        <p class="privacy">🔒 카메라 영상은 이 기기 안에서만 써요. 저장하지도, 어디로 보내지도 않아요.</p>
+      </div>
+    </section>
+
+    <!-- 카운트다운 -->
+    <div id="countdown" hidden></div>
+
+    <!-- 결과 -->
+    <section id="screen-result" class="overlay" hidden>
+      <div class="card">
+        <div class="big-emoji" id="result-emoji">🏆</div>
+        <h2 id="result-title">끝!</h2>
+        <p class="final"><b id="final-score">0</b><span id="final-unit">점</span></p>
+        <p id="result-detail" class="sub"></p>
+        <div class="buttons">
+          <button type="button" id="again" class="big">한 번 더!</button>
+          <button type="button" id="home">처음으로</button>
+        </div>
+      </div>
+    </section>
+  </main>
+</body>
+</html>
