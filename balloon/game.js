@@ -16,18 +16,18 @@ const COMBO_BONUS_FROM = 5; // 콤보가 이만큼 넘으면 풍선마다 +1점 
 const BALLOON_COLORS = ['#ff4f6d', '#ff9f1c', '#ffd93d', '#3ddc84', '#38b6ff', '#9b5cff', '#ff6ec7'];
 // 손바닥 가운데를 잡는 점: 손목과 네 손가락 뿌리
 const PALM_POINTS = [0, 5, 9, 13, 17];
-// 난이도. hand = 손 동그라미 크기(화면 짧은 쪽 대비), 풍선 반지름(보통 0.065, 작은 0.045)과 비슷하게
+// 난이도. hand = 손 동그라미 크기(화면 짧은 쪽 대비), 풍선 반지름(보통 0.09, 작은 0.062)보다 조금 작게
 const LEVELS = {
   easy: {
-    name: '쉬움', hint: '천천히, 폭탄 적게, 손 동그라미가 조금 커요',
+    name: '쉬움', hint: '천천히 올라오고 폭탄이 적어요',
     hand: 0.065, speed: 0.75, spawn: 1.25, bomb: [0.08, 0.08], small: 0.15, gold: 0.06,
   },
   normal: {
-    name: '보통', hint: '손 동그라미가 풍선만 해요',
+    name: '보통', hint: '보통 속도, 폭탄도 보통이에요',
     hand: 0.05, speed: 1, spawn: 1, bomb: [0.12, 0.13], small: 0.25, gold: 0.05,
   },
   hard: {
-    name: '어려움', hint: '빠르고 폭탄이 많아요. 손 동그라미가 작은 풍선만 해요',
+    name: '어려움', hint: '빠르고, 폭탄과 작은 풍선이 많아요. 손 동그라미도 작아요',
     hand: 0.038, speed: 1.35, spawn: 0.8, bomb: [0.18, 0.17], small: 0.4, gold: 0.04,
   },
 };
@@ -258,7 +258,7 @@ function spawn() {
   }
   const isGold = roll > 1 - L.gold;
   const isSmall = !isGold && Math.random() < L.small;
-  const r = unit * (isSmall ? 0.045 : 0.065) * (0.9 + Math.random() * 0.2);
+  const r = unit * (isSmall ? 0.062 : 0.09) * (0.9 + Math.random() * 0.2);
   objects.push({
     type: isGold ? 'gold' : isSmall ? 'small' : 'balloon',
     r, x: r + Math.random() * (W - 2 * r), y: H + r * 1.5,
