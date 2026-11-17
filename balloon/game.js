@@ -483,23 +483,146 @@ function explode(o) {
 }
 
 // ---------- 그리기 ----------
-function drawBackground() {
-  const v = videoView();
-  if (v && video.readyState >= 2) {
-    ctx.save();
-    ctx.translate(W, 0);
-    ctx.scale(-1, 1);
-    ctx.drawImage(video, v.dx, v.dy, v.w, v.h);
-    ctx.restore();
-    // 풍선이 잘 보이게 살짝 밝은 막을 씌운다
-    ctx.fillStyle = 'rgba(200, 230, 255, 0.18)';
-    ctx.fillRect(0, 0, W, H);
-  } else {
-    const g = ctx.createLinearGradient(0, 0, 0, H);
-    g.addColorStop(0, '#8fd3ff'); g.addColorStop(1, '#e6f6ff');
-    ctx.fillStyle = g;
-    ctx.fillRect(0, 0, W, H);
+// ---------- 귀여운 배경 그림 ----------
+// 움직이지 않는 부분(하늘·무지개·언덕·꽃)은 화면 크기가 바뀔 때만 한 번 그려 둔다
+let sceneCache = null;
+function buildScene() {
+  const c = document.createElement('canvas');
+  c.width = Math.round(W * DPR); c.height = Math.round(H * DPR);
+  const g = c.getContext('2d');
+  g.scale(DPR, DPR);
+  // 하늘
+  const sky = g.createLinearGradient(0, 0, 0, H);
+  sky.addColorStop(0, '#9fe0ff'); sky.addColorStop(0.6, '#d9f3ff'); sky.addColorStop(1, '#fff1f8');
+  g.fillStyle = sky; g.fillRect(0, 0, W, H);
+  // 무지개
+  const rc = { x: W * 0.62, y: H * 0.86 }, rr = Math.max(W, H) * 0.42, band = unit * 0.028;
+  g.globalAlpha = 0.45;
+  ['#ff8fa3', '#ffb86b', '#ffe36b', '#8fe39a', '#7cc8ff', '#b59bff'].forEach((col, i) => {
+    g.strokeStyle = col; g.lineWidth = band;
+    g.beginPath(); g.arc(rc.x, rc.y, rr - i * band, Math.PI, 0); g.stroke();
+  });
+  g.globalAlpha = 1;
+  // 언덕 두 겹
+  const hill = (y0, amp, color, phase) => {
+    g.fillStyle = color;
+    g.beginPath(); g.moveTo(0, H);
+    for (let x = 0; x <= W + 20; x += 20) g.lineTo(x, y0 + Math.sin(x / (W * 0.18) + phase) * amp);
+    g.lineTo(W, H); g.closePath(); g.fill();
+  };
+  hill(H * 0.80, unit * 0.04, '#b8edb0', 0.5);
+  hill(H * 0.88, unit * 0.03, '#8fdc8a', 2.2);
+  // 꽃 (자리는 늘 같게)
+  let seed = 7;
+  const rand = () => { seed = (seed * 9301 + 49297) % 233280; return seed / 233280; };
+  const petals = ['#ff8fb1', '#ffffff', '#c79bff', '#ffd36b', '#7cc8ff'];
+  for (let i = 0; i < Math.round(W / 45); i++) {
+    const x = rand() * W, y = H * (0.86 + rand() * 0.12), s = unit * (0.01 + rand() * 0.008);
+    g.fillStyle = petals[(rand() * petals.length) | 0];
+    for (let k = 0; k < 5; k++) {
+      const a = (k / 5) * Math.PI * 2;
+      g.beginPath(); g.arc(x + Math.cos(a) * s, y + Math.sin(a) * s, s * 0.8, 0, Math.PI * 2); g.fill();
+    }
+    g.fillStyle = '#ffcf3a';
+    g.beginPath(); g.arc(x, y, s * 0.6, 0, Math.PI * 2); g.fill();
   }
+  sceneCache = { canvas: c, w: W, h: H, dpr: DPR };
+}
+
+function drawFace(x, y, s, blush = true) {
+  ctx.fillStyle = '#5a4060';
+  ctx.beginPath(); ctx.arc(x - s * 0.35, y, s * 0.11, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(x + s * 0.35, y, s * 0.11, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = '#5a4060'; ctx.lineWidth = Math.max(2, s * 0.07); ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.arc(x, y + s * 0.12, s * 0.16, 0.15 * Math.PI, 0.85 * Math.PI); ctx.stroke();
+  if (blush) {
+    ctx.fillStyle = 'rgba(255, 130, 150, 0.5)';
+    ctx.beginPath(); ctx.ellipse(x - s * 0.58, y + s * 0.2, s * 0.15, s * 0.09, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(x + s * 0.58, y + s * 0.2, s * 0.15, s * 0.09, 0, 0, Math.PI * 2); ctx.fill();
+  }
+}
+
+function drawSun(time) {
+  const x = W * 0.12 + unit * 0.05, y = H * 0.24, r = unit * 0.075;
+  ctx.save(); ctx.translate(x, y); ctx.rotate(time * 0.3);
+  ctx.strokeStyle = '#ffd34d'; ctx.lineWidth = r * 0.16; ctx.lineCap = 'round';
+  for (let i = 0; i < 10; i++) {
+    const a = (i / 10) * Math.PI * 2;
+    ctx.beginPath(); ctx.moveTo(Math.cos(a) * r * 1.3, Math.sin(a) * r * 1.3);
+    ctx.lineTo(Math.cos(a) * r * 1.65, Math.sin(a) * r * 1.65); ctx.stroke();
+  }
+  ctx.restore();
+  ctx.fillStyle = '#ffe066';
+  ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
+  drawFace(x, y - r * 0.05, r * 0.8);
+}
+
+const CLOUDS = [ // y(높이 비율), 크기, 속도, 처음 자리
+  { y: 0.16, s: 1.0, v: 0.012, x: 0.30 }, { y: 0.30, s: 0.7, v: 0.02, x: 0.75 },
+  { y: 0.10, s: 0.8, v: 0.016, x: 0.95 }, { y: 0.42, s: 0.6, v: 0.024, x: 0.05 },
+];
+function drawClouds(time) {
+  for (const c of CLOUDS) {
+    const s = unit * 0.09 * c.s, span = W + s * 6;
+    const x = ((c.x * span + time * c.v * W) % span) - s * 3, y = H * c.y;
+    ctx.fillStyle = 'rgba(255,255,255,0.95)';
+    ctx.beginPath();
+    ctx.arc(x - s * 1.1, y + s * 0.2, s * 0.75, 0, Math.PI * 2);
+    ctx.arc(x, y - s * 0.15, s, 0, Math.PI * 2);
+    ctx.arc(x + s * 1.1, y + s * 0.2, s * 0.75, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath(); ctx.roundRect(x - s * 1.4, y + s * 0.1, s * 2.8, s * 0.85, s * 0.42); ctx.fill();
+    drawFace(x, y + s * 0.25, s * 0.55);
+  }
+}
+
+// 내 모습: 작은 거울 창 (풍선보다 뒤에 그려서 풍선을 가리지 않는다)
+function camWindow() {
+  const vw = video.videoWidth, vh = video.videoHeight;
+  if (!vw || !vh || video.readyState < 2) return null;
+  let w;
+  let x;
+  if (mode === 2) {
+    w = Math.min(W * 0.2, 240); x = (W - w) / 2;
+  } else {
+    const side = zones[0]?.x0 ?? 0;
+    if (side > 160) { w = Math.min(side - 32, 280); x = (side - w) / 2; } else { w = Math.min(W * 0.28, 220); x = 16; }
+  }
+  const h = w * vh / vw;
+  return { x, y: H - h - 16, w, h };
+}
+function drawCamWindow() {
+  const r = camWindow();
+  if (!r) return;
+  const v = videoView();
+  ctx.save();
+  ctx.fillStyle = '#fff';
+  ctx.beginPath(); ctx.roundRect(r.x - 5, r.y - 5, r.w + 10, r.h + 10, 18); ctx.fill();
+  ctx.beginPath(); ctx.roundRect(r.x, r.y, r.w, r.h, 14); ctx.clip();
+  ctx.translate(r.x + r.w, r.y); ctx.scale(-1, 1);
+  ctx.drawImage(video, 0, 0, r.w, r.h);
+  ctx.restore();
+  // 창 안에도 손 동그라미 자리를 작게 표시 (화면 좌표 → 창 좌표)
+  if (v) {
+    for (const h of hands) {
+      const nx = (h.palm.x - (W - v.dx - v.w)) / v.w, ny = (h.palm.y - v.dy) / v.h; // 0~1 (거울 기준)
+      ctx.fillStyle = 'rgba(255,255,255,0.9)';
+      ctx.beginPath(); ctx.arc(r.x + nx * r.w, r.y + ny * r.h, Math.max(4, r.w * 0.03), 0, Math.PI * 2); ctx.fill();
+    }
+  }
+  ctx.font = `800 ${Math.round(Math.max(12, r.w * 0.07))}px system-ui, sans-serif`;
+  ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+  ctx.fillStyle = 'rgba(255,255,255,0.95)';
+  ctx.strokeStyle = 'rgba(40,30,70,0.6)'; ctx.lineWidth = 3;
+  ctx.strokeText('📷 내 모습', r.x + 8, r.y + 6);
+  ctx.fillText('📷 내 모습', r.x + 8, r.y + 6);
+}
+
+function drawBackground(time) {
+  if (!sceneCache || sceneCache.w !== W || sceneCache.h !== H || sceneCache.dpr !== DPR) buildScene();
+  ctx.drawImage(sceneCache.canvas, 0, 0, W, H);
+  drawSun(time);
+  drawClouds(time);
 }
 
 // 구역 밖은 어둡게, 구역 테두리와 1P·2P 표시
@@ -507,10 +630,10 @@ function drawZones() {
   if (mode === 1) {
     const z = zones[0];
     if (z.x0 > 0) {
-      ctx.fillStyle = 'rgba(20, 15, 40, 0.55)';
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.45)'; // 구역 밖은 뿌옇게
       ctx.fillRect(0, 0, z.x0, H);
       ctx.fillRect(z.x1, 0, W - z.x1, H);
-      ctx.strokeStyle = 'rgba(255,255,255,0.9)';
+      ctx.strokeStyle = 'rgba(255, 143, 177, 0.95)';
       ctx.lineWidth = 4;
       ctx.setLineDash([16, 12]);
       ctx.beginPath();
@@ -779,8 +902,9 @@ function frame(now) {
   if (hands.length && now - hands[0].at > 300) hands = []; // 손이 사라졌으면 지운다
 
   ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
-  drawBackground();
+  drawBackground(time);
   if (game.state !== 'home') drawZones();
+  drawCamWindow();
   if (game.state === 'play') update(dt, time);
   // 풍선은 자기 구역 안에만 그린다
   zones.forEach((z, p) => {
