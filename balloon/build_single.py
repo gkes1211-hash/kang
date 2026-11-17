@@ -38,7 +38,43 @@ data = "\n".join(
         ("inline-model", here / "vendor" / "hand_landmarker.task"),
     ]
 )
-html = html.replace("</body>", f"{data}\n<script type=\"module\">\n{js}</script>\n</body>")
+# 켜질 때 GitHub 에서 최신 화면(index.html)·모양(style.css)·게임 코드(game.js)를 받아 쓴다.
+# 인터넷이 없거나 못 받으면 이 파일 안에 든 판으로 그냥 한다. (엔진과 손 모델은 늘 이 파일 안의 것을 쓴다)
+UPDATE_BASE = "https://raw.githubusercontent.com/gkes1211-hash/kang/claude/elegant-allen-9dx5iv/balloon/"
+loader = f"""<script type="module">
+const BASE = {UPDATE_BASE!r};
+async function latest() {{
+  const ctl = new AbortController();
+  const timer = setTimeout(() => ctl.abort(), 4000);
+  try {{
+    const get = async (n) => {{
+      const r = await fetch(BASE + n + '?t=' + Date.now(), {{ cache: 'no-store', signal: ctl.signal }});
+      if (!r.ok) throw new Error(n);
+      return r.text();
+    }};
+    const [page, css, js] = await Promise.all([get('index.html'), get('style.css'), get('game.js')]);
+    const app = new DOMParser().parseFromString(page, 'text/html').getElementById('app');
+    if (!app || !js.includes('inline-bundle')) throw new Error('bad');
+    return {{ app: app.innerHTML, css, js }};
+  }} catch {{ return null; }} finally {{ clearTimeout(timer); }}
+}}
+const startBtn = document.getElementById('start');
+const statusEl = document.getElementById('status');
+startBtn.disabled = true;
+statusEl.textContent = '🔄 새 버전 확인 중…';
+const fresh = await latest();
+startBtn.disabled = false;
+statusEl.textContent = '';
+if (fresh) {{
+  document.getElementById('app').innerHTML = fresh.app;
+  document.getElementById('app-style').textContent = fresh.css;
+}}
+const code = fresh ? fresh.js : document.getElementById('embedded-js').textContent;
+await import(URL.createObjectURL(new Blob([code], {{ type: 'text/javascript' }})));
+</script>"""
+embedded = js.replace("</script", "<\\/script")
+html = html.replace("<style>\n", '<style id="app-style">\n', 1)
+html = html.replace("</body>", f'{data}\n<script type="text/plain" id="embedded-js">{embedded}</script>\n{loader}\n</body>')
 
 out.parent.mkdir(parents=True, exist_ok=True)
 out.write_text(html, encoding="utf-8")

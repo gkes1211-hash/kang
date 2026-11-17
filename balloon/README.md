@@ -64,3 +64,10 @@ python3 balloon/build_single.py
 - 바탕화면에 🎈 풍선 아이콘이 달린 **풍선 터트리기** 바로가기를 만들어요.
 
 아이콘은 `python3 balloon/make_icon.py` 로 다시 그릴 수 있어요 (`icon.png`, `balloon.ico`).
+
+## 자동 업데이트
+
+`dist/풍선터트리기.html` 은 켜질 때 GitHub(`claude/elegant-allen-9dx5iv` 브랜치)에서 `balloon/index.html`, `style.css`, `game.js` 의 최신판을 받아서 써요.
+그래서 이 세 파일을 고쳐서 올리면, 이미 설치한 바로가기도 다음에 켤 때 새 버전으로 열려요 (GitHub 캐시 때문에 최대 5분쯤 늦을 수 있어요).
+인터넷이 없거나 4초 안에 못 받으면 파일 안에 든 판으로 그냥 시작해요. 손 인식 엔진과 모델은 늘 파일 안의 것을 써요.
+브랜치 이름이 바뀌면 `build_single.py` 의 `UPDATE_BASE` 를 고쳐서 다시 만들어요.
