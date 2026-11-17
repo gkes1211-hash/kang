@@ -43,7 +43,8 @@
       margin-top: 6px; padding: 12px 20px; border: 0; border-radius: 16px; background: #5b4bff; color: #fff;
       font: inherit; font-size: 18px; font-weight: 800; box-shadow: 0 4px 0 #3d2fd6; cursor: pointer;
     }
-    #install[hidden], #ios-hint[hidden] { display: none; }
+    #install[hidden], #ios-hint[hidden], #win-shortcut[hidden] { display: none; }
+    #win-shortcut { display: block; width: fit-content; margin: 10px auto 0; color: #3d2fd6; font-size: 15px; font-weight: 800; }
     #ios-hint { margin: 8px 0 0; color: #3d2fd6; font-size: 15px; font-weight: 700; }
     .note { color: #6a6680; font-size: 13px; margin-top: 18px; }
   </style>
@@ -70,6 +71,7 @@
     </a>
     <button type="button" id="install" hidden>📲 홈 화면에 설치하기</button>
     <p id="ios-hint" hidden>📲 홈 화면에 설치하려면: 공유 버튼 → "홈 화면에 추가"</p>
+    <a id="win-shortcut" href="desktop-shortcut/cheyuk-desktop-shortcut.zip" download hidden>💻 윈도우 바탕화면 아이콘 받기</a>
     <p class="note">🔒 카메라 영상은 이 기기 안에서만 써요. 저장하지도, 어디로 보내지도 않아요.</p>
   </main>
 </body>

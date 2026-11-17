@@ -19,6 +19,15 @@
 - **아이패드·아이폰 사파리**: 공유 버튼 → **홈 화면에 추가**
 - 한 번 연 게임은 기기에 담아 두어서, 다음부터는 인터넷이 없어도 열려요.
 
+## 윈도우 바탕화면 아이콘 만들기 💻
+
+1. 윈도우 컴퓨터에서 체육시간 첫 화면 아래의 **💻 윈도우 바탕화면 아이콘 받기**를 눌러 압축 파일을 받아요.
+   (또는 저장소의 [`desktop-shortcut/cheyuk-desktop-shortcut.zip`](desktop-shortcut/cheyuk-desktop-shortcut.zip) → Download)
+2. 압축을 풀고 **`make-shortcut.bat`**을 두 번 눌러요. ("Windows의 PC 보호" 창이 나오면 "추가 정보" → "실행")
+3. 바탕화면에 **체육시간** 아이콘이 생겨요. 누르면 크롬(없으면 엣지)이 주소창 없는 앱 창으로 체육시간을 열어요.
+
+크롬·엣지의 **📲 홈 화면에 설치하기**(앱 설치)로 설치해도 보통 바탕화면과 시작 메뉴에 아이콘이 생겨요.
+
 > 바로가기 주소는 이 저장소의 **GitHub Pages**가 켜져 있어야 열려요.
 > 저장소 **Settings → Pages → Build and deployment**에서 Source를 **Deploy from a branch**, Branch를 **`main`** / **`/ (root)`**로 두고 Save 하면, 1~2분 뒤 위 주소로 열려요.
 
@@ -29,5 +38,6 @@
 | `index.html` | 체육시간 첫 화면 (게임 고르기) |
 | `home.js` | 오프라인 준비, 설치 버튼·설치 안내 |
 | `manifest.webmanifest`, `sw.js`, `icons/` | 체육시간 앱 설치·오프라인 |
+| `desktop-shortcut/` | 윈도우 바탕화면 아이콘 만들기 (`make-shortcut.bat`·`.ps1`, `cheyuk.ico`, 묶음 `cheyuk-desktop-shortcut.zip`) |
 | `mugunghwa/`, `balloon/`, `byeok/` | 게임 (각 폴더 README 참고) |
 | `planner/` | 공부 플래너 (게임과 따로 쓰는 앱) |
