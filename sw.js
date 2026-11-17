@@ -2,7 +2,7 @@
 // 게임 파일은 한 번 연 것을 담아 둔다. (벽 통과하기·무궁화는 자기 폴더의 sw.js 가 따로 담는다)
 // 카메라 영상과는 아무 관련이 없다.
 const PREFIX = 'cheyuk-';
-const CACHE = `${PREFIX}v1`;
+const CACHE = `${PREFIX}v2`;
 const FILES = [
   './',
   './index.html',
