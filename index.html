@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'unsafe-inline'; img-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'">
+  <meta name="theme-color" content="#5b4bff">
+  <title>몸놀이 게임</title>
+  <link rel="icon" href="byeok/icons/icon-192.png" type="image/png">
+  <style>
+    :root { font-family: "Pretendard", "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", system-ui, sans-serif; color: #221f33; }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px 16px; background: #f1efff; word-break: keep-all; }
+    main { width: 100%; max-width: 560px; text-align: center; }
+    h1 { font-size: clamp(28px, 7vw, 40px); margin: 0 0 6px; color: #3d2fd6; }
+    p.sub { margin: 0 0 22px; color: #6a6680; font-size: 18px; }
+    a.game { display: flex; align-items: center; gap: 16px; text-align: left; text-decoration: none; color: inherit;
+      background: #fff; border-radius: 24px; padding: 18px; margin-bottom: 14px; box-shadow: 0 6px 24px rgba(61, 47, 214, 0.12);
+      border: 3px solid transparent; }
+    a.game:hover, a.game:focus-visible { border-color: #5b4bff; outline: none; }
+    a.game img { width: 72px; height: 72px; border-radius: 18px; flex: none; }
+    a.game b { display: block; font-size: 22px; margin-bottom: 4px; }
+    a.game span { color: #6a6680; font-size: 16px; }
+    .note { color: #6a6680; font-size: 13px; margin-top: 18px; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>몸놀이 게임 🎮</h1>
+    <p class="sub">카메라 앞에서 몸으로 하는 게임이에요. 하나 골라요!</p>
+    <a class="game" href="byeok/">
+      <img src="byeok/icons/icon-192.png" alt="">
+      <div><b>벽 통과하기</b><span>다가오는 벽의 구멍 모양대로 몸을 맞춰 통과해요</span></div>
+    </a>
+    <a class="game" href="balloon/">
+      <img src="balloon/icon.png" alt="">
+      <div><b>풍선 터트리기</b><span>손을 휘저어 풍선을 터트리고, 폭탄은 피해요</span></div>
+    </a>
+    <a class="game" href="mugunghwa/">
+      <img src="mugunghwa/icons/icon-192.png" alt="">
+      <div><b>무궁화 꽃이 피었습니다</b><span>카메라가 술래! 노래할 때 움직이고, 얼음! 하면 멈춰요</span></div>
+    </a>
+    <p class="note">🔒 카메라 영상은 이 기기 안에서만 써요. 저장하지도, 어디로 보내지도 않아요.</p>
+  </main>
+</body>
+</html>
