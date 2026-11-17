@@ -38,6 +38,15 @@
         </div>
 
         <div class="setting">
+          <h2>어디로 차요?</h2>
+          <div class="choices" data-setting="mode" role="radiogroup" aria-label="차는 곳">
+            <button type="button" role="radio" data-value="feet"><span>🦶</span>발·무릎<small>뒤로 서서 온몸으로</small></button>
+            <button type="button" role="radio" data-value="close"><span>✋</span>손·무릎도<small>가까이 서서</small></button>
+          </div>
+          <p class="hint" id="mode-hint"></p>
+        </div>
+
+        <div class="setting">
           <h2>난이도</h2>
           <div class="choices three" data-setting="difficulty" role="radiogroup" aria-label="난이도">
             <button type="button" role="radio" data-value="easy"><span>🐣</span>쉬움</button>

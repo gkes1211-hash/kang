@@ -1,7 +1,7 @@
 // 앱 파일을 기기에 담아 두어 인터넷이 없어도 열리게 한다.
 // 몸 인식 엔진은 옆 폴더 무궁화 게임의 것을, 카메라·소리 도우미는 common/ 의 것을 같이 쓴다.
 const PREFIX = 'jegi-';
-const CACHE = `${PREFIX}v2`;
+const CACHE = `${PREFIX}v3`;
 const FILES = [
   './',
   './index.html',
