@@ -20,12 +20,20 @@
 
     <!-- 게임 중 상단 정보 -->
     <div id="hud" hidden>
-      <div class="pill"><span class="label">점수</span><b id="score">0</b></div>
-      <div class="pill" id="combo-pill" hidden><span class="label">콤보</span><b id="combo">0</b></div>
-      <div class="pill"><span class="label">남은 시간</span><b id="time">60</b></div>
-      <button type="button" id="quit">그만하기</button>
+      <div class="hud-player" data-p="0">
+        <div class="pill score-pill"><span class="label tag">점수</span><b class="score">0</b></div>
+        <div class="pill combo-pill" hidden><span class="label">콤보</span><b class="combo">0</b></div>
+      </div>
+      <div class="pill time-pill"><span class="label">남은 시간</span><b id="time">60</b></div>
+      <div class="hud-player" data-p="1" hidden>
+        <div class="pill combo-pill" hidden><span class="label">콤보</span><b class="combo">0</b></div>
+        <div class="pill score-pill"><span class="label tag">점수</span><b class="score">0</b></div>
+      </div>
+      <div class="hud-buttons">
+        <button type="button" id="music-btn" aria-label="배경음악 켜기/끄기">🎵</button>
+        <button type="button" id="quit">그만하기</button>
+      </div>
     </div>
-    <div id="no-hand" hidden>✋ 카메라에 손을 보여 주세요!</div>
 
     <!-- 첫 화면 -->
     <section id="screen-home" class="overlay">
@@ -40,6 +48,14 @@
           <li><span>🔥</span>연속으로 터트리면 콤보 보너스</li>
         </ul>
         <div class="setting">
+          <h2>누가 해요?</h2>
+          <div class="choices" role="radiogroup" aria-label="인원">
+            <button type="button" role="radio" data-mode="1"><span>🙋</span>혼자</button>
+            <button type="button" role="radio" data-mode="2"><span>🤜🤛</span>둘이서 대결</button>
+          </div>
+          <p class="hint" id="mode-hint"></p>
+        </div>
+        <div class="setting">
           <h2>난이도</h2>
           <div class="choices" role="radiogroup" aria-label="난이도">
             <button type="button" role="radio" data-level="easy"><span>😊</span>쉬움</button>
@@ -48,12 +64,21 @@
           </div>
           <p class="hint" id="level-hint"></p>
         </div>
-        <div class="setting">
-          <h2>게임 시간</h2>
-          <div class="choices" role="radiogroup" aria-label="게임 시간">
-            <button type="button" role="radio" data-time="30">30초</button>
-            <button type="button" role="radio" data-time="60">60초</button>
-            <button type="button" role="radio" data-time="90">90초</button>
+        <div class="setting-row">
+          <div class="setting">
+            <h2>게임 시간</h2>
+            <div class="choices" role="radiogroup" aria-label="게임 시간">
+              <button type="button" role="radio" data-time="30">30초</button>
+              <button type="button" role="radio" data-time="60">60초</button>
+              <button type="button" role="radio" data-time="90">90초</button>
+            </div>
+          </div>
+          <div class="setting">
+            <h2>배경음악</h2>
+            <div class="choices" role="radiogroup" aria-label="배경음악">
+              <button type="button" role="radio" data-music="on">🎵 켜기</button>
+              <button type="button" role="radio" data-music="off">🔇 끄기</button>
+            </div>
           </div>
         </div>
         <button type="button" id="start" class="big">시작!</button>
@@ -71,7 +96,7 @@
       <div class="card">
         <div class="big-emoji" id="result-emoji">🏆</div>
         <h2 id="result-title">끝!</h2>
-        <p class="final"><b id="final-score">0</b>점</p>
+        <p class="final"><b id="final-score">0</b><span id="final-unit">점</span></p>
         <p id="result-detail" class="sub"></p>
         <div class="buttons">
           <button type="button" id="again" class="big">한 번 더!</button>

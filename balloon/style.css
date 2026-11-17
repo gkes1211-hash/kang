@@ -5,6 +5,8 @@
   --muted: #6b6380;
   --card: #ffffff;
   --bad: #ff3b3b;
+  --p1: #ff8a3d;
+  --p2: #3d8bff;
   font-family: "Pretendard", "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", system-ui, sans-serif;
   color-scheme: light;
 }
@@ -44,13 +46,22 @@ button { font: inherit; cursor: pointer; }
   top: max(12px, env(safe-area-inset-top));
   left: 16px;
   right: 16px;
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr auto;
   gap: 10px;
   align-items: center;
-  flex-wrap: wrap;
   pointer-events: none;
 }
-#hud[hidden], .pill[hidden] { display: none; }
+#hud[hidden], .pill[hidden], .hud-player[hidden] { display: none; }
+/* 혼자일 때: 점수(왼쪽) · 시간(가운데) · 버튼(오른쪽) */
+#hud .time-pill { grid-column: 2; }
+.hud-player { display: flex; gap: 8px; align-items: center; }
+.hud-player[data-p="0"] { grid-column: 1; justify-self: start; }
+.hud-player[data-p="1"] { grid-column: 3; justify-self: end; }
+.hud-buttons { grid-column: 4; display: flex; gap: 8px; }
+/* 둘이서: 시간이 화면 한가운데(나눈 선 위)에 오도록 */
+#hud.two { grid-template-columns: 1fr auto 1fr; padding-top: 52px; }
+#hud.two .hud-buttons { position: absolute; top: 0; right: 0; }
 .pill {
   background: rgba(255, 255, 255, 0.92);
   border-radius: 999px;
@@ -65,11 +76,14 @@ button { font: inherit; cursor: pointer; }
 .pill.bump b { animation: bump 0.25s ease; }
 .pill.hurt { background: #ffe1e1; }
 .pill.hurt b { color: var(--bad); }
-#combo-pill b { color: #ff7a00; }
+.combo-pill b { color: #ff7a00; }
+.score-pill.p0 { border: 3px solid var(--p1); }
+.score-pill.p0 .tag { color: var(--p1); font-weight: 800; }
+.score-pill.p1 { border: 3px solid var(--p2); }
+.score-pill.p1 .tag { color: var(--p2); font-weight: 800; }
 @keyframes bump { 50% { transform: scale(1.35); } }
 
-#quit {
-  margin-left: auto;
+.hud-buttons button {
   pointer-events: auto;
   border: 0;
   border-radius: 999px;
@@ -78,21 +92,8 @@ button { font: inherit; cursor: pointer; }
   color: var(--ink);
   font-weight: 700;
 }
-
-#no-hand {
-  position: absolute;
-  left: 50%;
-  bottom: 40px;
-  transform: translateX(-50%);
-  background: rgba(36, 31, 51, 0.85);
-  color: #fff;
-  font-size: 22px;
-  font-weight: 700;
-  padding: 12px 24px;
-  border-radius: 999px;
-  white-space: nowrap;
-  pointer-events: none;
-}
+#music-btn { padding: 10px 14px; }
+#music-btn.off { opacity: 0.55; text-decoration: line-through; }
 
 /* 화면 위 카드 */
 .overlay {
@@ -174,7 +175,7 @@ h2 { margin: 10px 0 4px; font-size: 28px; }
 .privacy { margin: 10px 0 0; font-size: 13px; color: var(--muted); }
 
 .final { font-size: 22px; margin: 4px 0; }
-.final b { font-size: 64px; color: var(--purple-deep); font-variant-numeric: tabular-nums; }
+.final b#final-score { font-size: 64px; color: var(--purple-deep); font-variant-numeric: tabular-nums; }
 .buttons { display: grid; gap: 10px; }
 #home {
   border: 0;
@@ -218,3 +219,7 @@ h2 { margin: 10px 0 4px; font-size: 28px; }
   .pill b { font-size: 22px; }
   .pill .label { font-size: 12px; }
 }
+
+/* 게임 시간 · 배경음악을 한 줄에 */
+.setting-row { display: grid; grid-template-columns: 3fr 2fr; gap: 12px; }
+@media (max-width: 420px) { .setting-row { grid-template-columns: 1fr; } }
