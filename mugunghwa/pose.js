@@ -14,6 +14,11 @@ export const P = {
 };
 const ARMS = [P.lElbow, P.rElbow, P.lWrist, P.rWrist];
 const LEGS = [P.lKnee, P.rKnee, P.lAnkle, P.rAnkle];
+// 팔·다리 하나씩 (한쪽 팔만 흔들어도 잡히도록 따로 잰다)
+const LIMBS = {
+  arms: [[P.lElbow, P.lWrist], [P.rElbow, P.rWrist]],
+  legs: [[P.lKnee, P.lAnkle], [P.rKnee, P.rAnkle]],
+};
 const TRACKED = [P.nose, P.lShoulder, P.rShoulder, ...ARMS, P.lHip, P.rHip, ...LEGS];
 export const BONES = [
   [P.lShoulder, P.rShoulder], [P.lShoulder, P.lElbow], [P.lElbow, P.lWrist],
@@ -22,7 +27,8 @@ export const BONES = [
 ];
 
 const VISIBLE = 0.5; // 이 점수보다 높아야 "보이는 점"으로 친다
-const MOTION_VISIBLE = 0.65; // 움직임을 잴 때는 더 확실히 보이는 점만 쓴다 (흐릿한 점은 떨림이 크다)
+const MOTION_VISIBLE = 0.55; // 움직임을 잴 때는 더 확실히 보이는 점만 쓴다 (흐릿한 점은 떨림이 크다)
+const KEEP_POINT = 0.35; // 팔을 빨리 흔들면 손목이 흐려져 잠깐 놓친다. 이 시간(초) 안에 다시 보이면 이어서 잰다
 const LOST_AFTER = 0.6; // 이만큼(초) 안 보이면 "사라짐"
 // 떨림 줄이기 정도 (0~1, 클수록 새 값 비중 = 반응이 빠름). 너무 작으면 멈춘 뒤에도
 // 움직임이 한동안 남아 "얼음!" 때 억울하게 걸린다.
@@ -90,35 +96,40 @@ export class BodyTrack {
     }
     const pts = this.points;
     const smoothInfo = bodyInfo(pts) || info;
+    // 어깨 가운데를 기준으로, 몸통 길이 단위로 바꾼 위치 (멀리 서도 가까이 서도 같은 기준)
     const rel = {};
     for (const i of TRACKED) {
-      if (vis(pts, i)) rel[i] = { x: (pts[i].x - smoothInfo.anchor.x) / smoothInfo.size, y: (pts[i].y - smoothInfo.anchor.y) / smoothInfo.size };
+      if (pts[i] && (pts[i].visibility ?? 1) > MOTION_VISIBLE) {
+        rel[i] = { x: (pts[i].x - smoothInfo.anchor.x) / smoothInfo.size, y: (pts[i].y - smoothInfo.anchor.y) / smoothInfo.size, t: now };
+      }
     }
 
-    let arms = 0;
-    let legs = 0;
-    let body = 0;
-    if (this.prevRel && dt > 0) {
-      // 잘 보이는 점들의 속도 중 가운데 값(중앙값). 점 하나가 튀는 떨림은 무시되고,
-      // 팔 전체(팔꿈치·손목)가 같이 움직일 때만 크게 나온다.
-      const speed = (ids, need) => {
-        const v = [];
-        for (const i of ids) {
-          if (rel[i] && this.prevRel[i] && pts[i].visibility > MOTION_VISIBLE) {
-            v.push(Math.hypot(rel[i].x - this.prevRel[i].x, rel[i].y - this.prevRel[i].y));
-          }
-        }
-        if (v.length < need) return 0;
-        v.sort((a, b) => a - b);
-        const m = v.length >> 1;
-        const median = v.length % 2 ? v[m] : (v[m - 1] + v[m]) / 2;
-        return median / dt;
-      };
-      arms = speed(ARMS, 2);
-      legs = speed(LEGS, 2);
-      body = dist(smoothInfo.anchor, this.prevAnchor) / smoothInfo.size / dt;
+    const prev = this.prevRel || {};
+    // 점 하나의 속도 (몸통 길이/초). 잠깐 놓쳤던 점은 마지막으로 본 때와 비교한다.
+    const pointSpeed = (i) => {
+      const a = rel[i];
+      const b = prev[i];
+      if (!a || !b) return null;
+      const gap = now - b.t;
+      if (gap <= 0 || gap > KEEP_POINT + dt) return null;
+      return Math.hypot(a.x - b.x, a.y - b.y) / gap;
+    };
+    // 팔 하나(팔꿈치+손목) 또는 다리 하나(무릎+발목)의 속도 = 보이는 점들의 평균
+    const limbSpeed = (ids) => {
+      const v = ids.map(pointSpeed).filter((s) => s !== null);
+      return v.length ? v.reduce((s, x) => s + x, 0) / v.length : 0;
+    };
+    // 왼쪽·오른쪽 중 더 크게 움직인 쪽 (한쪽 팔만 흔들어도 된다)
+    const arms = Math.max(...LIMBS.arms.map(limbSpeed));
+    const legs = Math.max(...LIMBS.legs.map(limbSpeed));
+    const body = this.prevAnchor && dt > 0 ? dist(smoothInfo.anchor, this.prevAnchor) / smoothInfo.size / dt : 0;
+
+    // 이번에 못 본 점은 마지막 위치를 잠깐 기억해 둔다
+    const keep = { ...rel };
+    for (const [i, b] of Object.entries(prev)) {
+      if (!keep[i] && now - b.t <= KEEP_POINT) keep[i] = b;
     }
-    this.prevRel = rel;
+    this.prevRel = keep;
     this.prevAnchor = smoothInfo.anchor;
     this.parts = { arms, legs, body };
     // 팔 흔들기, 제자리 달리기(무릎·발), 몸 들썩임 중 가장 큰 것

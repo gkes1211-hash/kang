@@ -59,33 +59,135 @@
       </div>
     </section>
 
-    <!-- 게임 화면 -->
+    <!-- 게임 화면: 왼쪽 카메라, 오른쪽 들판 달리기 -->
     <section id="screen-game" class="screen" aria-live="polite">
-      <video id="cam" playsinline muted autoplay></video>
-      <canvas id="skeleton" aria-hidden="true"></canvas>
-      <div id="divider" aria-hidden="true"></div>
-
-      <div id="tagger" class="back" aria-hidden="true">
-        <svg viewBox="0 0 120 120" width="120" height="120">
-          <circle cx="60" cy="64" r="44" class="skin"/>
-          <path class="hair-back" d="M16 64a44 44 0 0 1 88 0c0 26-20 44-44 44S16 90 16 64z"/>
-          <path class="hair-front" d="M16 60a44 44 0 0 1 88 0c-10-14-30-20-44-20S26 46 16 60z"/>
-          <g class="face">
-            <circle cx="44" cy="66" r="7" class="eye"/>
-            <circle cx="76" cy="66" r="7" class="eye"/>
-            <circle cx="46" cy="64" r="2.5" class="shine"/>
-            <circle cx="78" cy="64" r="2.5" class="shine"/>
-            <circle cx="34" cy="82" r="6" class="cheek"/>
-            <circle cx="86" cy="82" r="6" class="cheek"/>
-            <path d="M52 88q8 6 16 0" class="mouth"/>
-          </g>
-          <circle cx="60" cy="18" r="10" class="bun"/>
-        </svg>
+      <div id="cam-panel">
+        <div class="cam-frame">
+          <video id="cam" playsinline muted autoplay></video>
+          <canvas id="skeleton" aria-hidden="true"></canvas>
+          <div id="divider" aria-hidden="true"></div>
+          <div class="cam-tag">📷 내 모습</div>
+        </div>
+        <div id="meters"></div>
       </div>
-      <div id="bubble"></div>
 
-      <div id="lanes"></div>
-      <div id="center-msg"></div>
+      <div id="race-panel">
+        <!-- 귀여운 들판 배경 -->
+        <svg class="scene" viewBox="0 0 1000 700" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+          <defs>
+            <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stop-color="#9fdcff"/>
+              <stop offset="1" stop-color="#e9f8ff"/>
+            </linearGradient>
+            <linearGradient id="ground" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stop-color="#9be38b"/>
+              <stop offset="1" stop-color="#6cc96a"/>
+            </linearGradient>
+            <symbol id="flower" viewBox="-12 -12 24 24">
+              <circle cx="0" cy="-6" r="5"/><circle cx="6" cy="-1" r="5"/><circle cx="4" cy="6" r="5"/>
+              <circle cx="-4" cy="6" r="5"/><circle cx="-6" cy="-1" r="5"/>
+              <circle cx="0" cy="0" r="3.5" fill="#ffd84d"/>
+            </symbol>
+            <symbol id="cloud" viewBox="0 0 200 90">
+              <ellipse cx="60" cy="58" rx="50" ry="30"/><ellipse cx="105" cy="40" rx="45" ry="38"/>
+              <ellipse cx="145" cy="60" rx="45" ry="28"/><rect x="40" y="55" width="130" height="33" rx="16"/>
+            </symbol>
+          </defs>
+          <rect width="1000" height="700" fill="url(#sky)"/>
+          <!-- 해 -->
+          <g class="sun">
+            <g class="sun-rays" stroke="#ffcf3a" stroke-width="10" stroke-linecap="round">
+              <line x1="120" y1="20" x2="120" y2="45"/><line x1="120" y1="175" x2="120" y2="200"/>
+              <line x1="30" y1="110" x2="55" y2="110"/><line x1="185" y1="110" x2="210" y2="110"/>
+              <line x1="56" y1="46" x2="74" y2="64"/><line x1="166" y1="156" x2="184" y2="174"/>
+              <line x1="56" y1="174" x2="74" y2="156"/><line x1="166" y1="64" x2="184" y2="46"/>
+            </g>
+            <circle cx="120" cy="110" r="52" fill="#ffd84d"/>
+            <circle cx="104" cy="104" r="5" fill="#7a4b12"/><circle cx="136" cy="104" r="5" fill="#7a4b12"/>
+            <path d="M104 124q16 14 32 0" fill="none" stroke="#7a4b12" stroke-width="5" stroke-linecap="round"/>
+            <circle cx="92" cy="122" r="7" fill="#ffab6b" opacity="0.7"/><circle cx="148" cy="122" r="7" fill="#ffab6b" opacity="0.7"/>
+          </g>
+          <!-- 구름 -->
+          <use href="#cloud" class="cloud c1" x="300" y="40" width="200" height="90" fill="#fff"/>
+          <use href="#cloud" class="cloud c2" x="620" y="90" width="150" height="68" fill="#fff"/>
+          <use href="#cloud" class="cloud c3" x="820" y="25" width="170" height="76" fill="#fff"/>
+          <!-- 언덕 -->
+          <path d="M0 330 Q150 230 320 300 T640 290 T1000 280 V700 H0 Z" fill="#b8eaa6"/>
+          <path d="M0 360 Q220 290 460 350 T1000 330 V700 H0 Z" fill="url(#ground)"/>
+          <!-- 먼 나무들 -->
+          <g fill="#5fb85a">
+            <circle cx="250" cy="300" r="26"/><circle cx="275" cy="290" r="22"/>
+            <circle cx="560" cy="312" r="22"/><circle cx="582" cy="304" r="18"/>
+          </g>
+          <g fill="#8a5a3b"><rect x="258" y="310" width="8" height="26"/><rect x="566" y="320" width="7" height="20"/></g>
+          <!-- 울타리 -->
+          <g fill="#fff6e6" stroke="#d9b98f" stroke-width="2">
+            <rect x="20" y="345" width="10" height="34" rx="3"/><rect x="60" y="345" width="10" height="34" rx="3"/>
+            <rect x="100" y="345" width="10" height="34" rx="3"/><rect x="140" y="345" width="10" height="34" rx="3"/>
+            <rect x="10" y="352" width="150" height="7" rx="3"/><rect x="10" y="366" width="150" height="7" rx="3"/>
+          </g>
+          <!-- 꽃밭 -->
+          <g class="flowers">
+            <use href="#flower" x="40" y="640" width="30" height="30" fill="#ff8fb1"/>
+            <use href="#flower" x="120" y="665" width="24" height="24" fill="#fff"/>
+            <use href="#flower" x="210" y="650" width="28" height="28" fill="#c79bff"/>
+            <use href="#flower" x="330" y="672" width="22" height="22" fill="#ff8fb1"/>
+            <use href="#flower" x="430" y="648" width="30" height="30" fill="#fff"/>
+            <use href="#flower" x="540" y="668" width="24" height="24" fill="#ffb347"/>
+            <use href="#flower" x="640" y="645" width="28" height="28" fill="#ff8fb1"/>
+            <use href="#flower" x="730" y="670" width="22" height="22" fill="#c79bff"/>
+            <use href="#flower" x="200" y="380" width="20" height="20" fill="#ff8fb1"/>
+            <use href="#flower" x="400" y="395" width="18" height="18" fill="#fff"/>
+            <use href="#flower" x="690" y="385" width="20" height="20" fill="#ffb347"/>
+          </g>
+          <!-- 나비 -->
+          <g class="butterfly b1">
+            <ellipse cx="0" cy="-6" rx="9" ry="7" fill="#ffb3d1"/><ellipse cx="0" cy="6" rx="9" ry="7" fill="#ffb3d1"/>
+            <rect x="-2" y="-8" width="4" height="16" rx="2" fill="#6b4a3a"/>
+          </g>
+          <g class="butterfly b2">
+            <ellipse cx="0" cy="-6" rx="8" ry="6" fill="#ffe27a"/><ellipse cx="0" cy="6" rx="8" ry="6" fill="#ffe27a"/>
+            <rect x="-2" y="-7" width="4" height="14" rx="2" fill="#6b4a3a"/>
+          </g>
+        </svg>
+
+        <!-- 골인 지점: 무궁화 나무와 술래 -->
+        <div id="goal" aria-hidden="true">
+          <svg class="tree" viewBox="0 0 160 200">
+            <rect x="70" y="110" width="20" height="85" rx="8" fill="#8a5a3b"/>
+            <circle cx="80" cy="75" r="58" fill="#4fae55"/>
+            <circle cx="40" cy="95" r="34" fill="#4fae55"/><circle cx="122" cy="95" r="34" fill="#4fae55"/>
+            <g fill="#ff5c8a">
+              <use href="#flower" x="45" y="40" width="26" height="26"/><use href="#flower" x="92" y="30" width="24" height="24"/>
+              <use href="#flower" x="105" y="80" width="26" height="26"/><use href="#flower" x="22" y="85" width="24" height="24"/>
+              <use href="#flower" x="65" y="88" width="22" height="22"/>
+            </g>
+          </svg>
+          <div id="tagger" class="back">
+            <svg viewBox="0 0 120 120" width="120" height="120">
+              <circle cx="60" cy="64" r="44" class="skin"/>
+              <path class="hair-back" d="M16 64a44 44 0 0 1 88 0c0 26-20 44-44 44S16 90 16 64z"/>
+              <path class="hair-front" d="M16 60a44 44 0 0 1 88 0c-10-14-30-20-44-20S26 46 16 60z"/>
+              <g class="face">
+                <circle cx="44" cy="66" r="7" class="eye"/>
+                <circle cx="76" cy="66" r="7" class="eye"/>
+                <circle cx="46" cy="64" r="2.5" class="shine"/>
+                <circle cx="78" cy="64" r="2.5" class="shine"/>
+                <circle cx="34" cy="82" r="6" class="cheek"/>
+                <circle cx="86" cy="82" r="6" class="cheek"/>
+                <path d="M52 88q8 6 16 0" class="mouth"/>
+              </g>
+              <circle cx="60" cy="18" r="10" class="bun"/>
+            </svg>
+          </div>
+          <div class="goal-flag">🏁 골인</div>
+        </div>
+
+        <div id="bubble"></div>
+        <div id="lanes"></div>
+        <div id="center-msg"></div>
+      </div>
+
       <button type="button" id="quit">그만하기</button>
 
       <div id="result" hidden>
