@@ -180,10 +180,6 @@ const body = {
 const lerp = (a, b, t) => a + (b - a) * t;
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 
-function defaultFrame() {
-  return { anchor: { x: W / 2, y: H * 0.36 }, S: H * 0.2 };
-}
-
 function updateBody(pts, now, dt) {
   const fr = pts && bodyFrame(pts);
   if (!fr) {
@@ -473,15 +469,36 @@ function holeWidth(S) {
   return S * (0.28 + game.diff.tol / 180);
 }
 
+// 구멍은 언제나 화면 가운데 같은 자리·같은 크기에 뚫는다.
+// (예전에는 카메라에 비친 내 몸 위치를 따라가서, 카메라가 낮으면 구멍도 아래로 내려가 몸을 숙여야 했다)
+// 위쪽 점수 칸과 아래 게이지 칸을 뺀 자리에, 손을 번쩍 든 머리 위~발끝(몸통의 3.9배)이 들어가게 맞춘다.
 function holeFrame() {
-  if (body.anchor) return { anchor: body.anchor, S: body.S };
-  return defaultFrame();
+  const top = 64 * DPR;
+  const bottom = H - 100 * DPR;
+  const room = Math.max(bottom - top, H * 0.5);
+  const S = Math.min(room / 3.9, (W * 0.92) / 3.6);
+  return { anchor: { x: W / 2, y: top + (room - 3.9 * S) / 2 + 1.25 * S }, S };
+}
+
+// 카메라 화면과 내 뼈대를 옮기고 키워서, 내 몸이 언제나 가운데 구멍에 딱 겹치게 한다.
+// 카메라에서 멀리 서든 가까이 서든, 화면 어디에 비치든 자세만 맞추면 된다.
+function applyView(c) {
+  if (!body.anchor || !body.S) return 1;
+  const hole = holeFrame();
+  const k = clamp(hole.S / body.S, 0.4, 3);
+  c.translate(hole.anchor.x, hole.anchor.y);
+  c.scale(k, k);
+  c.translate(-body.anchor.x, -body.anchor.y);
+  return k;
 }
 
 function drawBackground() {
   const r = !DEMO && videoRect();
   if (r && video.readyState >= 2) {
+    ctx.fillStyle = '#1b1830'; // 카메라 화면을 줄였을 때 남는 가장자리
+    ctx.fillRect(0, 0, W, H);
     ctx.save();
+    applyView(ctx);
     ctx.translate(r.x + r.w, r.y);
     ctx.scale(-1, 1);
     ctx.drawImage(video, 0, 0, r.w, r.h);
@@ -602,7 +619,9 @@ function drawPlayer() {
   const [L, R] = pts[11].x <= pts[12].x ? [[11, 13, 15, 23, 25, 27], [12, 14, 16, 24, 26, 28]] : [[12, 14, 16, 24, 26, 28], [11, 13, 15, 23, 25, 27]];
   const vis = (i) => pts[i] && pts[i].visibility > 0.5;
   const S = body.S || 100;
-  const lw = Math.max(5 * DPR, S * 0.07);
+  ctx.save();
+  const k = applyView(ctx);
+  const lw = Math.max((5 * DPR) / k, S * 0.07);
   const live = game.live;
   const tol = game.diff?.tol ?? 30;
   const colorOf = (key) => {
@@ -640,6 +659,7 @@ function drawPlayer() {
     ctx.stroke();
   }
   ctx.restore();
+  ctx.restore(); // applyView
 }
 
 function draw(now) {
