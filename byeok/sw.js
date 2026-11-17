@@ -1,6 +1,6 @@
 // 앱 파일을 기기에 담아 두어 인터넷이 없어도 열리게 한다.
 // 몸 인식 엔진은 옆 폴더 무궁화 게임의 것을 같이 쓴다.
-const CACHE = 'byeok-v5';
+const CACHE = 'byeok-v6';
 const FILES = [
   './',
   './index.html',
