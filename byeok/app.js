@@ -651,15 +651,16 @@ function holeWidth(S) {
 }
 
 // 구멍은 언제나 화면 가운데 같은 자리·같은 크기에 뚫는다 (둘이서는 왼쪽 반·오른쪽 반 가운데).
-// 위쪽 점수 칸과 아래 이름·게이지 칸을 뺀 자리에, 손을 번쩍 든 머리 위~발끝(몸통의 3.9배)이 들어가게 맞춘다.
+// 서 있는 몸(머리 꼭대기~발끝, 몸통 길이의 3.5배)이 화면 세로의 3분의 2가 되게 맞추고, 세로 가운데에 둔다.
+// (전에는 위·아래 글자 칸 자리를 픽셀로 빼고 남은 곳에 맞춰서, 세로가 짧은 화면에서는 구멍이 많이 작아졌다)
+// 화면이 좁아 옆으로 쭉 뻗은 팔이 넘치면 그만큼만 줄인다.
+const BODY_SHARE = 2 / 3;
 function holeFrame(i) {
   const n = game.players;
-  const top = 64 * DPR;
-  const bottom = H - 135 * DPR;
-  const room = Math.max(bottom - top, H * 0.45);
-  const S = Math.min(room / 3.9, ((W / n) * 0.92) / 3.6);
+  const S = Math.min((H * BODY_SHARE) / 3.5, ((W / n) * 0.94) / 3.4);
   const x = n === 2 ? W * (0.25 + i * 0.5) : W / 2;
-  return { anchor: { x, y: top + (room - 3.9 * S) / 2 + 1.25 * S }, S };
+  // 서 있는 몸의 가운데(어깨에서 몸통 0.9배 아래)를 화면 세로 가운데에
+  return { anchor: { x, y: H / 2 - 0.9 * S }, S };
 }
 
 // 카메라 화면과 내 뼈대를 옮기고 키워서, 내 몸이 언제나 내 구멍에 딱 겹치게 한다.
@@ -668,7 +669,7 @@ function applyView(c, i) {
   const body = bodies[i];
   if (!body?.anchor || !body.S) return 1;
   const hole = holeFrame(i);
-  const k = clamp(hole.S / body.S, 0.4, 3);
+  const k = clamp(hole.S / body.S, 0.4, 4); // 멀리 서도 구멍만큼 키운다
   c.translate(hole.anchor.x, hole.anchor.y);
   c.scale(k, k);
   c.translate(-body.anchor.x, -body.anchor.y);
