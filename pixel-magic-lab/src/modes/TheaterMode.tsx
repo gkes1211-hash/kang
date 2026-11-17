@@ -12,7 +12,7 @@ import { Modal, useDialog } from '../components/Dialog';
 import { useRunner } from '../lib/useRunner';
 import { useHistory } from '../lib/useHistory';
 import { loadAnims, saveAnims, load, save, type Anim, type AnimFrame } from '../lib/storage';
-import { downloadGif, downloadSpriteSheet } from '../lib/exporter';
+import { CAN_DOWNLOAD, downloadGif, downloadSpriteSheet } from '../lib/exporter';
 import { appendGoTo } from '../lib/studio';
 import { TEMPLATES, templatePrograms } from '../data/templates';
 import { parseArt } from '../engine/dsl';
@@ -357,6 +357,8 @@ export function TheaterMode({ active, speed, onSpeed, guard }: { active: boolean
           <button className="btn butter" onClick={() => setNewOpen(true)}>
             <Icon name="plus" size={18} /> 새로·예시
           </button>
+          {CAN_DOWNLOAD && (
+            <>
           <button
             className="btn pink"
             disabled={!hasPixels}
@@ -374,6 +376,8 @@ export function TheaterMode({ active, speed, onSpeed, guard }: { active: boolean
           >
             <Icon name="image" size={18} /> 프레임 모음 PNG
           </button>
+            </>
+          )}
         </div>
       </aside>
 

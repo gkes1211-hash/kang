@@ -1,3 +1,6 @@
+/** 파일 내려받기가 가능한 환경인지 (claude.ai 웹페이지 버전에서는 보안상 막혀 있어 버튼을 숨긴다) */
+export const CAN_DOWNLOAD = import.meta.env.VITE_ARTIFACT !== '1';
+
 import type { Grid } from '../engine/types';
 import { PALETTE, colorHex } from '../engine/palette';
 import { encodeGif } from './gif';

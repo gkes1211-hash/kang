@@ -13,7 +13,7 @@ import { Modal, useDialog } from '../components/Dialog';
 import { useRunner } from '../lib/useRunner';
 import { useHistory } from '../lib/useHistory';
 import { loadWorks, saveWorks, load, save, type Work } from '../lib/storage';
-import { downloadPng } from '../lib/exporter';
+import { CAN_DOWNLOAD, downloadPng } from '../lib/exporter';
 import { appendGoTo } from '../lib/studio';
 import { sfx } from '../lib/sound';
 import { stepSound } from './MissionMode';
@@ -254,9 +254,11 @@ export function WorkshopMode({ active, speed, onSpeed, guard }: { active: boolea
           <button className="btn mint" onClick={() => setGallery(loadWorks())}>
             <Icon name="folder" size={20} /> 내 작품 보관함
           </button>
+          {CAN_DOWNLOAD && (
           <button className="btn pink" onClick={() => downloadPng(trace.final.grid, meta.width, meta.height, meta.name || '픽셀작품').then(() => dialog.toast('PNG 그림 파일을 내려받았어요'))} disabled={!trace.final.grid.some(Boolean)}>
-            <Icon name="download" size={20} /> PNG 그림 받기
-          </button>
+              <Icon name="download" size={20} /> PNG 그림 받기
+            </button>
+          )}
           <button className="btn butter" onClick={shrink} disabled={!trace.final.grid.some(Boolean) || !!trace.error}>
             <Icon name="wand" size={20} /> 주문 줄이기 마법
           </button>
@@ -300,9 +302,11 @@ export function WorkshopMode({ active, speed, onSpeed, guard }: { active: boolea
                     <button className="btn mini primary" onClick={() => openWork(w)}>
                       열기
                     </button>
+                    {CAN_DOWNLOAD && (
                     <button className="btn mini pink" onClick={() => downloadPng(runProgram(w.program, { width: w.width, height: w.height, startColor: START_COLOR }).final.grid, w.width, w.height, w.name)} aria-label={`${w.name} PNG 받기`}>
                       <Icon name="download" size={16} />
                     </button>
+                    )}
                     <button className="btn mini ghost" onClick={() => deleteWork(w)} aria-label={`${w.name} 지우기`}>
                       <Icon name="trash" size={16} />
                     </button>
