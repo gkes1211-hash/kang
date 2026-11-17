@@ -11,15 +11,22 @@ const DEMO = new URLSearchParams(location.search).has('demo'); // 카메라 없�
 const store = makeStore('jegi');
 
 // 난이도
-// gravity: 떨어지는 빠르기(화면 높이/초²), reach: 발·무릎이 제기에 닿는 거리(몸통 길이 배),
-// needUp: 발을 위로 올리는 중이어야 차지나, drift: 옆으로 튀는 정도(화면 너비 배)
+// gravity: 떨어지는 빠르기(화면 높이/초²) — 클수록 빨리 올라갔다 빨리 내려온다
+// reach: 발·무릎이 제기에 닿는 거리(몸통 길이 배), up: 이만큼 빠르게 위로 차올려야 찬다(몸통 길이/초)
+// top: 차면 올라가는 높이(화면 위에서부터 비율, 이 사이에서 랜덤)
+// aim: 차는 모양에 따라 날아가는 방향
+//   side: 제기의 어느 쪽을 찼나(오른쪽을 차면 왼쪽으로), foot: 발을 옆으로 쓸어 찬 방향, spread: 랜덤으로 흩어지는 정도
+//   (모두 내 칸 너비/초 단위. 무릎은 거의 위로, 발은 비스듬히, 손은 그 사이)
 const LEVELS = {
-  easy: { label: '쉬움', emoji: '🐣', gravity: 0.9, reach: 0.55, needUp: false, drift: 0.04,
-    hint: '제기가 천천히 떨어져요. 발이나 무릎에 닿기만 해도 올라가요.' },
-  normal: { label: '보통', emoji: '🐰', gravity: 1.2, reach: 0.45, needUp: true, drift: 0.07,
-    hint: '발이나 무릎을 위로 차올려야 올라가요.' },
-  hard: { label: '어려움', emoji: '🦅', gravity: 1.6, reach: 0.36, needUp: true, drift: 0.12,
-    hint: '빨리 떨어지고 옆으로 많이 튀어요. 진짜 제기처럼!' },
+  easy: { label: '쉬움', emoji: '🐣', gravity: 1.6, reach: 0.36, up: 0.6, top: [0.1, 0.22],
+    aim: { side: 0.25, foot: 0.12, spread: 0.12 },
+    hint: '발이나 무릎을 위로 차올려야 올라가요. 옆으로 조금씩 튀어요.' },
+  normal: { label: '보통', emoji: '🐰', gravity: 2.3, reach: 0.34, up: 0.8, top: [0.08, 0.3],
+    aim: { side: 0.45, foot: 0.3, spread: 0.25 },
+    hint: '빨리 올라갔다 빨리 떨어져요! 차는 모양에 따라 이리저리 날아가요.' },
+  hard: { label: '어려움', emoji: '🦅', gravity: 3.0, reach: 0.3, up: 1.0, top: [0.05, 0.4],
+    aim: { side: 0.6, foot: 0.4, spread: 0.4 },
+    hint: '아주 빨라요! 높이도 방향도 매번 달라요. 진짜 제기 고수만!' },
 };
 const DUO_TIME = 60;
 const LIVES = 3;
@@ -31,7 +38,8 @@ const settings = {
   voice: store.get('voice', 'on') === 'off' ? 'off' : 'on',
   mode: store.get('mode', 'feet') === 'close' ? 'close' : 'feet', // feet: 발·무릎 / close: 가까이 (손도 OK)
 };
-const bestKey = () => `best.${settings.difficulty}`;
+// 난이도를 더 어렵게 바꿔서(2번째 판) 예전 기록과 따로 센다
+const bestKey = () => `best2.${settings.difficulty}`;
 const voiceOn = () => settings.voice === 'on';
 
 // 차는 데 쓰는 몸 점: 발목·발끝·뒤꿈치(발), 무릎
@@ -172,17 +180,23 @@ function tryKick(kid, now) {
     const d = Math.hypot(p.x - jg.x, p.y - jg.y);
     if (d > reach) continue;
     const v = kid.vel[j] || { x: 0, y: 0 };
-    if (lv.needUp && v.y > -0.6 * S) continue; // 보통·어려움: 위로 차올려야 한다
+    if (v.y > -lv.up * S) continue; // 위로 차올려야 한다
     if (!hit || d < hit.d) hit = { j, d, p, v };
   }
   if (!hit) return;
-  // 화면 위쪽(조금씩 다른 높이)까지 올라가게 차 준다
-  const top = H * (0.1 + Math.random() * 0.12);
-  const rise = Math.max(H * 0.25, jg.y - top);
+  // 높이: 난이도마다 정해진 범위에서 랜덤
+  const top = H * (lv.top[0] + Math.random() * (lv.top[1] - lv.top[0]));
+  const rise = Math.max(H * 0.22, jg.y - top);
   jg.vy = -Math.sqrt(2 * lv.gravity * H * rise);
-  const side = (jg.x - hit.p.x) / reach;
-  jg.vx = Math.max(-W * 0.3, Math.min(W * 0.3, side * W * 0.12 + hit.v.x * 0.15 + (Math.random() - 0.5) * 2 * lv.drift * W));
-  jg.spin = (Math.random() - 0.5) * 8;
+  // 방향: 차는 모양에 따라 + 랜덤
+  const a = area(kid.i);
+  const aw = a.r - a.l;
+  const side = Math.max(-1, Math.min(1, (jg.x - hit.p.x) / reach)); // 제기의 어느 쪽을 찼나
+  const sweep = Math.max(-1, Math.min(1, hit.v.x / (2.5 * S))); // 발을 옆으로 쓸어 찬 방향·세기
+  const along = KNEES.includes(hit.j) ? 0.5 : HANDS.includes(hit.j) ? 0.8 : 1; // 무릎은 거의 위로
+  const dir = (side * lv.aim.side + sweep * lv.aim.foot) * along + (Math.random() * 2 - 1) * lv.aim.spread;
+  jg.vx = Math.max(-0.9, Math.min(0.9, dir)) * aw;
+  jg.spin = dir * 10 + (Math.random() - 0.5) * 4;
   kid.lastKick = now;
   kid.streak += 1;
   kid.total += 1;
@@ -543,7 +557,7 @@ function hud() {
     else if (!feet && settings.mode === 'feet') tip = '발이 보이게 뒤로 가요 👣 멀리 서도 크게 보여요';
     else if (game.phase === 'play' && k.jegi && k.jegi.vy > 0 && k.jegi.y > H * 0.45) {
       const what = settings.mode === 'close' ? '손이나 무릎' : '발';
-      tip = game.level.needUp ? `${what}을 위로 쳐 올려요! ⬆️` : `${what}에 대요! 🦶`;
+      tip = `${what}을 위로 차올려요! ⬆️`;
     }
     const hearts = n === 1 ? ` · ${'❤️'.repeat(Math.max(0, LIVES - k.drops))}${'🤍'.repeat(Math.min(LIVES, k.drops))}` : '';
     return {
