@@ -25,24 +25,26 @@ const BALLOON_COLORS = ['#ff4f6d', '#ff9f1c', '#ffd93d', '#3ddc84', '#38b6ff', '
 const PLAYER_COLORS = ['#ff8a3d', '#3d8bff'];
 // 손바닥 가운데를 잡는 점: 손목과 네 손가락 뿌리
 const PALM_POINTS = [0, 5, 9, 13, 17];
-// 난이도. hand = 손 동그라미 크기(화면 짧은 쪽 대비)
+// 빨리 휘두를 때 지나간 길까지 치는 점: 손가락 끝 다섯 개와 손바닥 가운데
+const SWEEP_POINTS = [4, 8, 12, 16, 20];
+// 난이도. pad = 손(손가락·손바닥) 둘레에 더 쳐 주는 여유 (화면 짧은 쪽 대비)
 const LEVELS = {
   easy: {
-    name: '쉬움', hint: '천천히 올라오고 폭탄이 적어요',
-    hand: 0.065, speed: 0.75, spawn: 1.25, bomb: [0.08, 0.08], sizes: [3, 3, 2, 1, 1], gold: 0.06,
+    name: '쉬움', hint: '천천히 올라오고 폭탄이 적어요. 손 둘레를 넉넉히 쳐 줘요',
+    pad: 0.03, speed: 0.75, spawn: 1.25, bomb: [0.08, 0.08], sizes: [3, 3, 2, 1, 1], gold: 0.06,
   },
   normal: {
     name: '보통', hint: '보통 속도, 폭탄도 보통이에요',
-    hand: 0.05, speed: 1, spawn: 1, bomb: [0.12, 0.13], sizes: [2, 2, 2, 2, 2], gold: 0.05,
+    pad: 0.018, speed: 1, spawn: 1, bomb: [0.12, 0.13], sizes: [2, 2, 2, 2, 2], gold: 0.05,
   },
   hard: {
-    name: '어려움', hint: '빠르고, 폭탄과 작은 풍선이 많아요. 손 동그라미도 작아요',
-    hand: 0.038, speed: 1.35, spawn: 0.8, bomb: [0.18, 0.17], sizes: [1, 1, 2, 3, 3], gold: 0.04,
+    name: '어려움', hint: '빠르고, 폭탄과 작은 풍선이 많아요. 손에 정확히 닿아야 해요',
+    pad: 0.008, speed: 1.35, spawn: 0.8, bomb: [0.18, 0.17], sizes: [1, 1, 2, 3, 3], gold: 0.04,
   },
 };
 const MODE_HINTS = {
-  1: '화면 가운데 밝은 구역에서만 풍선이 나오고 터져요',
-  2: '화면 왼쪽은 1P, 오른쪽은 2P! 똑같은 풍선이 나와요. 점수가 높은 쪽이 이겨요',
+  1: '화면 가운데 구역에서만 풍선이 나오고 터져요',
+  2: '화면 왼쪽은 1P, 오른쪽은 2P! 난이도는 같고 풍선은 따로따로 나와요. 점수가 높은 쪽이 이겨요',
 };
 const HAND_BONES = [
   [0, 1], [1, 2], [2, 3], [3, 4], [0, 5], [5, 6], [6, 7], [7, 8], [5, 9], [9, 10], [10, 11], [11, 12],
@@ -70,10 +72,10 @@ let objects = []; // 풍선·폭탄. o.p = 어느 구역(사람) 것인지
 let particles = [];
 let texts = [];
 let players = []; // 구역마다 한 사람
-const game = { state: 'home', timeLeft: 0, elapsed: 0, spawnIn: 0 }; // state: home | countdown | play | over
+const game = { state: 'home', timeLeft: 0, elapsed: 0 }; // state: home | countdown | play | over
 
 function newPlayer() {
-  return { score: 0, combo: 0, lastPopAt: -99, bestCombo: 0, popped: 0, bombs: 0, lastHand: performance.now(), flash: 0 };
+  return { score: 0, combo: 0, lastPopAt: -99, bestCombo: 0, popped: 0, bombs: 0, lastHand: performance.now(), flash: 0, spawnIn: 0.3 + Math.random() * 0.4 };
 }
 
 // ---------- 화면 크기 · 구역 ----------
@@ -348,10 +350,14 @@ function detectHands(now) {
       if (d < bestD) { bestD = d; best = h; }
     }
     // 한 번에 너무 멀리 뛴 건(인식 튐) 이어 보지 않는다
-    const prev = best && bestD < unit * 0.35 && now - best.at < 150 ? best.palm : null;
+    const ok = best && bestD < unit * 0.35 && now - best.at < 150;
     const zone = zoneAt(palm.x);
     if (zone >= 0 && players[zone]) players[zone].lastHand = now;
-    return { pts, palm, prev, at: now, zone };
+    // 손바닥 크기: 손바닥 가운데에서 손가락 뿌리까지 거리의 평균 정도
+    let palmR = 0;
+    for (const i of PALM_POINTS) palmR += Math.hypot(pts[i].x - palm.x, pts[i].y - palm.y) / PALM_POINTS.length;
+    palmR *= 0.75;
+    return { pts, palm, palmR, prev: ok ? best.palm : null, prevPts: ok ? best.pts : null, at: now, zone };
   });
 }
 
@@ -362,36 +368,35 @@ function pickWeighted(weights) {
   return weights.length - 1;
 }
 
-// 한 번 정한 풍선(폭탄)을 모든 구역에 같은 자리로 내보낸다 (둘이서 할 때 공평하게)
-function spawn() {
+// 구역(사람)마다 따로 풍선·폭탄을 내보낸다. 난이도는 같고 나오는 건 제각각
+function spawn(p) {
+  const z = zones[p];
   const t = game.elapsed / roundTime; // 0 → 1 로 갈수록 어려워진다
   const L = level();
   const roll = Math.random();
-  const rel = Math.random(); // 구역 안 가로 위치 (0~1)
-  let make;
   if (roll < L.bomb[0] + L.bomb[1] * t) {
     // 폭탄은 위에서 떨어진다. 클수록 많이 깎인다
     const size = BOMB_SIZES[(Math.random() * BOMB_SIZES.length) | 0];
-    const vy = unit * (0.22 + 0.18 * t + Math.random() * 0.1) * L.speed;
-    const vx = (Math.random() - 0.5) * unit * 0.08, spin = (Math.random() - 0.5) * 3;
-    make = (z) => {
-      const r = unit * size.r;
-      return { type: 'bomb', r, points: size.points, x: z.x0 + r + rel * (z.x1 - z.x0 - 2 * r), y: -r * 2, vy, vx, spin, angle: 0, phase: rel * 6 };
-    };
-  } else {
-    const isGold = roll > 1 - L.gold;
-    const tier = isGold ? -1 : pickWeighted(L.sizes); // 0 = 가장 큰 풍선
-    const size = isGold ? GOLD : BALLOON_SIZES[tier];
-    // 작은 풍선일수록 빨리 올라간다
-    const vy = -unit * (0.16 + 0.16 * t + Math.random() * 0.08) * (isGold ? 1.5 : 1 + tier * 0.1) * L.speed;
-    const color = isGold ? '#ffd23f' : BALLOON_COLORS[(Math.random() * BALLOON_COLORS.length) | 0];
-    const phase = Math.random() * 6, sway = unit * (0.02 + Math.random() * 0.03);
-    make = (z) => {
-      const r = unit * size.r;
-      return { type: isGold ? 'gold' : 'balloon', points: size.points, tier, r, x: z.x0 + r + rel * (z.x1 - z.x0 - 2 * r), y: H + r * 1.5, vy, color, phase, sway };
-    };
+    const r = unit * size.r;
+    objects.push({
+      type: 'bomb', p, r, points: size.points, x: z.x0 + r + Math.random() * (z.x1 - z.x0 - 2 * r), y: -r * 2,
+      vy: unit * (0.22 + 0.18 * t + Math.random() * 0.1) * L.speed, vx: (Math.random() - 0.5) * unit * 0.08,
+      spin: (Math.random() - 0.5) * 3, angle: 0, phase: Math.random() * 6,
+    });
+    return;
   }
-  zones.forEach((z, p) => objects.push({ ...make(z), p }));
+  const isGold = roll > 1 - L.gold;
+  const tier = isGold ? -1 : pickWeighted(L.sizes); // 0 = 가장 큰 풍선
+  const size = isGold ? GOLD : BALLOON_SIZES[tier];
+  const r = unit * size.r;
+  objects.push({
+    type: isGold ? 'gold' : 'balloon', p, points: size.points, tier,
+    r, x: z.x0 + r + Math.random() * (z.x1 - z.x0 - 2 * r), y: H + r * 1.5,
+    // 작은 풍선일수록 빨리 올라간다
+    vy: -unit * (0.16 + 0.16 * t + Math.random() * 0.08) * (isGold ? 1.5 : 1 + tier * 0.1) * L.speed,
+    color: isGold ? '#ffd23f' : BALLOON_COLORS[(Math.random() * BALLOON_COLORS.length) | 0],
+    phase: Math.random() * 6, sway: unit * (0.02 + Math.random() * 0.03),
+  });
 }
 
 function segDist(px, py, ax, ay, bx, by) {
@@ -402,17 +407,29 @@ function segDist(px, py, ax, ay, bx, by) {
   return Math.hypot(px - (ax + dx * k), py - (ay + dy * k));
 }
 
-// 자기 구역 안에 있는 손만 자기 풍선을 터트릴 수 있다
+// 손 전체(손가락 뼈대 + 손바닥)가 닿으면 터진다. 자기 구역 안에 있는 손만 자기 풍선을 터트린다
 function touched(o) {
-  const reach = o.r + handRadius() * 0.8; // 동그라미가 풍선에 제법 겹쳐야 터진다
+  const pad = handPad();
   for (const h of hands) {
     if (h.zone !== o.p) continue;
-    const q = h.prev || h.palm;
-    if (segDist(o.x, o.y, q.x, q.y, h.palm.x, h.palm.y) < reach) return true;
+    const reach = o.r + pad;
+    // 손가락 마디마디 (뼈대 선)
+    for (const [a, b] of HAND_BONES) {
+      if (segDist(o.x, o.y, h.pts[a].x, h.pts[a].y, h.pts[b].x, h.pts[b].y) < reach) return true;
+    }
+    // 손바닥 면
+    if (Math.hypot(o.x - h.palm.x, o.y - h.palm.y) < o.r + h.palmR + pad) return true;
+    // 빨리 휘둘렀을 때 손가락 끝·손바닥이 지나간 길
+    if (h.prevPts) {
+      for (const i of SWEEP_POINTS) {
+        if (segDist(o.x, o.y, h.prevPts[i].x, h.prevPts[i].y, h.pts[i].x, h.pts[i].y) < reach) return true;
+      }
+    }
+    if (h.prev && segDist(o.x, o.y, h.prev.x, h.prev.y, h.palm.x, h.palm.y) < o.r + h.palmR + pad) return true;
   }
   return false;
 }
-const handRadius = () => unit * level().hand;
+const handPad = () => unit * level().pad;
 
 // ---------- 점수판 ----------
 const hudPlayer = (p) => document.querySelector(`.hud-player[data-p="${p}"]`);
@@ -487,37 +504,31 @@ function explode(o) {
 // 움직이지 않는 부분(하늘·무지개·언덕·꽃)은 화면 크기가 바뀔 때만 한 번 그려 둔다
 let sceneCache = null;
 function buildScene() {
+  // 카메라 위에 겹쳐 그리는 장식: 옅은 무지개, 아래쪽 풀밭과 꽃 (가운데는 비워서 손이 잘 보이게)
   const c = document.createElement('canvas');
   c.width = Math.round(W * DPR); c.height = Math.round(H * DPR);
   const g = c.getContext('2d');
   g.scale(DPR, DPR);
-  // 하늘
-  const sky = g.createLinearGradient(0, 0, 0, H);
-  sky.addColorStop(0, '#9fe0ff'); sky.addColorStop(0.6, '#d9f3ff'); sky.addColorStop(1, '#fff1f8');
-  g.fillStyle = sky; g.fillRect(0, 0, W, H);
-  // 무지개
-  const rc = { x: W * 0.62, y: H * 0.86 }, rr = Math.max(W, H) * 0.42, band = unit * 0.028;
-  g.globalAlpha = 0.45;
+  const rc = { x: W * 0.5, y: H * 1.05 }, rr = Math.max(W, H) * 0.62, band = unit * 0.022;
+  g.globalAlpha = 0.28;
   ['#ff8fa3', '#ffb86b', '#ffe36b', '#8fe39a', '#7cc8ff', '#b59bff'].forEach((col, i) => {
     g.strokeStyle = col; g.lineWidth = band;
     g.beginPath(); g.arc(rc.x, rc.y, rr - i * band, Math.PI, 0); g.stroke();
   });
   g.globalAlpha = 1;
-  // 언덕 두 겹
   const hill = (y0, amp, color, phase) => {
     g.fillStyle = color;
     g.beginPath(); g.moveTo(0, H);
-    for (let x = 0; x <= W + 20; x += 20) g.lineTo(x, y0 + Math.sin(x / (W * 0.18) + phase) * amp);
+    for (let x = 0; x <= W + 20; x += 20) g.lineTo(x, y0 + Math.sin(x / (W * 0.12) + phase) * amp);
     g.lineTo(W, H); g.closePath(); g.fill();
   };
-  hill(H * 0.80, unit * 0.04, '#b8edb0', 0.5);
-  hill(H * 0.88, unit * 0.03, '#8fdc8a', 2.2);
-  // 꽃 (자리는 늘 같게)
+  hill(H * 0.93, unit * 0.015, 'rgba(184, 237, 176, 0.9)', 0.5);
+  hill(H * 0.965, unit * 0.012, '#8fdc8a', 2.2);
   let seed = 7;
   const rand = () => { seed = (seed * 9301 + 49297) % 233280; return seed / 233280; };
   const petals = ['#ff8fb1', '#ffffff', '#c79bff', '#ffd36b', '#7cc8ff'];
-  for (let i = 0; i < Math.round(W / 45); i++) {
-    const x = rand() * W, y = H * (0.86 + rand() * 0.12), s = unit * (0.01 + rand() * 0.008);
+  for (let i = 0; i < Math.round(W / 40); i++) {
+    const x = rand() * W, y = H * (0.94 + rand() * 0.05), s = unit * (0.009 + rand() * 0.006);
     g.fillStyle = petals[(rand() * petals.length) | 0];
     for (let k = 0; k < 5; k++) {
       const a = (k / 5) * Math.PI * 2;
@@ -543,7 +554,7 @@ function drawFace(x, y, s, blush = true) {
 }
 
 function drawSun(time) {
-  const x = W * 0.12 + unit * 0.05, y = H * 0.24, r = unit * 0.075;
+  const x = unit * 0.1, y = Math.max(H * 0.28, 170), r = unit * 0.05; // 점수판 아래
   ctx.save(); ctx.translate(x, y); ctx.rotate(time * 0.3);
   ctx.strokeStyle = '#ffd34d'; ctx.lineWidth = r * 0.16; ctx.lineCap = 'round';
   for (let i = 0; i < 10; i++) {
@@ -557,10 +568,9 @@ function drawSun(time) {
   drawFace(x, y - r * 0.05, r * 0.8);
 }
 
-const CLOUDS = [ // y(높이 비율), 크기, 속도, 처음 자리
-  { y: 0.16, s: 1.0, v: 0.012, x: 0.30 }, { y: 0.30, s: 0.7, v: 0.02, x: 0.75 },
-  { y: 0.10, s: 0.8, v: 0.016, x: 0.95 }, { y: 0.42, s: 0.6, v: 0.024, x: 0.05 },
-];
+const CLOUDS = [ // y(높이 비율), 크기, 속도, 처음 자리 — 화면 위쪽에만 작게
+  { y: 0.09, s: 0.6, v: 0.012, x: 0.30 }, { y: 0.16, s: 0.45, v: 0.02, x: 0.75 }, { y: 0.07, s: 0.5, v: 0.016, x: 0.95 },
+]; 
 function drawClouds(time) {
   for (const c of CLOUDS) {
     const s = unit * 0.09 * c.s, span = W + s * 6;
@@ -576,49 +586,23 @@ function drawClouds(time) {
   }
 }
 
-// 내 모습: 작은 거울 창 (풍선보다 뒤에 그려서 풍선을 가리지 않는다)
-function camWindow() {
-  const vw = video.videoWidth, vh = video.videoHeight;
-  if (!vw || !vh || video.readyState < 2) return null;
-  let w;
-  let x;
-  if (mode === 2) {
-    w = Math.min(W * 0.2, 240); x = (W - w) / 2;
-  } else {
-    const side = zones[0]?.x0 ?? 0;
-    if (side > 160) { w = Math.min(side - 32, 280); x = (side - w) / 2; } else { w = Math.min(W * 0.28, 220); x = 16; }
-  }
-  const h = w * vh / vw;
-  return { x, y: H - h - 16, w, h };
-}
-function drawCamWindow() {
-  const r = camWindow();
-  if (!r) return;
-  const v = videoView();
-  ctx.save();
-  ctx.fillStyle = '#fff';
-  ctx.beginPath(); ctx.roundRect(r.x - 5, r.y - 5, r.w + 10, r.h + 10, 18); ctx.fill();
-  ctx.beginPath(); ctx.roundRect(r.x, r.y, r.w, r.h, 14); ctx.clip();
-  ctx.translate(r.x + r.w, r.y); ctx.scale(-1, 1);
-  ctx.drawImage(video, 0, 0, r.w, r.h);
-  ctx.restore();
-  // 창 안에도 손 동그라미 자리를 작게 표시 (화면 좌표 → 창 좌표)
-  if (v) {
-    for (const h of hands) {
-      const nx = (h.palm.x - (W - v.dx - v.w)) / v.w, ny = (h.palm.y - v.dy) / v.h; // 0~1 (거울 기준)
-      ctx.fillStyle = 'rgba(255,255,255,0.9)';
-      ctx.beginPath(); ctx.arc(r.x + nx * r.w, r.y + ny * r.h, Math.max(4, r.w * 0.03), 0, Math.PI * 2); ctx.fill();
-    }
-  }
-  ctx.font = `800 ${Math.round(Math.max(12, r.w * 0.07))}px system-ui, sans-serif`;
-  ctx.textAlign = 'left'; ctx.textBaseline = 'top';
-  ctx.fillStyle = 'rgba(255,255,255,0.95)';
-  ctx.strokeStyle = 'rgba(40,30,70,0.6)'; ctx.lineWidth = 3;
-  ctx.strokeText('📷 내 모습', r.x + 8, r.y + 6);
-  ctx.fillText('📷 내 모습', r.x + 8, r.y + 6);
-}
-
 function drawBackground(time) {
+  const v = videoView();
+  if (v && video.readyState >= 2) {
+    // 처음처럼 카메라를 화면 가득 (거울)
+    ctx.save();
+    ctx.translate(W, 0);
+    ctx.scale(-1, 1);
+    ctx.drawImage(video, v.dx, v.dy, v.w, v.h);
+    ctx.restore();
+    ctx.fillStyle = 'rgba(255, 240, 250, 0.15)'; // 살짝 파스텔 빛
+    ctx.fillRect(0, 0, W, H);
+  } else {
+    const g = ctx.createLinearGradient(0, 0, 0, H);
+    g.addColorStop(0, '#9fe0ff'); g.addColorStop(1, '#fff1f8');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, W, H);
+  }
   if (!sceneCache || sceneCache.w !== W || sceneCache.h !== H || sceneCache.dpr !== DPR) buildScene();
   ctx.drawImage(sceneCache.canvas, 0, 0, W, H);
   drawSun(time);
@@ -630,7 +614,7 @@ function drawZones() {
   if (mode === 1) {
     const z = zones[0];
     if (z.x0 > 0) {
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.45)'; // 구역 밖은 뿌옇게
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.4)'; // 구역 밖은 뿌옇게
       ctx.fillRect(0, 0, z.x0, H);
       ctx.fillRect(z.x1, 0, W - z.x1, H);
       ctx.strokeStyle = 'rgba(255, 143, 177, 0.95)';
@@ -770,34 +754,33 @@ function drawBomb(o, time) {
 }
 
 function drawHands() {
-  const r = handRadius();
+  const pad = handPad();
   for (const h of hands) {
     const active = h.zone >= 0;
-    // 손 뼈대는 흐리게 (어디가 손인지만 보이게)
-    ctx.strokeStyle = 'rgba(255,255,255,0.35)';
-    ctx.lineWidth = 3;
-    ctx.lineCap = 'round';
-    ctx.beginPath();
-    for (const [a, b] of HAND_BONES) {
-      ctx.moveTo(h.pts[a].x, h.pts[a].y);
-      ctx.lineTo(h.pts[b].x, h.pts[b].y);
+    const color = !active ? 'rgba(170,170,170,0.9)' : mode === 2 ? PLAYER_COLORS[h.zone] : '#7b5cff';
+    const thick = Math.max(8, pad * 2);
+    ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    ctx.globalAlpha = active ? 1 : 0.5;
+    // 손바닥 면
+    ctx.fillStyle = 'rgba(255,255,255,0.35)';
+    ctx.beginPath(); ctx.arc(h.palm.x, h.palm.y, h.palmR + pad, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = color; ctx.lineWidth = 3; ctx.stroke();
+    // 뼈대: 색 테두리 + 흰 속
+    const bones = () => {
+      ctx.beginPath();
+      for (const [a, b] of HAND_BONES) { ctx.moveTo(h.pts[a].x, h.pts[a].y); ctx.lineTo(h.pts[b].x, h.pts[b].y); }
+      ctx.stroke();
+    };
+    ctx.strokeStyle = color; ctx.lineWidth = thick + 6; bones();
+    ctx.strokeStyle = 'rgba(255,255,255,0.9)'; ctx.lineWidth = thick; bones();
+    // 손가락 끝은 반짝
+    for (const i of SWEEP_POINTS) {
+      const q = h.pts[i], r = thick * 0.9;
+      const g = ctx.createRadialGradient(q.x, q.y, 0, q.x, q.y, r * 1.6);
+      g.addColorStop(0, '#fff'); g.addColorStop(0.5, 'rgba(255,255,255,0.8)'); g.addColorStop(1, 'rgba(255,255,255,0)');
+      ctx.fillStyle = g;
+      ctx.beginPath(); ctx.arc(q.x, q.y, r * 1.6, 0, Math.PI * 2); ctx.fill();
     }
-    ctx.stroke();
-    // 실제로 풍선을 터트리는 동그라미 (구역 밖이면 흐린 회색 = 못 터트림)
-    const { x, y } = h.palm;
-    ctx.globalAlpha = active ? 1 : 0.45;
-    const g = ctx.createRadialGradient(x, y, 0, x, y, r);
-    g.addColorStop(0, 'rgba(255,255,255,0.75)');
-    g.addColorStop(1, active ? 'rgba(120,190,255,0.35)' : 'rgba(150,150,150,0.35)');
-    ctx.fillStyle = g;
-    ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
-    ctx.strokeStyle = !active ? 'rgba(200,200,200,0.9)' : mode === 2 ? PLAYER_COLORS[h.zone] : 'rgba(255,255,255,0.95)';
-    ctx.lineWidth = mode === 2 ? 6 : 4;
-    ctx.stroke();
-    ctx.fillStyle = 'rgba(40,30,70,0.8)';
-    ctx.font = `${Math.round(r * 0.9)}px system-ui, sans-serif`;
-    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillText('✋', x, y + r * 0.05);
     ctx.globalAlpha = 1;
   }
 }
@@ -860,12 +843,14 @@ function update(dt, time) {
   music.tempo = game.timeLeft <= 10 ? 160 : 132; // 마지막 10초는 음악이 빨라진다
 
   // 새로 나오기: 시간이 갈수록 자주
-  game.spawnIn -= dt;
-  if (game.spawnIn <= 0) {
-    spawn();
-    const t = game.elapsed / roundTime;
-    game.spawnIn = (0.85 - 0.45 * t) * (0.7 + Math.random() * 0.6) * level().spawn;
-  }
+  players.forEach((pl, p) => {
+    pl.spawnIn -= dt;
+    if (pl.spawnIn <= 0) {
+      spawn(p);
+      const t = game.elapsed / roundTime;
+      pl.spawnIn = (0.85 - 0.45 * t) * (0.7 + Math.random() * 0.6) * level().spawn;
+    }
+  });
 
   for (const o of objects) {
     const z = zones[o.p];
@@ -904,7 +889,6 @@ function frame(now) {
   ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
   drawBackground(time);
   if (game.state !== 'home') drawZones();
-  drawCamWindow();
   if (game.state === 'play') update(dt, time);
   // 풍선은 자기 구역 안에만 그린다
   zones.forEach((z, p) => {
@@ -934,7 +918,7 @@ function show(id) {
 
 function resetGame() {
   layoutZones();
-  Object.assign(game, { timeLeft: roundTime, elapsed: 0, spawnIn: 0.3 });
+  Object.assign(game, { timeLeft: roundTime, elapsed: 0 });
   players = zones.map(newPlayer);
   objects = []; particles = []; texts = [];
   $('time').textContent = roundTime;
