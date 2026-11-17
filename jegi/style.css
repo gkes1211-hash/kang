@@ -1,0 +1,18 @@
+:root { --main: #d9433b; --main-deep: #a82c25; --soft: #fdeceb; --bg: #fff5f0; --line: #f6cbc6; }
+.timer { font-size: 26px; min-width: 84px; text-align: center; }
+.timer.hurry { background: rgba(255, 59, 59, 0.85); }
+.panel { flex: 1; max-width: 460px; display: grid; grid-template-columns: auto 1fr; gap: 4px 14px; align-items: center; }
+.count { grid-row: span 3; font-size: clamp(54px, 9vw, 96px); font-weight: 900; line-height: 1; min-width: 1.4em; text-align: center; }
+.count small { font-size: 0.3em; font-weight: 800; margin-left: 2px; }
+.panel-label { font-weight: 800; font-size: 16px; }
+.panel-sub { font-size: 15px; }
+.panel-tip { font-size: 15px; min-height: 1.3em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; opacity: 0.9; }
+.result-row { display: flex; align-items: center; justify-content: center; gap: 12px; margin: 10px 0; font-size: 20px; }
+.result-row b { font-size: 44px; color: var(--main-deep); }
+.result-row.win b { color: #e0a800; }
+.stamp { display: inline-block; margin-top: 6px; padding: 6px 14px; border-radius: 999px; background: #fff4c2; color: #8a6400; font-weight: 800; }
+@media (max-width: 520px) { .timer { font-size: 20px; min-width: 64px; } }
+/* 발과 제기가 화면 아래쪽에서 움직이므로, 점수 칸은 위쪽에 둔다 */
+.hud.under-top { top: calc(env(safe-area-inset-top) + 64px); justify-content: center; gap: 10px; }
+.hud.under-top .panel { max-width: 380px; padding: 8px 12px; background: rgba(20, 16, 40, 0.55); }
+.hud.under-top .count { font-size: clamp(40px, 6vw, 64px); }
