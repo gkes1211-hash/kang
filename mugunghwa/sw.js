@@ -1,6 +1,6 @@
 // 앱 파일을 기기에 담아 두어 인터넷이 없어도 열리게 한다.
 // 이 앱의 파일만 다루고, 카메라 영상과는 아무 관련이 없다.
-const CACHE = 'mugunghwa-v3';
+const CACHE = 'mugunghwa-v4';
 const FILES = [
   './',
   './index.html',

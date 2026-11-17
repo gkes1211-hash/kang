@@ -137,29 +137,47 @@ let sampleAcc = 0;
 let wakeLock = null;
 let lastSample = null;
 
+// 오른쪽 들판의 달리기 길(출발 → 골인)과, 왼쪽 카메라 아래 움직임 게이지를 만든다
+const PATH_START = 9; // 길의 출발 위치(%)
+const PATH_END = 87; // 골인선 위치(%)
 function buildLanes(count) {
   const box = $('#lanes');
+  const meters = $('#meters');
   box.textContent = '';
+  meters.textContent = '';
   lanes = [];
   for (let i = 0; i < count; i++) {
+    const name = count === 1 ? '나' : `${i + 1}P`;
     const lane = document.createElement('div');
     lane.className = 'lane';
     lane.style.setProperty('--player-color', COLORS[i]);
     lane.innerHTML = `
-      <div class="track"><div class="track-fill"></div></div>
+      <div class="path"><div class="path-fill"></div></div>
+      <div class="finish-line"></div>
+      <div class="start-label">출발</div>
+      <div class="lane-label">${name}</div>
       <div class="runner">${RUNNERS[i]}</div>
-      <div class="meter" title="움직임"><div class="meter-fill"></div></div>
-      <div class="lane-label">${count === 1 ? '나' : `${i + 1}P`}</div>
-      <div class="lane-status" hidden></div>
-      <div class="lane-debug" ${DEBUG ? '' : 'hidden'}></div>`;
+      <div class="lane-status" hidden></div>`;
     box.appendChild(lane);
+
+    const meter = document.createElement('div');
+    meter.className = 'meter-box';
+    meter.style.setProperty('--player-color', COLORS[i]);
+    meter.innerHTML = `
+      <div class="meter-title"><span>${RUNNERS[i]} ${name} 움직임</span><small class="meter-hint"></small></div>
+      <div class="meter"><div class="meter-fill"></div><div class="meter-mark"></div></div>
+      <div class="meter-debug" ${DEBUG ? '' : 'hidden'}></div>`;
+    meters.appendChild(meter);
+
     lanes.push({
       root: lane,
-      fill: lane.querySelector('.track-fill'),
+      fill: lane.querySelector('.path-fill'),
       runner: lane.querySelector('.runner'),
-      meter: lane.querySelector('.meter-fill'),
+      meter: meter.querySelector('.meter-fill'),
+      mark: meter.querySelector('.meter-mark'),
+      hint: meter.querySelector('.meter-hint'),
       status: lane.querySelector('.lane-status'),
-      debug: lane.querySelector('.lane-debug'),
+      debug: meter.querySelector('.meter-debug'),
       statusTimer: 0,
     });
   }
@@ -343,13 +361,13 @@ function resizeOverlay() {
 }
 window.addEventListener('resize', resizeOverlay);
 
-// 비디오는 화면을 꽉 채우도록(cover) 잘려 보이므로 같은 방식으로 좌표를 맞춘다
+// 비디오는 잘리지 않게(contain) 가운데 놓이므로 같은 방식으로 좌표를 맞춘다
 function videoToScreen() {
   const W = overlay.width;
   const H = overlay.height;
   const vw = video.videoWidth || 640;
   const vh = video.videoHeight || 480;
-  const s = Math.max(W / vw, H / vh);
+  const s = Math.min(W / vw, H / vh);
   const dw = vw * s;
   const dh = vh * s;
   const ox = (W - dw) / 2;
@@ -420,15 +438,23 @@ function render(dt) {
   game.players.forEach((p, i) => {
     const lane = lanes[i];
     if (!lane) return;
-    const pct = Math.round(p.progress * 1000) / 10;
-    lane.fill.style.height = `${pct}%`;
-    // 출발선(트랙 아래 9%)에서 도착선(위 26%)까지
-    lane.runner.style.bottom = `calc(9% + ${p.progress} * 65%)`;
-    lane.runner.classList.toggle('moving', phase === 'go' && p.motion > p.noise + profile.idle);
+    // 출발선에서 골인선까지 왼쪽 → 오른쪽으로 달린다
+    const x = PATH_START + p.progress * (PATH_END - PATH_START);
+    lane.runner.style.left = `${x}%`;
+    lane.fill.style.width = `${Math.round(p.progress * 1000) / 10}%`;
+    const floor = game.goFloor(p);
+    const moving = phase === 'go' && p.motion > floor;
+    lane.runner.classList.toggle('moving', moving);
     lane.runner.classList.toggle('missing', phase !== 'find' && !p.present);
-    const meterPct = Math.min(100, (p.motion / profile.fullEffort) * 100);
-    lane.meter.style.width = `${meterPct}%`;
+
+    // 움직임 게이지: 막대 끝까지 차면 "힘껏". 세로 줄은 노래할 땐 "앞으로 가는 기준", 얼음 땐 "걸리는 기준"
+    const scale = profile.fullEffort * 1.5;
+    lane.meter.style.width = `${Math.min(100, (p.motion / scale) * 100)}%`;
+    const limit = phase === 'freeze' ? game.freezeLimit(p) : floor;
+    lane.mark.style.left = `${Math.min(99, (limit / scale) * 100)}%`;
     lane.meter.classList.toggle('warn', phase === 'freeze' && p.motion > game.freezeLimit(p));
+    lane.hint.textContent = phase === 'go' ? (moving ? '달려요! 🏃' : '더 크게 흔들어요!')
+      : phase === 'freeze' ? '멈춰요! ✋' : '';
 
     if (lane.statusTimer > 0) {
       lane.statusTimer -= dt;
@@ -443,7 +469,7 @@ function render(dt) {
 
     if (DEBUG) {
       const parts = lastSample?.people?.[i]?.parts;
-      lane.debug.textContent = `움직임 ${p.motion.toFixed(3)} · 잡음 ${p.noise.toFixed(3)} · 얼음기준 ${game.freezeLimit(p).toFixed(3)}`
+      lane.debug.textContent = `움직임 ${p.motion.toFixed(2)} · 잡음 ${p.noise.toFixed(2)} · 가기 ${floor.toFixed(2)} · 얼음 ${game.freezeLimit(p).toFixed(2)}`
         + (parts ? ` · 팔 ${parts.arms.toFixed(2)} 다리 ${parts.legs.toFixed(2)} 몸 ${parts.body.toFixed(2)}` : '')
         + ` · ${mode}`;
     }

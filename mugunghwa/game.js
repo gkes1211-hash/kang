@@ -5,8 +5,9 @@
 //  - pixel: 화면에서 바뀐 점의 비율 (몸 인식을 못 켰을 때 쓰는 예비 방식)
 export const PROFILES = {
   pose: {
-    fullEffort: 1.5, // 이만큼이면 "힘껏" (팔을 크게 흔들면 2~8 정도 나온다)
-    idle: 0.2, // 이보다 작은 움직임은 앞으로 가지 않음
+    fullEffort: 1.2, // 이만큼이면 "힘껏" (팔을 크게 흔들면 2~8 정도 나온다)
+    idle: 0.12, // 이보다 작은 움직임은 앞으로 가지 않음
+    goNoiseShare: 0.5, // 노래할 때는 잡음을 절반만 빼서, 살살 흔들어도 앞으로 가게 한다
     noiseCap: 0.6, // 가만히 있을 때의 몸 점 떨림은 카메라·조명에 따라 0.2~0.7 정도
     noiseMul: 1.2,
     noisePad: 0.1,
@@ -15,6 +16,7 @@ export const PROFILES = {
   pixel: {
     fullEffort: 0.15,
     idle: 0.01,
+    goNoiseShare: 1,
     noiseCap: 0.012,
     noiseMul: 1.5,
     noisePad: 0.005,
@@ -80,6 +82,11 @@ export class Game {
     this.events.push({ type: 'phase', phase, length });
   }
 
+  // 노래할 때 이보다 크게 움직여야 앞으로 간다
+  goFloor(p) {
+    return p.noise * this.profile.goNoiseShare + this.profile.idle;
+  }
+
   freezeLimit(p) {
     const pr = this.profile;
     return Math.max(pr.freeze[this.difficulty], p.noise * pr.noiseMul + pr.noisePad);
@@ -107,7 +114,8 @@ export class Game {
       } else if (this.phase === 'calibrate') {
         if (this.t > CALIBRATE_SKIP && p.present) p.samples.push(m);
       } else if (this.phase === 'go') {
-        const effort = clamp((m - p.noise - pr.idle) / (pr.fullEffort - pr.idle), 0, 1);
+        const floor = this.goFloor(p);
+        const effort = clamp((m - floor) / Math.max(0.01, pr.fullEffort - floor), 0, 1);
         p.progress = Math.min(1, p.progress + (effort * dt) / RUN_SECONDS);
       } else if (this.phase === 'freeze' && this.t > this.rules.grace && !p.caughtThisRound && p.present) {
         if (m > this.freezeLimit(p)) p.suspicion += dt;
