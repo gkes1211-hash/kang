@@ -229,3 +229,22 @@ textarea.code { width: 100%; min-height: 90px; border: 1px solid var(--line); bo
 #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+
+/* 수준 고르기 */
+.tier-chip {
+  border: 0; border-radius: 99px; padding: 5px 12px; margin-bottom: 10px; font-size: 14px; font-weight: 800;
+  background: rgba(255, 255, 255, .2); color: #fff;
+}
+.tier-card {
+  display: flex; align-items: center; gap: 8px; background: var(--surface); border: 2px solid var(--line);
+  border-radius: 18px; padding: 6px 12px 6px 6px; margin-bottom: 10px; box-shadow: var(--shadow);
+}
+.tier-card.current { border-color: var(--accent); background: var(--accent-soft); }
+.tier-main { flex: 1; min-width: 0; display: flex; align-items: center; gap: 12px; border: 0; background: none; text-align: left; padding: 8px; }
+.tier-main .ico { font-size: 30px; width: 46px; height: 46px; display: grid; place-items: center; border-radius: 14px; background: var(--surface-2); flex: none; }
+.tier-main .txt { flex: 1; min-width: 0; }
+.tier-main b { display: block; font-size: 17px; }
+.tier-main small { display: block; color: var(--ink-2); font-size: 14px; }
+.tier-sample { display: block; margin-top: 4px; font-size: 14px; font-style: italic; color: var(--accent-ink); }
+.tier-say { flex: none; padding: 10px 14px; }
+.tier-chips { margin-bottom: 4px; }
