@@ -14,8 +14,23 @@ const POINTS = { balloon: 1, small: 2, gold: 5, bomb: -5 };
 const COMBO_WINDOW = 1.5; // 이 시간(초) 안에 다음 풍선을 터트리면 콤보가 이어진다
 const COMBO_BONUS_FROM = 5; // 콤보가 이만큼 넘으면 풍선마다 +1점 더
 const BALLOON_COLORS = ['#ff4f6d', '#ff9f1c', '#ffd93d', '#3ddc84', '#38b6ff', '#9b5cff', '#ff6ec7'];
-// 손에서 "닿는 곳"으로 쓰는 점: 손목, 다섯 손가락 끝, 손바닥 가운데
-const TOUCH_POINTS = [0, 4, 8, 12, 16, 20, 9];
+// 손바닥 가운데를 잡는 점: 손목과 네 손가락 뿌리
+const PALM_POINTS = [0, 5, 9, 13, 17];
+// 난이도. hand = 손 동그라미 크기(화면 짧은 쪽 대비), 풍선 반지름(보통 0.065, 작은 0.045)과 비슷하게
+const LEVELS = {
+  easy: {
+    name: '쉬움', hint: '천천히, 폭탄 적게, 손 동그라미가 조금 커요',
+    hand: 0.065, speed: 0.75, spawn: 1.25, bomb: [0.08, 0.08], small: 0.15, gold: 0.06,
+  },
+  normal: {
+    name: '보통', hint: '손 동그라미가 풍선만 해요',
+    hand: 0.05, speed: 1, spawn: 1, bomb: [0.12, 0.13], small: 0.25, gold: 0.05,
+  },
+  hard: {
+    name: '어려움', hint: '빠르고 폭탄이 많아요. 손 동그라미가 작은 풍선만 해요',
+    hand: 0.038, speed: 1.35, spawn: 0.8, bomb: [0.18, 0.17], small: 0.4, gold: 0.04,
+  },
+};
 const HAND_BONES = [
   [0, 1], [1, 2], [2, 3], [3, 4], [0, 5], [5, 6], [6, 7], [7, 8], [5, 9], [9, 10], [10, 11], [11, 12],
   [9, 13], [13, 14], [14, 15], [15, 16], [13, 17], [0, 17], [17, 18], [18, 19], [19, 20],
@@ -27,6 +42,8 @@ const store = {
   set(k, v) { try { localStorage.setItem(k, v); } catch { /* 저장 못 해도 괜찮다 */ } },
 };
 let roundTime = Number(store.get('balloon.time', '60')) || 60;
+let levelKey = LEVELS[store.get('balloon.level', 'normal')] ? store.get('balloon.level', 'normal') : 'normal';
+const level = () => LEVELS[levelKey];
 
 // ---------- 상태 ----------
 let W = 0, H = 0, DPR = 1, unit = 1;
@@ -210,12 +227,14 @@ function detectHands(now) {
   const next = found.map((pts) => {
     let best = null, bestD = Infinity;
     for (const h of hands) {
-      const d = Math.hypot(h.pts[9].x - pts[9].x, h.pts[9].y - pts[9].y);
+      const d = Math.hypot(h.palm.x - pts[9].x, h.palm.y - pts[9].y);
       if (d < bestD) { bestD = d; best = h; }
     }
-    const size = Math.hypot(pts[0].x - pts[9].x, pts[0].y - pts[9].y);
-    const prev = best && bestD < unit * 0.5 && now - best.at < 200 ? best.pts : null;
-    return { pts, prev, at: now, r: Math.max(14, size * 0.35) };
+    const palm = { x: 0, y: 0 };
+    for (const i of PALM_POINTS) { palm.x += pts[i].x / PALM_POINTS.length; palm.y += pts[i].y / PALM_POINTS.length; }
+    // 빠르게 움직인 길도 치되, 한 번에 너무 멀리 뛴 건(인식 튐) 무시한다
+    const prev = best && Math.hypot(best.palm.x - palm.x, best.palm.y - palm.y) < unit * 0.35 && now - best.at < 150 ? best.palm : null;
+    return { pts, palm, prev, at: now };
   });
   hands = next;
   if (hands.length) lastHandSeen = now;
@@ -224,25 +243,26 @@ function detectHands(now) {
 // ---------- 풍선 · 폭탄 ----------
 function spawn() {
   const t = game.elapsed / roundTime; // 0 → 1 로 갈수록 어려워진다
-  const bombChance = 0.12 + 0.13 * t;
+  const L = level();
+  const bombChance = L.bomb[0] + L.bomb[1] * t;
   const roll = Math.random();
   if (roll < bombChance) {
     // 폭탄은 위에서 떨어진다
     const r = unit * 0.055;
     objects.push({
       type: 'bomb', r, x: r + Math.random() * (W - 2 * r), y: -r * 2,
-      vy: unit * (0.22 + 0.18 * t + Math.random() * 0.1), vx: (Math.random() - 0.5) * unit * 0.08,
+      vy: unit * (0.22 + 0.18 * t + Math.random() * 0.1) * L.speed, vx: (Math.random() - 0.5) * unit * 0.08,
       spin: (Math.random() - 0.5) * 3, angle: 0, phase: Math.random() * 6,
     });
     return;
   }
-  const isGold = roll > 0.95;
-  const isSmall = !isGold && Math.random() < 0.25;
+  const isGold = roll > 1 - L.gold;
+  const isSmall = !isGold && Math.random() < L.small;
   const r = unit * (isSmall ? 0.045 : 0.065) * (0.9 + Math.random() * 0.2);
   objects.push({
     type: isGold ? 'gold' : isSmall ? 'small' : 'balloon',
     r, x: r + Math.random() * (W - 2 * r), y: H + r * 1.5,
-    vy: -unit * (0.16 + 0.16 * t + Math.random() * 0.08) * (isSmall ? 1.25 : 1) * (isGold ? 1.4 : 1),
+    vy: -unit * (0.16 + 0.16 * t + Math.random() * 0.08) * (isSmall ? 1.25 : 1) * (isGold ? 1.4 : 1) * L.speed,
     color: isGold ? '#ffd23f' : BALLOON_COLORS[(Math.random() * BALLOON_COLORS.length) | 0],
     phase: Math.random() * 6, sway: unit * (0.02 + Math.random() * 0.03),
   });
@@ -257,17 +277,14 @@ function segDist(px, py, ax, ay, bx, by) {
 }
 
 function touched(o) {
-  const cx = o.x, cy = o.y; // 풍선·폭탄 몸통 가운데
+  const reach = o.r + handRadius() * 0.8; // 동그라미가 풍선에 제법 겹쳐야 터진다
   for (const h of hands) {
-    for (const i of TOUCH_POINTS) {
-      const p = h.pts[i];
-      const q = h.prev ? h.prev[i] : p;
-      const reach = o.r + h.r * (i === 9 ? 1.4 : 1);
-      if (segDist(cx, cy, q.x, q.y, p.x, p.y) < reach) return true;
-    }
+    const q = h.prev || h.palm;
+    if (segDist(o.x, o.y, q.x, q.y, h.palm.x, h.palm.y) < reach) return true;
   }
   return false;
 }
+const handRadius = () => unit * level().hand;
 
 function addScore(n, x, y, color) {
   const before = game.score;
@@ -445,9 +462,11 @@ function drawBomb(o, time) {
 }
 
 function drawHands() {
+  const r = handRadius();
   for (const h of hands) {
-    ctx.strokeStyle = 'rgba(255,255,255,0.75)';
-    ctx.lineWidth = 4;
+    // 손 뼈대는 흐리게 (어디가 손인지만 보이게)
+    ctx.strokeStyle = 'rgba(255,255,255,0.35)';
+    ctx.lineWidth = 3;
     ctx.lineCap = 'round';
     ctx.beginPath();
     for (const [a, b] of HAND_BONES) {
@@ -455,16 +474,20 @@ function drawHands() {
       ctx.lineTo(h.pts[b].x, h.pts[b].y);
     }
     ctx.stroke();
-    for (const i of TOUCH_POINTS) {
-      const p = h.pts[i];
-      const r = i === 9 ? h.r * 0.9 : h.r * 0.55;
-      const g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, r);
-      g.addColorStop(0, 'rgba(255,255,255,0.95)');
-      g.addColorStop(0.5, 'rgba(160,220,255,0.7)');
-      g.addColorStop(1, 'rgba(120,180,255,0)');
-      ctx.fillStyle = g;
-      ctx.beginPath(); ctx.arc(p.x, p.y, r, 0, Math.PI * 2); ctx.fill();
-    }
+    // 실제로 풍선을 터트리는 동그라미
+    const { x, y } = h.palm;
+    const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+    g.addColorStop(0, 'rgba(255,255,255,0.75)');
+    g.addColorStop(1, 'rgba(120,190,255,0.35)');
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,0.95)';
+    ctx.lineWidth = 4;
+    ctx.stroke();
+    ctx.fillStyle = 'rgba(40,30,70,0.8)';
+    ctx.font = `${Math.round(r * 0.9)}px system-ui, sans-serif`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('✋', x, y + r * 0.05);
   }
 }
 
@@ -530,7 +553,7 @@ function update(dt, time) {
   if (game.spawnIn <= 0) {
     spawn();
     const t = game.elapsed / roundTime;
-    game.spawnIn = (0.85 - 0.45 * t) * (0.7 + Math.random() * 0.6);
+    game.spawnIn = (0.85 - 0.45 * t) * (0.7 + Math.random() * 0.6) * level().spawn;
   }
 
   for (const o of objects) {
@@ -625,14 +648,14 @@ function endGame() {
   game.state = 'over';
   $('hud').hidden = true;
   $('no-hand').hidden = true;
-  const best = Number(store.get('balloon.best', '0')) || 0;
+  const best = Number(store.get(bestKey(), '0')) || 0;
   const isBest = game.score > best;
-  if (isBest) store.set('balloon.best', String(game.score));
+  if (isBest) store.set(bestKey(), String(game.score));
   $('final-score').textContent = game.score;
   $('result-emoji').textContent = isBest ? '🏆' : game.score >= 30 ? '🎉' : '🎈';
   $('result-title').textContent = isBest ? '최고 기록!' : '끝!';
   $('result-detail').textContent =
-    `풍선 ${game.popped}개 터트림 · 최대 콤보 ${game.bestCombo} · 폭탄 ${game.bombs}번 맞음`;
+    `${level().name} · 풍선 ${game.popped}개 터트림 · 최대 콤보 ${game.bestCombo} · 폭탄 ${game.bombs}번 맞음`;
   show('screen-result');
   updateBest();
 }
@@ -646,9 +669,10 @@ function quitGame() {
   show('screen-home');
 }
 
+function bestKey() { return `balloon.best.${levelKey}`; }
 function updateBest() {
-  const best = Number(store.get('balloon.best', '0')) || 0;
-  $('best-line').textContent = best ? `🏅 최고 점수 ${best}점` : '';
+  const best = Number(store.get(bestKey(), '0')) || 0;
+  $('best-line').textContent = best ? `🏅 ${level().name} 최고 점수 ${best}점` : '';
 }
 
 // ---------- 버튼 ----------
@@ -664,7 +688,21 @@ for (const b of timeButtons) {
   });
 }
 renderTime();
-updateBest();
+
+const levelButtons = document.querySelectorAll('[data-level]');
+function renderLevel() {
+  for (const b of levelButtons) b.setAttribute('aria-checked', String(b.dataset.level === levelKey));
+  $('level-hint').textContent = level().hint;
+  updateBest();
+}
+for (const b of levelButtons) {
+  b.addEventListener('click', () => {
+    levelKey = b.dataset.level;
+    store.set('balloon.level', levelKey);
+    renderLevel();
+  });
+}
+renderLevel();
 
 const status = $('status');
 $('start').addEventListener('click', async () => {

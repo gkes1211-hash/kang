@@ -31,13 +31,22 @@
       <div class="card">
         <div class="big-emoji" aria-hidden="true">🎈💥</div>
         <h1>풍선 터트리기</h1>
-        <p class="sub">카메라 앞에서 손을 휘저어 풍선을 터트려요!</p>
+        <p class="sub">카메라 앞에서 손을 움직여 풍선을 터트려요!<br>손바닥 가운데의 <b>동그라미</b>가 풍선에 닿아야 터져요.</p>
         <ul class="rules">
           <li><span>🎈</span>풍선 <b>+1점</b> (작은 풍선 +2점)</li>
           <li><span>🌟</span>금색 풍선 <b>+5점</b></li>
           <li><span>💣</span>폭탄은 피하세요! <b class="bad">-5점</b></li>
           <li><span>🔥</span>연속으로 터트리면 콤보 보너스</li>
         </ul>
+        <div class="setting">
+          <h2>난이도</h2>
+          <div class="choices" role="radiogroup" aria-label="난이도">
+            <button type="button" role="radio" data-level="easy"><span>😊</span>쉬움</button>
+            <button type="button" role="radio" data-level="normal"><span>🙂</span>보통</button>
+            <button type="button" role="radio" data-level="hard"><span>🔥</span>어려움</button>
+          </div>
+          <p class="hint" id="level-hint"></p>
+        </div>
         <div class="setting">
           <h2>게임 시간</h2>
           <div class="choices" role="radiogroup" aria-label="게임 시간">

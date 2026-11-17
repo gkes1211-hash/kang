@@ -98,8 +98,7 @@ button { font: inherit; cursor: pointer; }
 .overlay {
   position: absolute;
   inset: 0;
-  display: grid;
-  place-items: center;
+  display: flex;
   padding: 16px;
   background: rgba(27, 22, 48, 0.45);
   overflow-y: auto;
@@ -110,6 +109,7 @@ button { font: inherit; cursor: pointer; }
   border-radius: 28px;
   padding: 28px 24px;
   width: min(440px, 100%);
+  margin: auto; /* 화면이 낮아도 위가 잘리지 않게 가운데 */
   text-align: center;
   box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
 }
@@ -152,6 +152,9 @@ h2 { margin: 10px 0 4px; font-size: 28px; }
   background: #f0ebff;
   color: var(--purple-deep);
 }
+.choices button span { display: block; font-size: 22px; }
+.setting:has(.hint) .choices { margin-bottom: 6px; }
+.hint { margin: 0 0 16px; font-size: 13px; color: var(--muted); min-height: 1.3em; }
 
 .big {
   width: 100%;
