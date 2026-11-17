@@ -1,13 +1,19 @@
-// 여행 영어 첫걸음: 단계별 학습 내용
-// 단계가 올라갈수록 조금씩 어려워진다. 단계마다:
+// 여행 영어 첫걸음: 수준(TIERS)별 학습 내용. 이 파일은 🧸 유치원생 수준이다.
+// 다른 수준은 data-2.js ~ data-6.js 에 있다.
+// 수준마다 여행 상황 8단계(levels)가 있고, 단계마다:
 //   words     단어      [영어, 뜻, 한글 발음, 그림]
-//   say       내가 말할 문장  [영어, 뜻, 한글 발음]
+//   say       내가 말할 문장  [영어, 뜻, 한글 발음(없어도 됨)]
 //   hear      여행지에서 듣게 되는 말  [영어, 뜻]
 //   talks     역할극 회화. them = 상대방이 하는 말 [영어, 뜻]
-//                         me   = 내가 할 말 [뜻, [정답으로 인정할 영어 여러 개], 한글 발음]
+//                         me   = 내가 할 말 [뜻, [정답으로 인정할 영어 여러 개], 한글 발음(없어도 됨)]
 'use strict';
 
-const LEVELS = [
+const TIERS = [];
+
+TIERS.push({
+  id: 1, emoji: '🧸', name: '유치원생', desc: '낱말 하나, 아주 짧은 말부터',
+  sample: 'Water, please.',
+  levels: [
   {
     id: 1, emoji: '👋', title: '첫인사', desc: '인사, 네/아니요, 고맙습니다',
     words: [
@@ -601,19 +607,5 @@ const LEVELS = [
       },
     ],
   },
-];
-
-// 각 항목에 고유 번호를 붙인다 (기록 저장용)
-for (const lv of LEVELS) {
-  lv.words = lv.words.map(([en, ko, pron, pic]) => ({ id: `w${lv.id}:${en}`, level: lv.id, en, ko, pron, pic }));
-  lv.say = lv.say.map(([en, ko, pron], i) => ({ id: `s${lv.id}:${i}`, level: lv.id, en, ko, pron }));
-  lv.hear = lv.hear.map(([en, ko], i) => ({ id: `h${lv.id}:${i}`, level: lv.id, en, ko }));
-  lv.talks = lv.talks.map((t, i) => ({
-    ...t,
-    id: `t${lv.id}:${i}`,
-    level: lv.id,
-    turns: t.turns.map((x) => (x[0] === 'them'
-      ? { who: 'them', en: x[1], ko: x[2] }
-      : { who: 'me', ko: x[1], answers: x[2], pron: x[3] })),
-  }));
-}
+],
+});

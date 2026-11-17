@@ -9,13 +9,37 @@ const shuffle = (arr) => { const a = [...arr]; for (let i = a.length - 1; i > 0;
 const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
 const stars = (sc) => (sc >= 0.9 ? '⭐⭐⭐' : sc >= 0.6 ? '⭐⭐' : sc >= 0.3 ? '⭐' : '');
 
+// ---------- 수준·단계 내용에 고유 번호 붙이기 (기록 저장용) ----------
+// 🧸 유치원생(1) 수준은 예전 번호(w1:hello)를 그대로 써서 그동안의 기록이 이어진다.
+for (const t of TIERS) {
+  for (const lv of t.levels) {
+    const p = t.id === 1 ? String(lv.id) : `${t.id}-${lv.id}`;
+    const base = { lk: p, tier: t.id };
+    lv.key = p;
+    lv.tier = t.id;
+    lv.words = lv.words.map(([en, ko, pron, pic]) => ({ ...base, id: `w${p}:${en}`, en, ko, pron, pic }));
+    lv.say = lv.say.map(([en, ko, pron], i) => ({ ...base, id: `s${p}:${i}`, en, ko, pron }));
+    lv.hear = lv.hear.map(([en, ko], i) => ({ ...base, id: `h${p}:${i}`, en, ko }));
+    lv.talks = lv.talks.map((tk, i) => ({
+      ...tk, ...base, id: `t${p}:${i}`,
+      turns: tk.turns.map((x) => (x[0] === 'them'
+        ? { who: 'them', en: x[1], ko: x[2] }
+        : { who: 'me', ko: x[1], answers: x[2], pron: x[3] })),
+    }));
+  }
+}
+const everyLevel = TIERS.flatMap((t) => t.levels);
 const ALL = {
-  words: LEVELS.flatMap((l) => l.words),
-  say: LEVELS.flatMap((l) => l.say),
-  hear: LEVELS.flatMap((l) => l.hear),
-  talks: LEVELS.flatMap((l) => l.talks),
+  words: everyLevel.flatMap((l) => l.words),
+  say: everyLevel.flatMap((l) => l.say),
+  hear: everyLevel.flatMap((l) => l.hear),
+  talks: everyLevel.flatMap((l) => l.talks),
 };
-const levelOf = (id) => LEVELS.find((l) => l.id === id);
+const tierOf = (id) => TIERS.find((t) => t.id === Number(id)) || TIERS[0];
+const curTier = () => tierOf(S.settings.tier || 1);
+const LV = () => curTier().levels;
+const levelOf = (id) => LV().find((l) => l.id === id);
+const tierWords = () => LV().flatMap((l) => l.words);
 
 const PRAISE = ['맞았어요! 🎉', '잘했어요! 👏', '훌륭해요! ✨', '정답! 💯', '최고예요! 🙌'];
 const CHEER = ['괜찮아요, 이렇게 외우는 거예요 💪', '틀려도 괜찮아요! 곧 다시 나와요 🙂', '아깝다! 한 번 더 보면 기억나요 💡'];
@@ -32,7 +56,7 @@ const TIPS = [
 
 // ---------- 저장 ----------
 const KEY = 'travel-english-v1';
-const DEFAULT_SETTINGS = { rate: 0.8, voice: '', pron: true, newPerDay: 6, unlockAll: false, theme: 'system', subs: 'both', hint: true };
+const DEFAULT_SETTINGS = { tier: null, rate: 0.8, voice: '', pron: true, newPerDay: 6, unlockAll: false, theme: 'system', subs: 'both', hint: true };
 let S = load();
 function load() {
   let s = null;
@@ -70,7 +94,7 @@ function markWord(id, ok) {
 function seeWord(id) { S.words[id] = { ...ws(id), seen: true }; }
 const wordStatus = (id) => { const w = ws(id); return w.box >= 3 ? 'known' : w.seen ? 'learning' : 'new'; };
 const dueWords = () => ALL.words.filter((w) => { const s = ws(w.id); return s.seen && s.box > 0 && s.due <= today(); });
-const confusing = () => ALL.words.filter((w) => { const s = ws(w.id); return s.wrong > 0 && s.box < 3; });
+const confusing = (pool = tierWords()) => pool.filter((w) => { const s = ws(w.id); return s.wrong > 0 && s.box < 3; });
 const knownCount = () => ALL.words.filter((w) => wordStatus(w.id) === 'known').length;
 
 // ---------- 단계 진행 ----------
@@ -89,12 +113,14 @@ function levelProgress(lv) {
 const UNLOCK = 50;
 function unlocked(lv) {
   if (S.settings.unlockAll || lv.id === 1) return true;
-  return levelProgress(levelOf(lv.id - 1)).pct >= UNLOCK;
+  const prev = tierOf(lv.tier).levels.find((l) => l.id === lv.id - 1);
+  return levelProgress(prev).pct >= UNLOCK;
 }
 function currentLevel() {
-  const open = LEVELS.filter(unlocked);
+  const open = LV().filter(unlocked);
   return open.find((l) => levelProgress(l).pct < 90) || open[open.length - 1];
 }
+const tierProgress = (t) => Math.round(t.levels.reduce((a, l) => a + levelProgress(l).pct, 0) / t.levels.length);
 
 // ---------- 효과음 ----------
 let actx = null;
@@ -146,11 +172,15 @@ function render() {
   const s = streak();
   $('#top-streak').textContent = s ? `🔥 ${s}일` : '';
   const v = $('#view');
-  if (tab === 'today') v.innerHTML = viewToday();
+  if (tab === 'tiers') v.innerHTML = viewTiers();
+  else if (tab === 'today') v.innerHTML = S.settings.tier ? viewToday() : viewTiers(true);
   else if (tab === 'levels') v.innerHTML = levelPage ? viewLevel(levelOf(levelPage)) : viewLevels();
   else if (tab === 'words') { v.innerHTML = viewWords(); fillWordList(); }
   else if (tab === 'settings') v.innerHTML = viewSettings();
-  $('#top-title').textContent = { today: '여행 영어 첫걸음', levels: '단계별 공부', words: '내 단어장', settings: '설정' }[tab];
+  // 고른 수준 칩이 가로 목록 밖에 있으면 보이게 옮긴다
+  const chip = $('.tier-chips [aria-pressed="true"]');
+  if (chip) chip.parentElement.scrollLeft = chip.offsetLeft - chip.parentElement.offsetLeft - 16;
+  $('#top-title').textContent = { today: '여행 영어 첫걸음', tiers: '내 수준 고르기', levels: '단계별 공부', words: '내 단어장', settings: '설정' }[tab];
 }
 
 function row({ act, arg = '', ico, title, sub = '', right = '', cls = '', bar = null }) {
@@ -170,6 +200,7 @@ function viewToday() {
   const tipIdx = today() % TIPS.length;
   return `
   <section class="card hero">
+    <button type="button" class="tier-chip" data-act="tiers">${curTier().emoji} 내 수준: ${curTier().name} · 바꾸기</button>
     <h2>${done ? '오늘 공부 완료! 🎉' : '오늘도 5분만 해 볼까요? 🙂'}</h2>
     <p>${done ? '잘했어요. 더 하고 싶으면 한 번 더 해도 좋아요.' : `새 단어 ${S.settings.newPerDay}개 + 복습 + 말하기·듣기를 한 번에 해요.`}</p>
     <div class="stats">
@@ -192,10 +223,32 @@ function viewToday() {
   <div class="card"><p>${TIPS[tipIdx]}</p></div>`;
 }
 
+// ---------- 수준 고르기 ----------
+function viewTiers(first = false) {
+  const cur = S.settings.tier;
+  return `
+  <section class="card">
+    <h2>${first ? '👋 먼저 내 수준을 골라 주세요' : '📶 내 수준 고르기'}</h2>
+    <p class="small">위로 갈수록 쉽고 아래로 갈수록 어려워요. 🔊를 눌러 예문을 들어 보고, <b>조금 어렵다 싶은 수준</b>을 고르면 실력이 빨리 늘어요. 언제든 바꿀 수 있고, 수준마다 기록이 따로 남아요.</p>
+  </section>
+  ${TIERS.map((t) => `<div class="tier-card ${cur === t.id ? 'current' : ''}">
+    <button type="button" class="tier-main" data-act="set-tier" data-arg="${t.id}">
+      <span class="ico" aria-hidden="true">${t.emoji}</span>
+      <span class="txt"><b>${t.id}. ${esc(t.name)} ${cur === t.id ? '<span class="pill">지금 수준</span>' : ''}</b><small>${esc(t.desc)}</small>
+      <span class="tier-sample">"${esc(t.sample)}"</span>
+      ${tierProgress(t) ? `<span class="bar"><i style="width:${tierProgress(t)}%"></i></span>` : ''}</span>
+    </button>
+    <button type="button" class="audio-btn tier-say" data-say="${esc(t.sample)}" aria-label="예문 듣기">🔊</button>
+  </div>`).join('')}`;
+}
+function tierChips() {
+  return `<div class="chips tier-chips" role="group" aria-label="수준">${TIERS.map((t) => `<button type="button" data-act="pick-tier" data-arg="${t.id}" aria-pressed="${curTier().id === t.id}">${t.emoji} ${esc(t.name)}</button>`).join('')}</div>`;
+}
+
 // ---------- 단계 목록 ----------
 function viewLevels() {
-  return `<p class="muted small" style="margin:4px 4px 14px">쉬운 단계부터 차근차근! 앞 단계를 ${UNLOCK}% 넘게 하면 다음 단계가 열려요.</p>` +
-    LEVELS.map((lv) => {
+  return tierChips() + `<p class="muted small" style="margin:4px 4px 14px">${curTier().emoji} <b>${esc(curTier().name)}</b> 수준 · 쉬운 단계부터 차근차근! 앞 단계를 ${UNLOCK}% 넘게 하면 다음 단계가 열려요.</p>` +
+    LV().map((lv) => {
       const p = levelProgress(lv);
       const open = unlocked(lv);
       return row({
@@ -213,10 +266,11 @@ function viewLevel(lv) {
   return `
   <button type="button" class="link-btn" data-act="levels">‹ 단계 목록</button>
   <section class="card">
+    <p class="small">${curTier().emoji} ${esc(curTier().name)} 수준</p>
     <h2>${lv.emoji} ${lv.id}단계 · ${lv.title}</h2>
     <p>${lv.desc}</p>
     <div class="bar" style="margin-top:12px"><i style="width:${p.pct}%"></i></div>
-    <p class="small" style="margin-top:6px">진행 ${p.pct}% ${p.pct >= UNLOCK && lv.id < LEVELS.length ? '· 다음 단계 열림 🔓' : ''}</p>
+    <p class="small" style="margin-top:6px">진행 ${p.pct}% ${p.pct >= UNLOCK && lv.id < LV().length ? '· 다음 단계 열림 🔓' : ''}</p>
   </section>
   <div class="sec-title">1. 단어</div>
   ${row({ act: 'learn', arg: lv.id, ico: '📖', title: p.unseen ? '새 단어 배우기' : '단어 다시 보기', sub: p.unseen ? `새 단어 ${p.unseen}개 남았어요` : '모든 단어를 한 번씩 봤어요' })}
@@ -232,15 +286,16 @@ function viewLevel(lv) {
 let wordFilter = 'all';
 let wordQuery = '';
 function viewWords() {
+  const tw = tierWords();
   const counts = {
-    all: ALL.words.length,
-    new: ALL.words.filter((w) => wordStatus(w.id) === 'new').length,
-    learning: ALL.words.filter((w) => wordStatus(w.id) === 'learning').length,
-    known: knownCount(),
+    all: tw.length,
+    new: tw.filter((w) => wordStatus(w.id) === 'new').length,
+    learning: tw.filter((w) => wordStatus(w.id) === 'learning').length,
+    known: tw.filter((w) => wordStatus(w.id) === 'known').length,
     hard: confusing().length,
   };
   const chip = (k, label) => `<button type="button" data-filter="${k}" aria-pressed="${wordFilter === k}">${label} ${counts[k]}</button>`;
-  return `
+  return `${tierChips()}
   <input class="search" id="word-q" type="search" placeholder="🔍 영어나 뜻으로 찾기" value="${esc(wordQuery)}" autocomplete="off">
   <div class="chips">${chip('all', '전체')}${chip('new', '새 단어')}${chip('learning', '🟠 배우는 중')}${chip('known', '🟢 외움')}${chip('hard', '😵 헷갈려요')}</div>
   ${counts.hard ? `<button type="button" class="big-btn ghost" data-act="hard" style="margin:6px 0 10px">😵 헷갈리는 단어 ${counts.hard}개 연습하기</button>` : ''}
@@ -251,7 +306,7 @@ function fillWordList() {
   const q = wordQuery.trim().toLowerCase();
   const hard = new Set(confusing().map((w) => w.id));
   let html = '';
-  for (const lv of LEVELS) {
+  for (const lv of LV()) {
     const list = lv.words.filter((w) => {
       const st = wordStatus(w.id);
       if (wordFilter === 'hard' ? !hard.has(w.id) : wordFilter !== 'all' && st !== wordFilter) return false;
@@ -283,6 +338,8 @@ function viewSettings() {
   </section>
   <section class="card">
     <h2>📚 공부</h2>
+    <div class="setting"><span class="lbl">내 수준<small>단어·문장의 어려운 정도</small></span>
+      <select data-set="tier">${TIERS.map((t) => opt(t.id, curTier().id, `${t.emoji} ${t.name}`)).join('')}</select></div>
     <div class="setting"><label for="s-pron">한글 발음 보기<small>익숙해지면 꺼 보세요</small></label><input id="s-pron" class="switch" type="checkbox" data-set="pron" ${st.pron ? 'checked' : ''}></div>
     <div class="setting"><label for="s-hint">회화에서 정답 힌트 바로 보기<small>끄면 💡 버튼을 눌러야 보여요</small></label><input id="s-hint" class="switch" type="checkbox" data-set="hint" ${st.hint ? 'checked' : ''}></div>
     <div class="setting"><span class="lbl">하루 새 단어</span>
@@ -337,10 +394,11 @@ function setProgress(i, n) {
 const sentence = (it) => !it.id.startsWith('w');
 function choicesFor(item, field) {
   const pool = (sentence(item) ? [...ALL.hear, ...ALL.say] : ALL.words).filter((x) => x[field] !== item[field]);
-  const same = shuffle(pool.filter((x) => x.level === item.level));
-  const other = shuffle(pool.filter((x) => x.level !== item.level));
+  const same = shuffle(pool.filter((x) => x.lk === item.lk));
+  const near = shuffle(pool.filter((x) => x.lk !== item.lk && x.tier === item.tier));
+  const other = shuffle(pool.filter((x) => x.tier !== item.tier));
   const out = [];
-  for (const x of [...same, ...other]) {
+  for (const x of [...same, ...near, ...other]) {
     if (out.length >= 3) break;
     if (!out.some((o) => o[field] === x[field])) out.push(x);
   }
@@ -365,12 +423,12 @@ function buildToday() {
   q.push(...due.map((w) => ({ k: reviewKind(w), item: w })));
   // 새 단어: 지금 단계부터, 다 봤으면 열린 다음 단계에서
   const fresh = [];
-  for (const l of LEVELS.filter(unlocked).filter((x) => x.id >= lv.id)) {
+  for (const l of LV().filter(unlocked).filter((x) => x.id >= lv.id)) {
     for (const w of l.words) if (!ws(w.id).seen && fresh.length < S.settings.newPerDay) fresh.push(w);
   }
   q.push(...buildLearn(fresh));
   if (!due.length && !fresh.length) {
-    const seen = ALL.words.filter((w) => ws(w.id).seen && w.level <= lv.id);
+    const seen = tierWords().filter((w) => ws(w.id).seen);
     q.push(...shuffle(seen).slice(0, 8).map((w) => ({ k: reviewKind(w), item: w })));
   }
   const says = [...lv.say].sort((a, b) => (S.say[a.id]?.best || 0) - (S.say[b.id]?.best || 0)).slice(0, 2);
@@ -637,7 +695,7 @@ function renderTurnBox(feedback = '') {
     action = `<button type="button" class="mic" data-act="mic" aria-label="말하기">🎤</button><p class="mic-label" id="mic-label">${P.tries ? '다시 눌러서 말해 보세요' : '버튼을 누르고 영어로 말해요'}</p>`;
   } else {
     // 마이크가 안 되는 브라우저: 소리 내어 읽으며 알맞은 말을 고른다
-    const others = shuffle(ALL.talks.flatMap((t) => t.turns).filter((x) => x.who === 'me' && !x.answers.includes(ans)).map((x) => x.answers[0]));
+    const others = shuffle(ALL.talks.filter((t) => t.tier === P.talk.tier).flatMap((t) => t.turns).filter((x) => x.who === 'me' && !x.answers.includes(ans)).map((x) => x.answers[0]));
     const opts = shuffle([ans, ...[...new Set(others)].slice(0, 2)]);
     action = `<p class="mic-label" style="margin-top:10px">알맞은 말을 <b>소리 내어 읽고</b> 골라요</p>
       <div class="choices">${opts.map((o) => `<button type="button" class="choice" data-talk-pick="${esc(o)}">${esc(o)}</button>`).join('')}</div>`;
@@ -731,6 +789,13 @@ document.addEventListener('click', (e) => {
   switch (act) {
     case 'today': startSession('오늘 공부', buildToday(), '오늘 공부 끝! 🎉'); break;
     case 'level': go('levels', { level: Number(arg) }); break;
+    case 'tiers': go('tiers'); break;
+    case 'set-tier':
+      S.settings.tier = Number(arg); save();
+      go('today');
+      toast(`${curTier().emoji} <b>${esc(curTier().name)}</b> 수준으로 공부해요!`);
+      break;
+    case 'pick-tier': S.settings.tier = Number(arg); save(); levelPage = null; render(); break;
     case 'levels': go('levels'); break;
     case 'locked': toast(`앞 단계를 ${UNLOCK}% 넘게 하면 열려요 🔒<br><span class="small">설정 › 모든 단계 열기로 바로 열 수도 있어요</span>`); break;
     case 'learn': {
@@ -814,7 +879,7 @@ document.addEventListener('change', (e) => {
   if (!key) return;
   const el = e.target;
   let val = el.type === 'checkbox' ? el.checked : el.value;
-  if (key === 'rate' || key === 'newPerDay') val = Number(val);
+  if (key === 'rate' || key === 'newPerDay' || key === 'tier') val = Number(val);
   S.settings[key] = val;
   save();
   applySettings();
