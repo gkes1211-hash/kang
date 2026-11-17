@@ -9,10 +9,12 @@
 | [무궁화 꽃이 피었습니다](mugunghwa/) | [▶ 하러 가기](https://gkes1211-hash.github.io/kang/mugunghwa/) | 카메라가 술래가 되는 아이들 몸놀이 게임 |
 | [풍선 터트리기](balloon/) | [▶ 하러 가기](https://gkes1211-hash.github.io/kang/balloon/) | 카메라로 손을 인식해 풍선을 터트리고 폭탄은 피하는 게임 |
 | [벽 통과하기](byeok/) | [▶ 하러 가기](https://gkes1211-hash.github.io/kang/byeok/) | 다가오는 벽의 구멍 모양대로 몸을 맞춰 통과하는 몸놀이 게임 |
+| [체력왕 운동 카운터](fitness/) | [▶ 하러 가기](https://gkes1211-hash.github.io/kang/fitness/) | 스쿼트·팔 벌려 뛰기·무릎 들기 횟수를 카메라가 세어 주는 운동 게임 |
+| [제기차기](jegi/) | [▶ 하러 가기](https://gkes1211-hash.github.io/kang/jegi/) | 화면 속 제기를 발과 무릎으로 차올리는 전통 놀이 게임 |
 
 ## 체육시간 앱으로 설치하기
 
-첫 화면을 홈 화면에 설치하면 **체육시간** 앱 하나로 세 게임을 모두 할 수 있어요.
+첫 화면을 홈 화면에 설치하면 **체육시간** 앱 하나로 모든 게임을 할 수 있어요.
 앱 안에서 게임을 누르면 같은 창에서 열리고, 게임 첫 화면 왼쪽 위 **"← 🏃 체육시간"**을 누르면 게임 고르기로 돌아와요.
 
 - **안드로이드·크롬·엣지**: 첫 화면의 **📲 홈 화면에 설치하기** 버튼, 또는 주소창 메뉴 → "앱 설치"
@@ -39,5 +41,6 @@
 | `home.js` | 오프라인 준비, 설치 버튼·설치 안내 |
 | `manifest.webmanifest`, `sw.js`, `icons/` | 체육시간 앱 설치·오프라인 |
 | `desktop-shortcut/` | 윈도우 바탕화면 아이콘 만들기 (`make-shortcut.bat`·`.ps1`, `cheyuk.ico`, 묶음 `cheyuk-desktop-shortcut.zip`) |
-| `mugunghwa/`, `balloon/`, `byeok/` | 게임 (각 폴더 README 참고) |
+| `mugunghwa/`, `balloon/`, `byeok/`, `fitness/`, `jegi/` | 게임 (각 폴더 README 참고) |
+| `common/` | 체력왕·제기차기가 같이 쓰는 카메라·몸 인식·소리·꾸밈 도우미 |
 | `planner/` | 공부 플래너 (게임과 따로 쓰는 앱) |

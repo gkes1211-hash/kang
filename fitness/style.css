@@ -1,0 +1,16 @@
+:root { --main: #16a36a; --main-deep: #0d7a4e; --soft: #e3f8ee; --bg: #effaf4; --line: #c4ecd8; }
+.timer { font-size: 26px; min-width: 84px; text-align: center; }
+.timer.hurry { background: rgba(255, 59, 59, 0.85); }
+.panel { flex: 1; max-width: 460px; display: grid; grid-template-columns: auto 1fr; gap: 4px 14px; align-items: center; }
+.count { grid-row: span 3; font-size: clamp(54px, 9vw, 96px); font-weight: 900; line-height: 1; min-width: 1.4em; text-align: center; }
+.count small { font-size: 0.32em; font-weight: 800; margin-left: 2px; }
+.panel-label { font-weight: 800; font-size: 16px; }
+.gauge { height: 14px; border-radius: 999px; background: rgba(255, 255, 255, 0.2); overflow: hidden; }
+.gauge-fill { height: 100%; width: 0; border-radius: 999px; background: #ffd23f; transition: width 0.08s; }
+.gauge-fill.done { background: var(--ok); }
+.panel-tip { font-size: 15px; min-height: 1.3em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.result-row { display: flex; align-items: center; justify-content: center; gap: 12px; margin: 10px 0; font-size: 20px; }
+.result-row b { font-size: 44px; color: var(--main-deep); }
+.result-row.win b { color: #e0a800; }
+.stamp { display: inline-block; margin-top: 6px; padding: 6px 14px; border-radius: 999px; background: #fff4c2; color: #8a6400; font-weight: 800; }
+@media (max-width: 520px) { .timer { font-size: 20px; min-width: 64px; } }
