@@ -28,6 +28,15 @@
         <p class="sub">벽이 다가와요! 구멍 모양대로 <b>몸을 맞춰야</b> 통과해요.</p>
 
         <div class="setting">
+          <h2>누가 해요?</h2>
+          <div class="choices" data-setting="players" role="radiogroup" aria-label="인원">
+            <button type="button" role="radio" data-value="1"><span>🙋</span>혼자</button>
+            <button type="button" role="radio" data-value="2"><span>👫</span>둘이서</button>
+          </div>
+          <p class="hint" id="players-hint"></p>
+        </div>
+
+        <div class="setting">
           <h2>난이도</h2>
           <div class="choices three" data-setting="difficulty" role="radiogroup" aria-label="난이도">
             <button type="button" role="radio" data-value="easy"><span>🐣</span>쉬움</button>
@@ -37,11 +46,20 @@
           <p class="hint" id="difficulty-hint"></p>
         </div>
 
-        <div class="setting">
-          <h2>목소리</h2>
-          <div class="choices" data-setting="voice" role="radiogroup" aria-label="목소리">
-            <button type="button" role="radio" data-value="on"><span>🔊</span>켜기</button>
-            <button type="button" role="radio" data-value="off"><span>🔇</span>끄기</button>
+        <div class="setting two-col">
+          <div>
+            <h2>배경음악</h2>
+            <div class="choices" data-setting="music" role="radiogroup" aria-label="배경음악">
+              <button type="button" role="radio" data-value="on"><span>🎵</span>켜기</button>
+              <button type="button" role="radio" data-value="off"><span>🔇</span>끄기</button>
+            </div>
+          </div>
+          <div>
+            <h2>목소리 (통과·꽝)</h2>
+            <div class="choices" data-setting="voice" role="radiogroup" aria-label="목소리">
+              <button type="button" role="radio" data-value="on"><span>🔊</span>켜기</button>
+              <button type="button" role="radio" data-value="off"><span>🔇</span>끄기</button>
+            </div>
           </div>
         </div>
 
@@ -61,17 +79,15 @@
         <div class="pill" id="lives" aria-label="남은 목숨"></div>
         <div class="pill" id="score" aria-live="polite">0점</div>
         <div class="pill" id="level"></div>
+        <button type="button" class="pill btn" id="music-btn" aria-label="배경음악 켜고 끄기">🎵</button>
         <button type="button" class="pill btn" id="quit" aria-label="그만하기">✕</button>
       </div>
 
       <div id="banner" class="banner" aria-live="assertive"></div>
 
       <div class="hud bottom">
-        <div class="meter-wrap">
-          <div class="meter-label" id="meter-label">자세 맞추기</div>
-          <div class="meter"><div class="meter-fill" id="meter-fill"></div></div>
-          <div class="tip" id="tip"></div>
-        </div>
+        <div class="pose-name" id="pose-name" aria-live="polite"></div>
+        <div class="meters" id="meters"></div>
       </div>
     </section>
 
