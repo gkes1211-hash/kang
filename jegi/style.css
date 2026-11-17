@@ -12,7 +12,10 @@
 .result-row.win b { color: #e0a800; }
 .stamp { display: inline-block; margin-top: 6px; padding: 6px 14px; border-radius: 999px; background: #fff4c2; color: #8a6400; font-weight: 800; }
 @media (max-width: 520px) { .timer { font-size: 20px; min-width: 64px; } }
-/* 발과 제기가 화면 아래쪽에서 움직이므로, 점수 칸은 위쪽에 둔다 */
-.hud.under-top { top: calc(env(safe-area-inset-top) + 64px); justify-content: center; gap: 10px; }
-.hud.under-top .panel { max-width: 380px; padding: 8px 12px; background: rgba(20, 16, 40, 0.55); }
-.hud.under-top .count { font-size: clamp(40px, 6vw, 64px); }
+/* 몸이 화면 가운데를 크게 차지하고 제기는 위로 높이 오르므로, 점수 칸은 위쪽 구석에 작게 둔다
+   (혼자: 왼쪽 위, 둘이서: 1P 왼쪽 위·2P 오른쪽 위) */
+.hud.under-top { top: calc(env(safe-area-inset-top) + 64px); justify-content: space-between; gap: 10px; }
+.hud.under-top .panel { flex: 0 1 290px; padding: 8px 12px; background: rgba(20, 16, 40, 0.55); column-gap: 10px; }
+.hud.under-top .count { font-size: clamp(36px, 5vw, 56px); }
+.hud.under-top .panel-label, .hud.under-top .panel-sub, .hud.under-top .panel-tip { font-size: 14px; }
+.hud.under-top .panel-tip { white-space: normal; }

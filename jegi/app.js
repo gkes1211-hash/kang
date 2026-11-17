@@ -29,6 +29,7 @@ const settings = {
   difficulty: LEVELS[store.get('difficulty', 'easy')] ? store.get('difficulty', 'easy') : 'easy',
   music: store.get('music', 'on') === 'off' ? 'off' : 'on',
   voice: store.get('voice', 'on') === 'off' ? 'off' : 'on',
+  mode: store.get('mode', 'feet') === 'close' ? 'close' : 'feet', // feet: 발·무릎 / close: 가까이 (손도 OK)
 };
 const bestKey = () => `best.${settings.difficulty}`;
 const voiceOn = () => settings.voice === 'on';
@@ -36,6 +37,38 @@ const voiceOn = () => settings.voice === 'on';
 // 차는 데 쓰는 몸 점: 발목·발끝·뒤꿈치(발), 무릎
 const FEET = [27, 28, 29, 30, 31, 32];
 const KNEES = [25, 26];
+const HANDS = [15, 16, 17, 18, 19, 20]; // 손목·새끼손가락·검지 (가까이 모드)
+const kickers = () => (settings.mode === 'close' ? [...FEET, ...KNEES, ...HANDS] : [...FEET, ...KNEES]);
+const MODE_HINTS = {
+  feet: '발까지 보이게 뒤로 서요. 멀리 서도 화면이 나를 크게 보여 줘요. (태블릿을 의자나 바닥에 낮게 두면 가까이서도 발이 보여요)',
+  close: '뒤로 갈 자리가 없을 때: 가까이 서서 손바닥이나 무릎으로 제기를 쳐 올려요.',
+};
+
+// ---------- 화면 키우기 ----------
+// 발까지 보이려면 카메라에서 멀리 서야 하는데, 그러면 몸과 제기가 작게 보인다.
+// 그래서 카메라 화면을 내 몸에 맞춰 옮기고 키워서, 서 있는 몸이 화면 세로의 85%쯤 되게 보여 준다.
+// 제기와 차기 판정도 모두 키운 화면 위에서 하므로, 멀리 서도 가까이 있는 것처럼 논다.
+const BODY_SHARE = 0.85;
+const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+const toView = (v, p) => ({ x: (p.x - v.ax) * v.k + v.tx, y: (p.y - v.ay) * v.k + v.ty, visibility: p.visibility });
+const fromView = (v, p) => ({ x: (p.x - v.tx) / v.k + v.ax, y: (p.y - v.ty) / v.k + v.ay });
+
+function updateView(kid, raw, dt) {
+  const s = raw && torso(raw);
+  if (!s) return;
+  const a = area(kid.i);
+  const sh = mid(raw[11], raw[12]);
+  const kWant = (H * BODY_SHARE) / 3.5 / s;
+  const k = clamp(kWant, 1, 3.5);
+  const ax = sh.x;
+  const ay = sh.y + 0.9 * s; // 서 있는 몸의 가운데
+  // 이미 가까이 서 있으면(키울 필요 없으면) 옮기지도 않는다
+  const f = clamp((kWant - 1) / 0.6, 0, 1);
+  const want = { ax, ay, k, tx: ax + ((a.l + a.r) / 2 - ax) * f, ty: ay + (H * 0.5 - ay) * f };
+  if (!kid.view) { kid.view = want; return; }
+  const t = Math.min(1, dt * 2); // 천천히 따라가야 화면이 흔들리지 않는다
+  for (const key of Object.keys(want)) kid.view[key] += (want[key] - kid.view[key]) * t;
+}
 
 // ---------- 화면 ----------
 function showScreen(id) {
@@ -47,9 +80,8 @@ function refreshHome() {
     group.querySelectorAll('button').forEach((b) => b.setAttribute('aria-checked', String(b.dataset.value === settings[key])));
   });
   $('difficulty-hint').textContent = LEVELS[settings.difficulty].hint;
-  $('players-hint').textContent = settings.players === '2'
-    ? '1P는 화면 왼쪽, 2P는 오른쪽에 서요. 각자 제기를 차요!'
-    : '발까지 화면에 보이게 조금 뒤로 서요.';
+  $('mode-hint').textContent = MODE_HINTS[settings.mode];
+  $('players-hint').textContent = settings.players === '2' ? '1P는 화면 왼쪽, 2P는 오른쪽에 서요. 각자 제기를 차요!' : '';
   const best = Number(store.get(bestKey(), 0));
   $('best').textContent = best ? `🏆 ${LEVELS[settings.difficulty].label} 최고 연속 기록: ${best}번` : '';
   $('music-btn').textContent = settings.music === 'on' ? '🎵' : '🔇';
@@ -91,7 +123,7 @@ const music = new Music({
 // 한 사람의 상태: 몸, 제기, 기록
 function newKid(i) {
   return {
-    i, pts: null, S: 0, seen: 0, prev: {}, vel: {},
+    i, pts: null, view: null, S: 0, seen: 0, prev: {}, vel: {},
     jegi: null, respawn: 0, streak: 0, best: 0, total: 0, drops: 0, lastKick: -1, pops: [],
   };
 }
@@ -114,7 +146,7 @@ function spawn(kid) {
 // ---------- 차기 ----------
 function trackPoints(kid, dt) {
   const pts = kid.pts;
-  for (const j of [...FEET, ...KNEES]) {
+  for (const j of kickers()) {
     if (!vis(pts, j)) { delete kid.prev[j]; continue; }
     const p = pts[j];
     const q = kid.prev[j];
@@ -134,7 +166,7 @@ function tryKick(kid, now) {
   const S = kid.S || H * 0.2;
   const reach = lv.reach * S + jegiR();
   let hit = null;
-  for (const j of [...FEET, ...KNEES]) {
+  for (const j of kickers()) {
     if (!vis(kid.pts, j)) continue;
     const p = kid.pts[j];
     const d = Math.hypot(p.x - jg.x, p.y - jg.y);
@@ -155,8 +187,8 @@ function tryKick(kid, now) {
   kid.streak += 1;
   kid.total += 1;
   kid.best = Math.max(kid.best, kid.streak);
-  const knee = KNEES.includes(hit.j);
-  kid.pops.push({ x: jg.x, y: jg.y, t: 0, text: knee ? `무릎! ${kid.streak}` : String(kid.streak) });
+  const part = KNEES.includes(hit.j) ? '무릎! ' : HANDS.includes(hit.j) ? '손! ' : '';
+  kid.pops.push({ x: jg.x, y: jg.y, t: 0, text: `${part}${kid.streak}` });
   sfx.good(kid.streak);
   if (kid.streak % 10 === 0) speak(`${kid.streak}번!`, voiceOn());
 }
@@ -208,13 +240,15 @@ const demoState = [];
 function demoBody(kid, dt, now) {
   const n = game.players;
   const ds = demoState[kid.i] || (demoState[kid.i] = { cx: 0, foot: null, miss: false, side: 1 });
-  const S = H * (n === 2 ? 0.14 : 0.17);
+  // 카메라에서 멀리 선 사람처럼 작게, 화면 아래쪽에 선다 (화면 키우기가 크게 보여 준다)
+  const S = H * (n === 2 ? 0.075 : 0.09);
   const a = area(kid.i);
-  if (!ds.cx) ds.cx = (a.l + a.r) / 2;
-  const jg = kid.jegi;
+  if (!ds.cx) ds.cx = a.l + (a.r - a.l) * 0.4;
+  const jg = kid.jegi && kid.view ? { ...kid.jegi, ...fromView(kid.view, kid.jegi) } : kid.jegi;
+  const scale = kid.view ? kid.view.k : 1;
   if (jg) ds.cx += (jg.x - ds.cx) * Math.min(1, dt * 2.5);
   ds.cx = Math.max(a.l + S, Math.min(a.r - S, ds.cx)); // 내 칸 안에서만
-  const footY = H * 0.93;
+  const footY = H * 0.82;
   const hipY = footY - 1.65 * S;
   const shY = hipY - S;
   const cx = ds.cx + Math.sin(now * 2 + kid.i) * S * 0.05;
@@ -222,7 +256,7 @@ function demoBody(kid, dt, now) {
   if (jg && jg.vy > 0 && jg.y > hipY + 0.2 * S) {
     if (!ds.foot) { ds.side = jg.x < cx ? -1 : 1; ds.miss = Math.random() < 0.12; ds.foot = { x: cx + ds.side * 0.3 * S, y: footY }; }
     const tx = jg.x + (ds.miss ? ds.side * 1.4 * S : 0);
-    const ty = jg.y + jegiR() * 0.6;
+    const ty = jg.y + (jegiR() * 0.6) / scale;
     ds.foot.x += (tx - ds.foot.x) * Math.min(1, dt * 14);
     ds.foot.y += (ty - ds.foot.y) * Math.min(1, dt * 14);
     kick = ds.foot;
@@ -438,7 +472,17 @@ function draw() {
   ctx.fillRect(0, 0, W, H);
   const r = !DEMO && videoRect(video, W, H);
   if (r && video.readyState >= 2) {
-    drawMirrored(ctx, video, r);
+    for (const kid of game.kids) {
+      ctx.save();
+      if (game.players === 2) {
+        const a = area(kid.i);
+        ctx.beginPath(); ctx.rect(a.l, 0, a.r - a.l, H); ctx.clip();
+      }
+      const v = kid.view;
+      if (v) { ctx.translate(v.tx, v.ty); ctx.scale(v.k, v.k); ctx.translate(-v.ax, -v.ay); }
+      drawMirrored(ctx, video, r);
+      ctx.restore();
+    }
     ctx.fillStyle = 'rgba(20,16,40,0.18)';
     ctx.fillRect(0, 0, W, H);
   } else {
@@ -460,9 +504,9 @@ function draw() {
     if (kid.pts) {
       const color = game.players === 2 ? (kid.i === 0 ? '#ffb27a' : '#8cbcff') : 'rgba(255,255,255,0.9)';
       drawSkeleton(ctx, kid.pts, { width: Math.max(5 * DPR, (kid.S || 100) * 0.07), color });
-      // 차는 곳(발·무릎)을 동그라미로 보여 준다
+      // 차는 곳(발·무릎, 가까이 모드는 손도)을 동그라미로 보여 준다
       ctx.save();
-      for (const j of [27, 28, 25, 26]) {
+      for (const j of settings.mode === 'close' ? [27, 28, 25, 26, 15, 16] : [27, 28, 25, 26]) {
         if (!vis(kid.pts, j)) continue;
         ctx.strokeStyle = 'rgba(255,210,63,0.85)';
         ctx.lineWidth = 3 * DPR;
@@ -496,8 +540,11 @@ function hud() {
     const feet = k.pts && (vis(k.pts, 27) || vis(k.pts, 28));
     let tip = '';
     if (!k.seen && game.phase !== 'find') tip = '안 보여요! 화면 안으로 와요 🙈';
-    else if (!feet) tip = '발이 보이게 조금 뒤로 가요 👣';
-    else if (game.phase === 'play' && k.jegi && k.jegi.vy > 0 && k.jegi.y > H * 0.45) tip = game.level.needUp ? '발을 위로 차올려요! 🦶' : '발에 대요! 🦶';
+    else if (!feet && settings.mode === 'feet') tip = '발이 보이게 뒤로 가요 👣 멀리 서도 크게 보여요';
+    else if (game.phase === 'play' && k.jegi && k.jegi.vy > 0 && k.jegi.y > H * 0.45) {
+      const what = settings.mode === 'close' ? '손이나 무릎' : '발';
+      tip = game.level.needUp ? `${what}을 위로 쳐 올려요! ⬆️` : `${what}에 대요! 🦶`;
+    }
     const hearts = n === 1 ? ` · ${'❤️'.repeat(Math.max(0, LIVES - k.drops))}${'🤍'.repeat(Math.min(LIVES, k.drops))}` : '';
     return {
       count: k.streak,
@@ -534,9 +581,11 @@ function loop(ts) {
   const res = DEMO ? null : sensor?.sample(dt);
   const r = DEMO ? null : videoRect(video, W, H);
   for (const kid of game.kids) {
-    let pts = null;
-    if (DEMO) pts = demoBody(kid, dt, now);
-    else if (res?.[kid.i]?.present && res[kid.i].landmarks && r) pts = toPixels(res[kid.i].landmarks, r);
+    let raw = null;
+    if (DEMO) raw = demoBody(kid, dt, now);
+    else if (res?.[kid.i]?.present && res[kid.i].landmarks && r) raw = toPixels(res[kid.i].landmarks, r);
+    updateView(kid, raw, dt);
+    const pts = raw && kid.view ? raw.map((p) => toView(kid.view, p)) : raw;
     kid.pts = pts;
     const s = pts && torso(pts);
     if (s) {
