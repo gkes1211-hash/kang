@@ -26,3 +26,6 @@ window.addEventListener('appinstalled', () => { installBtn.hidden = true; });
 // 아이패드·아이폰 사파리는 설치 버튼이 없어서 방법을 글로 알려 준다
 const ios = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 if (ios && !installed) iosHint.hidden = false;
+
+// 윈도우 컴퓨터: 바탕화면 아이콘 만들기 파일 받기 (이미 앱으로 열었으면 감춤)
+if (/Windows/.test(navigator.userAgent) && !installed) document.getElementById('win-shortcut').hidden = false;
