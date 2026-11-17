@@ -55,3 +55,12 @@ python3 balloon/build_single.py
 
 `dist/풍선터트리기.html` (약 30MB) 이 만들어져요. 엔진과 손 모델이 모두 들어 있어서 이 파일만 있으면 돼요.
 크롬이나 엣지에서 더블클릭해 열고, 카메라를 허락하면 바로 시작해요.
+
+## 바탕화면 풍선 아이콘 (Windows)
+
+`build_single.py` 는 `dist/풍선터트리기.zip` 도 만들어요. 압축을 풀고 `바로가기만들기.bat` 을 더블클릭하면:
+
+- 게임 파일과 아이콘을 `%LOCALAPPDATA%\BalloonGame` 에 복사하고
+- 바탕화면에 🎈 풍선 아이콘이 달린 **풍선 터트리기** 바로가기를 만들어요.
+
+아이콘은 `python3 balloon/make_icon.py` 로 다시 그릴 수 있어요 (`icon.png`, `balloon.ico`).

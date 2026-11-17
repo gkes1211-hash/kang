@@ -1,0 +1,5 @@
+@echo off
+rem Balloon game: copies the game to %LOCALAPPDATA%\BalloonGame and makes a Desktop shortcut with a balloon icon.
+powershell -NoProfile -ExecutionPolicy Bypass -Command "$src='%~dp0'; $dst=Join-Path $env:LOCALAPPDATA 'BalloonGame'; New-Item -ItemType Directory -Force $dst | Out-Null; $html=Get-ChildItem -LiteralPath $src -Filter *.html | Select-Object -First 1; if(-not $html){Write-Host 'HTML file not found next to this file.'; exit 1}; Copy-Item -LiteralPath $html.FullName -Destination (Join-Path $dst 'balloon-game.html') -Force; Copy-Item -LiteralPath (Join-Path $src 'balloon.ico') -Destination (Join-Path $dst 'balloon.ico') -Force; $name=-join [char[]](0xD48D,0xC120,0x20,0xD130,0xD2B8,0xB9AC,0xAE30); $desk=[Environment]::GetFolderPath('Desktop'); $lnk=(New-Object -ComObject WScript.Shell).CreateShortcut((Join-Path $desk ($name+'.lnk'))); $lnk.TargetPath=(Join-Path $dst 'balloon-game.html'); $lnk.IconLocation=(Join-Path $dst 'balloon.ico')+',0'; $lnk.Save(); Write-Host ''; Write-Host '  OK! Balloon shortcut is on your Desktop.'"
+echo.
+pause
