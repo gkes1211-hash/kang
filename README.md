@@ -12,3 +12,10 @@
 
 > 바로가기 주소는 이 저장소의 **GitHub Pages**가 켜져 있어야 열려요.
 > 저장소 **Settings → Pages → Build and deployment**에서 Source를 **Deploy from a branch**, Branch를 **`main`** / **`/ (root)`**로 두고 Save 하면, 1~2분 뒤 위 주소로 열려요.
+
+## 공부 플래너
+
+| 앱 | 바로가기 | 설명 |
+| --- | --- | --- |
+| [엄마 앱](planner/) | [▶ 열기](https://gkes1211-hash.github.io/kang/planner/) | 요일별 루틴, 숙제, 부모님 확인 도장을 한눈에 보는 학습 플래너 |
+| [아이 앱](planner/kid/) | [▶ 열기](https://gkes1211-hash.github.io/kang/planner/kid/) | 오늘 공부를 체크하고, 다 하면 엄마한테 카톡·문자로 알려요 |
