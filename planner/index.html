@@ -110,6 +110,11 @@ h1{font-size:clamp(25px,7vw,30px);font-weight:800;letter-spacing:-.03em;margin:2
 .summary p{margin:2px 0 0;color:var(--ink-2);font-size:14px}
 .stamped{display:inline-flex;gap:4px;align-items:center;margin-top:6px;font-size:13px;font-weight:800;color:var(--warn-ink);background:var(--warn-soft);border-radius:999px;padding:2px 10px}
 
+.kidmsg{display:flex;flex-direction:column;gap:2px;background:var(--surface-2);border-radius:14px;padding:11px 14px}
+.kidmsg.all{background:var(--accent-soft)}
+.kidmsg b{font-size:15.5px}
+.kidmsg span{font-size:13px;color:var(--ink-2)}
+.dot-warn{color:var(--warn-ink);font-weight:800}
 .note{display:flex;gap:10px;align-items:flex-start;background:var(--warn-soft);color:var(--warn-ink);border-radius:16px;padding:12px 14px;font-size:14px}
 .note .grow{color:var(--ink)}
 
@@ -255,120 +260,31 @@ input::placeholder,textarea::placeholder{color:var(--ink-3)}
 <div class="modal" id="modal" hidden><div class="backdrop" data-act="closeModal"></div><div class="sheet" role="dialog" aria-modal="true" id="sheet"></div></div>
 <div id="toast" role="status"></div>
 
+<script src="core.js"></script>
 <script>
 (() => {
 'use strict';
+const H = window.HB;
+const {DOW, DOW_ORDER, COLORS, parse, today, addDays, dowOf, mondayOf, md, mdw, diffDays, uid, esc, hash, CHECK} = H;
 const KEY = 'homebase.planner.v1';
-const DOW = ['일','월','화','수','목','금','토'];
-const DOW_ORDER = [1,2,3,4,5,6,0];
-const COLORS = { // light bg, fg, border | dark bg, fg, border
-  green:['#e3f0dc','#3e6b2e','#c5deb8','#213020','#a9d597','#35502f'],
-  blue:['#dceaf3','#2d5f80','#b9d3e6','#1d2e3b','#9cc6e6','#2f4a5e'],
-  orange:['#fbe7d4','#94531a','#f1cda9','#3a2a1c','#f2bc88','#5a4128'],
-  red:['#f6dee0','#9a3340','#ebc0c5','#3a2226','#f0a5af','#5a3339'],
-  yellow:['#f8efc8','#7a6410','#eadb98','#35301a','#e8d27a','#524a28'],
-  teal:['#d9f0ee','#22675f','#b3deda','#18302e','#8fd8cf','#2a4b48'],
-  purple:['#ece4f7','#5d3f8f','#d6c7ee','#2d2540','#c8b2f0','#45395f'],
-  pink:['#fbe0ee','#94326a','#f0c0da','#3a2030','#f0a6cf','#5a3349'],
-  gray:['#eceef2','#4f5868','#d6dae1','#262c36','#b5bcc8','#3a4250'],
-};
-(function injectColors(){
-  let l='', d='', cls='';
-  for (const [n,c] of Object.entries(COLORS)) {
-    l += `--${n}-bg:${c[0]};--${n}-fg:${c[1]};--${n}-bd:${c[2]};`;
-    d += `--${n}-bg:${c[3]};--${n}-fg:${c[4]};--${n}-bd:${c[5]};`;
-    cls += `.c-${n}{--cbg:var(--${n}-bg);--cfg:var(--${n}-fg);--cbd:var(--${n}-bd)}`;
-  }
-  const s = document.createElement('style');
-  s.textContent = `:root{${l}}@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){${d}}}:root[data-theme="dark"]{${d}}${cls}`;
-  document.head.appendChild(s);
-})();
-
-/* ---------- dates ---------- */
-const pad = n => String(n).padStart(2,'0');
-const ymd = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
-const parse = k => { const [y,m,d] = k.split('-').map(Number); return new Date(y, m-1, d); };
-const today = () => ymd(new Date());
-const addDays = (k,n) => { const d = parse(k); d.setDate(d.getDate()+n); return ymd(d); };
-const dowOf = k => parse(k).getDay();
-const mondayOf = k => addDays(k, -((dowOf(k)+6)%7));
-const md = k => { const d = parse(k); return `${d.getMonth()+1}월 ${d.getDate()}일`; };
-const mdw = k => `${md(k)} (${DOW[dowOf(k)]})`;
-const diffDays = (a,b) => Math.round((parse(b)-parse(a))/86400000);
-const uid = () => Math.random().toString(36).slice(2,9) + Date.now().toString(36).slice(-3);
-const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const hash = s => { let h = 5381; for (const ch of 'hb:' + s) h = ((h << 5) + h + ch.charCodeAt(0)) | 0; return (h >>> 0).toString(36); };
-const CHECK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
-
-/* ---------- state ---------- */
-function defaultState() {
-  const subjects = [['math','수학','green'],['eng','영어','blue'],['hanja','한자','orange'],['hist','역사','red'],['soc','사회','yellow'],['sci','과학','teal'],['read','독서','purple'],['etc','기타','gray']]
-    .map(([id,name,color]) => ({id,name,color}));
-  const r = (subj,title,min,detail='') => ({id:uid(),subj,title,detail,min});
-  const routine = {
-    1:[r('math','수학 문제집 2쪽',30),r('eng','영어 숙제',30),r('hanja','한자 5자 쓰기',15)],
-    2:[r('math','수학 문제집 2쪽',30),r('eng','영어 숙제',30),r('hist','역사책 읽기',20)],
-    3:[r('math','수학 문제집 2쪽',30),r('eng','영어 숙제',30),r('soc','사회책 읽기',20),r('hanja','한자 5자 쓰기',15)],
-    4:[r('math','수학 문제집 2쪽',30),r('eng','영어 숙제',30),r('sci','과학책 읽기',20)],
-    5:[r('math','수학 문제집 2쪽',30),r('eng','영어 숙제',30),r('hist','역사책 읽기',20),r('hanja','한자 복습',10)],
-    6:[r('math','틀린 문제 다시 풀기',30),r('sci','과학책 읽기',30),r('read','읽고 싶은 책 읽기',30)],
-    0:[r('soc','사회책 읽기',20),r('hanja','이번 주 한자 쪽지시험',15),r('etc','다음 주 준비물 챙기기',10)],
-  };
-  const t = today();
-  return {
-    v:1, name:'', subjects, routine, days:{}, stamps:{},
-    homework:[{id:uid(),subj:'eng',title:'영어 학원 숙제 (단어 시험 준비)',due:addDays(t,2),memo:'',done:false,doneAt:'',created:t,
-      steps:[{id:uid(),t:'단어 20개 외우기',done:false},{id:uid(),t:'예문 5개 쓰기',done:false},{id:uid(),t:'엄마랑 단어 테스트',done:false}]}],
-    lock:{enabled:false,pin:''}, sampleNote:true,
-  };
-}
-function load() {
-  try { const s = JSON.parse(localStorage.getItem(KEY)); if (s && s.v === 1 && s.routine) return s; } catch (e) {}
-  return defaultState();
-}
-let state = load();
-function save() { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} }
+let state = H.load(KEY) || H.defaultState();
+function save() { H.save(KEY, state); }
 save();
 
 let unlocked = false;
 const ui = { tab:'today', date:today(), week:mondayOf(today()), filter:'all', q:'', showDone:false, rdow:dowOf(today()), hwTab:'todo' };
 try { const t = sessionStorage.getItem('hb.tab'); if (t) ui.tab = t; } catch (e) {}
 
-const subj = id => state.subjects.find(s => s.id === id) || {id, name:'기타', color:'gray'};
-const chip = id => { const s = subj(id); return `<span class="chip c-${s.color}">${esc(s.name)}</span>`; };
-
-/* ---------- day data ---------- */
-const routineItems = k => (state.routine[dowOf(k)] || []).map(i => ({...i, src:'r'}));
-function rawItems(k) { const d = state.days[k]; return d ? d.items : routineItems(k); }
-function itemsFor(k) { const d = state.days[k]; return rawItems(k).filter(i => !(d && d.skip && d.skip[i.id])); }
-function materialize(k) {
-  if (!state.days[k]) state.days[k] = {items:routineItems(k), done:{}, memo:{}, skip:{}};
-  const d = state.days[k]; d.done ||= {}; d.memo ||= {}; d.skip ||= {};
-  return d;
-}
-const isDone = (k,id) => !!(state.days[k] && state.days[k].done && state.days[k].done[id]);
-function dayStats(k) {
-  const items = itemsFor(k); let done = 0, left = 0;
-  for (const i of items) { if (isDone(k,i.id)) done++; else left += (+i.min || 0); }
-  return {total:items.length, done, left, pct: items.length ? Math.round(done/items.length*100) : 0};
-}
-// After routine edits: days from today on pick up the new routine; checked items stay.
-function syncRoutine() {
-  const t = today();
-  for (const [k,d] of Object.entries(state.days)) {
-    if (k < t) continue;
-    const r = state.routine[dowOf(k)] || [];
-    const ids = new Set(r.map(i => i.id));
-    d.items = [...r.map(i => ({...i, src:'r'})), ...d.items.filter(it => it.src === 'x' || (!ids.has(it.id) && d.done[it.id]))];
-  }
-}
-const hwSteps = h => ({done:h.steps.filter(s => s.done).length, total:h.steps.length});
-function ddayHtml(due, base = today()) {
-  const n = diffDays(base, due);
-  if (n < 0) return `<span class="dday late">${-n}일 지남</span>`;
-  if (n === 0) return `<span class="dday soon">D-day</span>`;
-  return `<span class="dday ${n<=1?'soon':''}">D-${n}</span>`;
-}
+const subj = id => H.subj(state, id);
+const chip = id => H.chip(state, id);
+const routineItems = k => H.routineItems(state, k);
+const rawItems = k => H.rawItems(state, k);
+const itemsFor = k => H.itemsFor(state, k);
+const materialize = k => H.materialize(state, k);
+const isDone = (k,id) => H.isDone(state, k, id);
+const dayStats = k => H.dayStats(state, k);
+const syncRoutine = () => H.syncRoutine(state);
+const hwSteps = H.hwSteps, ddayHtml = H.ddayHtml;
 
 /* ---------- render ---------- */
 const $ = s => document.querySelector(s);
@@ -407,6 +323,22 @@ function hwRow(h, base) {
     </div>
     <button class="btn sm" data-act="hwSheet" data-id="${h.id}">열기 ›</button>
   </div>`;
+}
+
+function kidCard(k) {
+  const inbox = state.kidInbox || [];
+  const last = inbox[0], forDay = inbox.find(x => x.date === k);
+  const never = !state.kidSentFp, dirty = !never && state.kidSentFp !== H.planPrint(state);
+  let line;
+  if (forDay) { const all = forDay.total && forDay.done === forDay.total;
+    line = `<div class="kidmsg ${all?'all':''}"><b>${all?'🎉 아이가 ‘다 했어요’를 보냈어요':'📨 아이가 소식을 보냈어요'}</b><span>${H.hm(forDay.at)} · ${forDay.done}/${forDay.total} 완료${forDay.note?` · “${esc(forDay.note)}”`:''}</span></div>`; }
+  else line = `<div class="muted small">${k===today()?'오늘':'이날'} 아이가 보낸 소식은 아직 없어요.${last?` (마지막 소식 ${mdw(last.date)} ${H.hm(last.at)})`:''}</div>`;
+  return `<section class="card">
+    <div class="card-h"><h2>👧 아이 앱</h2><span class="meta">${never?'아직 연결 전':dirty?'<span class="dot-warn">● 보낼 변경 있음</span>':'아이 기기와 같아요'}</span></div>
+    ${line}
+    ${never?'<div class="note small"><span>📲</span><div class="grow">‘아이 기기로 보내기’로 루틴과 숙제를 아이 앱에 넣어 주세요.</div></div>':dirty?'<div class="note small"><span>🔄</span><div class="grow">바뀐 루틴·숙제가 아직 아이 기기에 없어요. ‘아이 기기로 보내기’를 눌러 주세요.</div></div>':''}
+    <div class="grid2"><button class="btn primary" data-act="kidIn">📥 아이 소식 넣기</button><button class="btn" data-act="kidOut">📲 아이 기기로 보내기</button></div>
+  </section>`;
 }
 
 const VIEWS = {
@@ -453,6 +385,7 @@ today() {
       <button class="btn" data-act="report">📤 오늘 보고 보내기</button>
     </div>
   </section>
+  ${kidCard(k)}
   ${state.sampleNote?`<div class="note"><span>📌</span><div class="grow small">지금 보이는 시간표는 <b>예시</b>예요. <b>루틴</b> 탭에서 우리 아이 문제집과 요일에 맞게 바꿔 주세요.</div><button class="btn sm" data-act="hideNote">닫기</button></div>`:''}
   <div class="filters" role="group" aria-label="과목 고르기">
     <button class="fchip all" data-act="filter" data-f="all" aria-pressed="${ui.filter==='all'}">모두</button>${subjFilters}
@@ -534,7 +467,7 @@ routine() {
         </div>
       </div>`).join('') || '<div class="empty">이 요일은 쉬는 날이에요.</div>'}</div>
     <button class="btn dashed" data-act="redit">＋ 루틴 추가</button>
-    <div class="row wrap-ok"><button class="btn sm" data-act="rcopy">📋 다른 요일로 복사</button><span class="muted small grow">바꾼 루틴은 오늘부터 적용돼요. 지난 기록은 그대로예요.</span></div>
+    <div class="row wrap-ok"><button class="btn sm" data-act="rcopy">📋 다른 요일로 복사</button><span class="muted small grow">바꾼 루틴은 오늘부터 적용돼요. 다 바꾼 뒤 오늘 탭 › ‘아이 기기로 보내기’를 눌러 주세요.</span></div>
     ${locked?'<div class="note small"><span>🔒</span><div class="grow">루틴을 바꾸려면 부모님 비밀번호가 필요해요.</div></div>':''}
   </section>
   <section class="card">
@@ -616,6 +549,7 @@ record() {
     <div class="srow"><div class="grow"><b>아이 이름</b><span>${state.name?esc(state.name)+' · ':''}맨 위 제목에 이름이 나와요</span></div><button class="btn" data-act="setName">바꾸기</button></div>
     <div class="srow"><div class="grow"><b>부모님 잠금</b><span>루틴 바꾸기 · 숙제 지우기 · 확인 도장 · 설정에 비밀번호가 필요해요</span></div>${L.enabled?(unlocked?'<button class="btn" data-act="lockNow">잠그기</button>':'<button class="btn" data-act="unlock">풀기</button>'):'<button class="btn" data-act="setPin">켜기</button>'}</div>
     ${L.enabled?'<div class="srow"><div class="grow"><b>비밀번호 바꾸기 / 잠금 끄기</b></div><button class="btn" data-act="pinMenu">바꾸기</button></div>':''}
+    <div class="srow"><div class="grow"><b>아이 앱 연결</b><span>아이 기기에서 ${esc(H.base())}kid/ 를 열고, 여기서 보낸 글을 붙여 넣어요</span></div><button class="btn" data-act="kidOut">보내기</button></div>
     <div class="srow"><div class="grow"><b>과목 관리</b><span>과목 이름과 색을 바꾸거나 새 과목을 넣어요</span></div><button class="btn" data-act="subjects">관리</button></div>
     <div class="srow"><div class="grow"><b>백업 · 기기 옮기기</b><span>기록은 이 기기에만 저장돼요. 다른 기기로 옮기거나 보관할 때 써요.</span></div><button class="btn" data-act="backup">백업</button></div>
     <div class="srow"><div class="grow"><b>백업 불러오기</b><span>다른 기기에서 만든 백업을 넣어요</span></div><button class="btn" data-act="restore">불러오기</button></div>
@@ -747,7 +681,7 @@ const A = {
   report() {
     const text = reportText(ui.date);
     openModal(`<h3>📤 오늘 보고</h3><p class="muted small" style="margin:0">복사해서 카톡이나 문자로 보내요.</p><div class="report" id="rep">${esc(text)}</div>
-      <div class="actions">${navigator.share?'<button class="btn" data-act="m" data-h="share">공유하기</button>':''}<button class="btn primary" data-act="m" data-h="copy">복사하기</button></div>`,
+      <div class="actions"><button class="btn" data-act="closeModal">닫기</button>${navigator.share?'<button class="btn" data-act="m" data-h="share">공유하기</button>':''}<button class="btn primary" data-act="m" data-h="copy">복사하기</button></div>`,
     { copy() { copyText(text, '보고를 복사했어요. 붙여넣어 보내요'); },
       async share() { try { await navigator.share({text}); } catch (e) { if (e.name !== 'AbortError') copyText(text, '보고를 복사했어요'); } } });
   },
@@ -886,7 +820,32 @@ const A = {
     });
   },
   reset() {
-    guard(() => confirmBox('처음 상태로', '모든 기록, 루틴, 숙제가 지워지고 예시 시간표로 돌아가요. 되돌릴 수 없어요. 필요하면 먼저 백업해 주세요.', '모두 지우기', () => { state = defaultState(); unlocked = false; save(); ui.date = today(); render(); toast('처음 상태로 돌아갔어요'); }));
+    guard(() => confirmBox('처음 상태로', '모든 기록, 루틴, 숙제가 지워지고 예시 시간표로 돌아가요. 되돌릴 수 없어요. 필요하면 먼저 백업해 주세요.', '모두 지우기', () => { state = H.defaultState(); unlocked = false; save(); ui.date = today(); render(); toast('처음 상태로 돌아갔어요'); }));
+  },
+  kidIn() {
+    openModal(`<h3>📥 아이 소식 넣기</h3><p class="muted small" style="margin:0">아이가 카톡이나 문자로 보낸 글을 <b>통째로</b> 복사해서 붙여 넣으면 아이가 한 체크와 메모가 들어와요.</p>
+      <textarea id="kin" rows="5" placeholder="아이에게 받은 글을 여기에 붙여 넣어요"></textarea>
+      <div class="err" id="err"></div>
+      <div class="actions"><button class="btn" data-act="m" data-h="paste">📋 붙여넣기</button><button class="btn primary" data-act="m" data-h="ok">넣기</button></div>`,
+    { async paste() { try { $('#kin').value = await navigator.clipboard.readText(); } catch (e) { $('#kin').focus(); toast('글 칸을 길게 눌러 붙여넣기 해 주세요'); } },
+      async ok() {
+        let p; try { p = await H.decode(val('kin')); } catch (e) { return void ($('#err').textContent = '아이 앱에서 보낸 글을 찾지 못했어요. 글 끝의 HB 로 시작하는 코드까지 다 붙여 넣어 주세요.'); }
+        if (p.k !== 'kid') return void ($('#err').textContent = '이건 엄마 앱에서 만든 글이에요. 아이가 보낸 글을 붙여 넣어 주세요.');
+        H.applyKidPacket(state, p); save(); closeModal(); ui.date = p.date; ui.tab = 'today'; render();
+        toast(`${md(p.date)} 아이 체크를 넣었어요 · ${p.doneN}/${p.total}`);
+      } });
+  },
+  async kidOut() {
+    openModal(`<h3>📲 아이 기기로 보내기</h3><p class="muted small" style="margin:0">지금 루틴·숙제·확인 도장을 아이 앱에 넣는 글이에요. 카톡으로 아이에게 보내고, 아이 앱 › ⚙️ › <b>엄마 코드 넣기</b>에 붙여 넣어요.</p><div class="report" id="kout">만드는 중…</div>`);
+    const code = await H.encode(H.momPacket(state));
+    const text = `📒 ${state.name || '우리 아이'} 공부 플래너 · 엄마가 보낸 업데이트\n아이 앱 › ⚙️ › ‘엄마 코드 넣기’에 이 글을 통째로 붙여 넣어요.\n처음이면 아이 앱 주소: ${H.base()}kid/\n\n${code}`;
+    const fp = H.planPrint(state);
+    const sent = () => { state.kidSentFp = fp; save(); render(); };
+    openModal(`<h3>📲 아이 기기로 보내기</h3><p class="muted small" style="margin:0">카톡으로 아이에게 보내고, 아이 앱 › ⚙️ › <b>엄마 코드 넣기</b>에 붙여 넣어요. 루틴이나 숙제를 바꿀 때마다 한 번씩 보내 주세요.</p>
+      <div class="report">${esc(text)}</div>
+      <div class="actions"><button class="btn" data-act="closeModal">닫기</button>${navigator.share?'<button class="btn" data-act="m" data-h="share">카톡으로 보내기</button>':''}<button class="btn primary" data-act="m" data-h="copy">복사하기</button></div>`,
+    { async copy() { if (await copyText(text, '복사했어요. 아이에게 카톡으로 보내 주세요')) { sent(); closeModal(); } },
+      async share() { try { await navigator.share({text}); sent(); toast('보냈어요'); } catch (e) { if (e.name !== 'AbortError' && await copyText(text, '복사했어요. 카톡에 붙여 넣어 보내 주세요')) sent(); } } });
   },
   closeModal() { closeModal(); },
   m(el) { const f = M[el.dataset.h]; if (f) f(el); },
