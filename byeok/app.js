@@ -315,7 +315,6 @@ async function startGame() {
   body.seenFor = 0;
   sensor?.reset();
   setPhase('find');
-  drawTargetCard(null);
   lastTs = 0;
   requestAnimationFrame(loop);
 }
@@ -341,7 +340,6 @@ function nextWall() {
   // 어려움: 세 번째 벽부터는 다가오다가 구멍 모양이 바뀔 수 있다
   game.morphAt = d.morph && game.passed >= 2 && Math.random() < d.morph ? 0.35 + Math.random() * 0.15 : null;
   demo.mistake = DEMO && Math.random() < 0.3 ? Math.floor(Math.random() * (game.pose.legs ? 8 : 4)) : null;
-  drawTargetCard(game.pose);
   setPhase('wall');
   banner(`${game.pose.emoji} ${game.pose.name}!`, 'small', 1300);
   speak(game.pose.name);
@@ -443,8 +441,7 @@ function step(dt, now) {
         game.pose = pickPose(d, game.passed + 4, old.id, performance.now() / 1000 - body.lastLegs < 1.5 || DEMO);
         game.lastPoseId = game.pose.id;
         game.morphAt = null;
-        drawTargetCard(game.pose);
-        banner(`바뀐다! 🔄 ${game.pose.name}`, 'small gold', 1300);
+              banner(`바뀐다! 🔄 ${game.pose.name}`, 'small gold', 1300);
         sfx.morph();
         speak(`바뀐다! ${game.pose.name}`);
         if (DEMO && demo.mistake == null && Math.random() < 0.5) demo.mistake = 0;
@@ -655,26 +652,6 @@ function draw(now) {
   }
 }
 
-// 아래 왼쪽 작은 카드: 이번 벽의 구멍 모양
-const tctx = $('target').getContext('2d');
-const tPattern = tctx.createPattern(brickTile, 'repeat');
-function drawTargetCard(pose) {
-  const c = tctx;
-  c.clearRect(0, 0, 160, 200);
-  c.fillStyle = tPattern;
-  c.fillRect(0, 0, 160, 200);
-  if (!pose) {
-    $('target-name').textContent = '준비';
-    return;
-  }
-  const f = figure({ x: 80, y: 62 }, 46, pose, DEFAULT_PROPS);
-  c.fillStyle = c.strokeStyle = '#ffd23f';
-  traceSilhouette(c, f, 26);
-  c.fillStyle = c.strokeStyle = '#2a2350';
-  traceSilhouette(c, f, 19);
-  $('target-name').textContent = `${pose.emoji} ${pose.name}`;
-}
-
 let hudCache = '';
 function hud() {
   const d = game.diff;
@@ -691,7 +668,7 @@ function hud() {
     const k = worstPart(live);
     if (k) tip = live.segs[k] === Infinity ? `${josa(SEG_NAME[k], '이', '가')} 안 보여요` : `${josa(SEG_NAME[k], '을', '를')} 구멍에 맞춰요`;
   } else if (live?.pass) tip = '좋아요! 그대로 멈춰요 ✋';
-  const key = [hearts, game.score, lvl, pct, live?.pass, tip].join('|');
+  const key = [hearts, game.score, lvl, pct, live?.pass, tip, game.pose?.id, game.phase].join('|');
   if (key === hudCache) return;
   hudCache = key;
   $('lives').textContent = hearts;
@@ -699,7 +676,9 @@ function hud() {
   $('level').textContent = lvl;
   $('meter-fill').style.width = `${pct}%`;
   $('meter-fill').classList.toggle('good', !!live?.pass);
-  $('meter-label').textContent = live ? (live.pass ? '딱 맞아요! 👍' : `자세 맞추기 ${pct}%`) : '자세 맞추기';
+  // 이번 자세 이름도 여기에 보여 준다 (예: "🙌 만세 · 딱 맞아요! 👍")
+  const name = game.pose && game.phase !== 'find' && game.phase !== 'count' ? `${game.pose.emoji} ${game.pose.name} · ` : '';
+  $('meter-label').textContent = name + (live ? (live.pass ? '딱 맞아요! 👍' : `${pct}%`) : '자세 맞추기');
   $('tip').textContent = tip;
 }
 
