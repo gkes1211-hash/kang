@@ -1,6 +1,6 @@
 // 앱 파일을 기기에 담아 두어 인터넷이 없어도 열리게 한다.
 // 이 앱의 파일만 다루고, 카메라 영상과는 아무 관련이 없다.
-const CACHE = 'mugunghwa-v2';
+const CACHE = 'mugunghwa-v3';
 const FILES = [
   './',
   './index.html',
@@ -8,6 +8,11 @@ const FILES = [
   './app.js',
   './game.js',
   './motion.js',
+  './pose.js',
+  './vendor/vision_bundle.mjs',
+  './vendor/wasm/vision_wasm_internal.js',
+  './vendor/wasm/vision_wasm_internal.wasm',
+  './vendor/pose_landmarker_lite.task',
   './manifest.webmanifest',
   './icons/icon-192.png',
   './icons/icon-512.png',
