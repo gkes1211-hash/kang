@@ -14,6 +14,22 @@ const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&l
 
 if ('serviceWorker' in navigator && window.isSecureContext) navigator.serviceWorker.register('sw.js').catch(() => {});
 
+// 열쇠 학교만 따로 여는 아이콘: 크롬·엣지·안드로이드는 "앱 설치", 아이패드·아이폰은 홈 화면에 추가, 윈도우는 바탕화면 아이콘
+const installed = matchMedia('(display-mode: fullscreen), (display-mode: standalone)').matches || navigator.standalone;
+let installEvt = null;
+window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); installEvt = e; document.getElementById('install').hidden = false; });
+document.getElementById('install').addEventListener('click', async () => {
+  if (!installEvt) return;
+  installEvt.prompt();
+  try { await installEvt.userChoice; } catch { /* 무시 */ }
+  installEvt = null;
+  document.getElementById('install').hidden = true;
+});
+window.addEventListener('appinstalled', () => { document.getElementById('install').hidden = true; });
+const ios = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+if (ios && !installed) document.getElementById('ios-hint').hidden = false;
+if (/Windows/.test(navigator.userAgent) && !installed) document.getElementById('win-shortcut').hidden = false;
+
 // ---------------- 설정 ----------------
 const me = {
   name: store.get('name', ''),

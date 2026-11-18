@@ -266,3 +266,11 @@
   .t-head { flex-wrap: wrap; }
 }
 .touch .help { bottom: calc(170px + env(safe-area-inset-bottom)); }
+
+/* 앱 설치 (홈 화면·바탕화면 아이콘) */
+.install { margin-top: 14px; display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.install [hidden] { display: none; }
+#install { padding: 12px 20px; border: 0; border-radius: 16px; background: var(--main); color: #fff; font-size: 18px; font-weight: 800; box-shadow: 0 4px 0 var(--main-deep); }
+#ios-hint { margin: 0; color: var(--main-deep); font-size: 15px; font-weight: 700; }
+#win-shortcut { color: var(--main-deep); font-size: 15px; font-weight: 800; }
+.text-in.code::placeholder { letter-spacing: 0; font-size: 17px; }
