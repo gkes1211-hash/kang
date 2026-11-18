@@ -42,6 +42,7 @@ const TIPS = [
 const KEY = 'sing-practice-v1';
 const DEFAULT = () => ({
   settings: { voice: null, lo: null, hi: null, judge: 'normal', names: 'ko', theme: 'system' },
+  guided: false, // 처음 안내를 봤나
   days: {}, // 날짜 → 연습한 초
   best: {}, // match(0~100), long(초), warm-<id>(0~100)
   routine: {}, // 날짜 → 오늘의 연습 다 했나
@@ -130,6 +131,11 @@ function viewHome() {
   const done = S.routine[dayKey()];
   const first = !S.settings.voice;
   return `
+    ${inAppBanner()}
+    ${!S.guided ? `<div class="card guide-card"><h2>👋 처음이세요?</h2>
+      <p>30초만에 <b>마이크가 내 목소리를 잘 듣는지</b> 확인하고, 쓰는 법을 알려 드려요.</p>
+      <button type="button" class="big-btn" data-act="guide">🎙️ 마이크 확인하고 시작하기</button>
+      <button type="button" class="link-btn" data-act="guide-skip">괜찮아요, 바로 할게요</button></div>` : ''}
     ${first ? `<div class="card"><h2>👋 먼저 내 목소리를 골라요</h2>
       <p>목소리에 맞는 높이로 연습 음을 들려줘요. 나중에 설정에서 바꿀 수 있어요.</p>${voicePicker()}</div>` : ''}
     <div class="card hero">
@@ -250,7 +256,9 @@ function viewSettings() {
         <select data-set="theme">${opt('system', st.theme, '기기 설정 따라')}${opt('light', st.theme, '밝게')}${opt('dark', st.theme, '어둡게')}</select></div>
     </div>
     <div class="card"><div class="setting"><div><span class="lbl">🎙️ 마이크 확인</span><small>"아~" 하면 음 이름이 나오고, 위쪽 막대가 움직이면 잘 듣고 있는 거예요</small></div>
-      <button type="button" class="big-btn ghost small-btn" data-act="ex" data-ex="tuner">확인하기</button></div></div>
+      <button type="button" class="big-btn ghost small-btn" data-act="guide">확인하기</button></div>
+      <div class="setting"><div><span class="lbl">❓ 사용법</span><small>화면마다 무엇을 하는지, 소리를 못 들을 때 할 일</small></div>
+      <button type="button" class="big-btn ghost small-btn" data-act="help">보기</button></div></div>
     <div class="card"><div class="setting"><div><span class="lbl danger">기록 모두 지우기</span><small>연속 일, 최고 기록, 음역이 지워져요</small></div>
       <button type="button" class="big-btn ghost small-btn" data-act="reset">지우기</button></div></div>
     <p class="note">🔒 마이크 소리는 이 기기 안에서만 음 높이를 계산하는 데 써요. 녹음은 내가 💾 저장하지 않으면 앱을 닫을 때 지워져요.</p>`;
@@ -348,8 +356,7 @@ function meter(r, now) {
 async function needMic() {
   try { await Mic.open(); meterReset(); return true; } catch (e) {
     body(`<div class="done-pic">🎙️</div><div class="done-title">마이크를 쓸 수 없어요</div>
-      <div class="feedback bad">${e && e.message === 'nomic' ? '이 브라우저는 마이크를 지원하지 않아요. 크롬이나 사파리로 열어 주세요.'
-    : '마이크 사용을 <b>허용</b>해 주세요.<br><span class="small">주소창 왼쪽 🔒(또는 ⓘ) → 마이크 → 허용, 그다음 다시 해 봐요.</span>'}</div>
+      <div class="feedback bad guide-fix">${micFixHtml(e)}</div>
       <div class="spacer"></div><button type="button" class="big-btn" data-act="close">닫기</button>`);
     return false;
   }
@@ -835,7 +842,10 @@ document.addEventListener('click', (e) => {
   const b = e.target.closest('[data-act]');
   if (!b) return;
   const act = b.dataset.act;
-  if (['ex', 'warm', 'routine', 'next-step', 'sing-song'].includes(act)) Mic.ensureCtx();
+  if (['ex', 'warm', 'routine', 'next-step', 'sing-song', 'guide'].includes(act)) Mic.ensureCtx();
+  if (act === 'guide') { exGuide(); return; }
+  if (act === 'help') { exHelp(); return; }
+  if (act === 'guide-skip') { S.guided = true; save(); render(); toast('언제든 오른쪽 위 ❓ 를 누르면 사용법을 볼 수 있어요'); return; }
   if (act === 'ex') { routine = null; EX[b.dataset.ex](); }
   else if (act === 'warm') exWarm(b.dataset.id);
   else if (act === 'routine') startRoutine();

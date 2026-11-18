@@ -1,7 +1,7 @@
 // 앱 파일을 기기에 담아 두어 인터넷이 없어도 열리게 한다. 연습 기록은 기기(localStorage)에만 있다.
 const PREFIX = 'sing-';
-const CACHE = `${PREFIX}v2`;
-const FILES = ['./', './index.html', './style.css', './pitch.js', './roll.js', './karaoke.js', './app.js', './manifest.webmanifest',
+const CACHE = `${PREFIX}v3`;
+const FILES = ['./', './index.html', './style.css', './pitch.js', './roll.js', './karaoke.js', './guide.js', './app.js', './manifest.webmanifest',
   './icons/icon-192.png', './icons/icon-512.png', './icons/icon-maskable-512.png', './icons/apple-touch-icon.png'];
 
 self.addEventListener('install', (event) => {
