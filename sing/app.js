@@ -156,11 +156,34 @@ function viewHome() {
     ${row('long', '💨', '길게 소리 내기', '숨을 아껴 쓰는 연습. 몇 초 버틸까요?', S.best.long != null ? `최고 ${S.best.long}초` : '')}
     ${row('range', '📏', '내 음역 찾기', '가장 낮은 음과 가장 높은 음을 재요', S.measured ? `${Notes.en(S.measured.lo)}~${Notes.en(S.measured.hi)}` : '')}
     <div class="card tip"><b>💡 노래 꿀팁</b><p>${pick(TIPS)}</p></div>
+    ${installCard()}
     <p class="note">🎙️ 연습 화면 오른쪽 위 막대가 움직이면 내 목소리를 잘 듣고 있는 거예요.<br>🔒 마이크 소리는 이 기기 안에서만 써요. 어디로도 보내지 않아요.<br>🎧 이어폰을 끼면 기준음이 마이크로 새지 않아 더 정확해요.</p>`;
 }
 function row(ex, ico, title, sub, pill = '') {
   return `<button type="button" class="row" data-act="ex" data-ex="${ex}"><span class="ico">${ico}</span>
     <span class="txt"><b>${title} ${pill ? `<span class="pill">${esc(pill)}</span>` : ''}</b><small>${sub}</small></span><span class="go">›</span></button>`;
+}
+
+// ---------- 📲 아이콘 만들기 (따로 여는 앱) ----------
+// 크롬·엣지·안드로이드는 "앱 설치", 아이패드·아이폰은 홈 화면에 추가, 윈도우는 바탕화면 아이콘
+const INSTALLED = matchMedia('(display-mode: fullscreen), (display-mode: standalone)').matches || navigator.standalone;
+let installEvt = null;
+window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); installEvt = e; if (tab === 'home' || tab === 'settings') render(); });
+window.addEventListener('appinstalled', () => { installEvt = null; render(); toast('노래 연습장 아이콘을 만들었어요! 🎤'); });
+function installCard() {
+  if (INSTALLED) return '';
+  const win = /Windows/.test(navigator.userAgent);
+  const lines = [];
+  if (installEvt) lines.push('<button type="button" class="big-btn" data-act="install">📲 노래 연습장 앱 설치하기</button>');
+  if (IS_IOS) lines.push('<p>📲 사파리 아래쪽 <b>공유 버튼</b>(네모에 ↑) → <b>"홈 화면에 추가"</b>를 누르면 아이콘이 생겨요.</p>');
+  else if (IS_ANDROID && !installEvt) lines.push('<p>📲 크롬 오른쪽 위 <b>⋮</b> → <b>"홈 화면에 추가"</b>(또는 "앱 설치")를 누르면 아이콘이 생겨요.</p>');
+  if (win) {
+    lines.push(`<a class="big-btn ghost win-btn" href="desktop-shortcut/norae-desktop-shortcut.zip" download>💻 윈도우 바탕화면 아이콘 받기</a>
+      <p class="small">받은 압축 파일을 풀고 <b>make-shortcut.bat</b>을 두 번 누르면 바탕화면에 <b>노래 연습장</b> 아이콘이 생겨요. ("Windows의 PC 보호" 창이 나오면 "추가 정보" → "실행")</p>`);
+  } else if (!installEvt && !IS_IOS && !IS_ANDROID) lines.push('<p>📲 주소창 오른쪽의 <b>설치</b> 아이콘이나 브라우저 메뉴 → <b>"앱 설치"</b>를 누르면 돼요.</p>');
+  if (!lines.length) return '';
+  return `<div class="card install-card"><h2>📲 노래 연습장 아이콘 만들기</h2>
+    <p class="small muted">아이콘을 만들어 두면 주소를 치지 않고 앱처럼 바로 열 수 있어요.</p>${lines.join('')}</div>`;
 }
 
 // ---------- 녹음 목록 ----------
@@ -261,6 +284,7 @@ function viewSettings() {
       <button type="button" class="big-btn ghost small-btn" data-act="help">보기</button></div></div>
     <div class="card"><div class="setting"><div><span class="lbl danger">기록 모두 지우기</span><small>연속 일, 최고 기록, 음역이 지워져요</small></div>
       <button type="button" class="big-btn ghost small-btn" data-act="reset">지우기</button></div></div>
+    ${installCard()}
     <p class="note">🔒 마이크 소리는 이 기기 안에서만 음 높이를 계산하는 데 써요. 녹음은 내가 💾 저장하지 않으면 앱을 닫을 때 지워져요.</p>`;
 }
 
@@ -845,6 +869,13 @@ document.addEventListener('click', (e) => {
   if (['ex', 'warm', 'routine', 'next-step', 'sing-song', 'guide'].includes(act)) Mic.ensureCtx();
   if (act === 'guide') { exGuide(); return; }
   if (act === 'help') { exHelp(); return; }
+  if (act === 'install') {
+    if (!installEvt) return;
+    const ev = installEvt; installEvt = null;
+    ev.prompt();
+    ev.userChoice.catch(() => {}).finally(render);
+    return;
+  }
   if (act === 'guide-skip') { S.guided = true; save(); render(); toast('언제든 오른쪽 위 ❓ 를 누르면 사용법을 볼 수 있어요'); return; }
   if (act === 'ex') { routine = null; EX[b.dataset.ex](); }
   else if (act === 'warm') exWarm(b.dataset.id);

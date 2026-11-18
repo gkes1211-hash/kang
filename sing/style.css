@@ -330,3 +330,8 @@ canvas.roll.kk { height: 26vh; min-height: 170px; }
 .mm-demo i:nth-child(1) { height: 4px; } .mm-demo i:nth-child(2) { height: 7px; } .mm-demo i:nth-child(3) { height: 10px; } .mm-demo i:nth-child(4) { height: 12px; } .mm-demo i:nth-child(5) { height: 14px; margin-right: 4px; }
 .help-h { font-size: 17px; margin: 10px 0 0; }
 .center { text-align: center; }
+
+/* 아이콘 만들기 */
+.install-card p { margin-top: 10px; }
+.install-card .big-btn { margin-top: 12px; }
+.win-btn { font-size: 17px; }
