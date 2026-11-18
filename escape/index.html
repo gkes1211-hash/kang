@@ -100,9 +100,35 @@
         <button type="button" class="pill icon" id="book-btn" aria-label="탐험 수첩">📒</button>
         <button type="button" class="pill icon" id="dress-btn" aria-label="캐릭터 꾸미기">👕</button>
         <button type="button" class="pill icon" id="emote-btn" aria-label="기분 표현하기">😀</button>
+        <button type="button" class="pill icon" id="set-btn" aria-label="소리·화면 설정">⚙️</button>
         <button type="button" class="pill icon" id="quit" aria-label="나가기">✕</button>
       </div>
+      <div id="settings" class="settings" hidden>
+        <b>⚙️ 설정</b>
+        <button type="button" data-sound="music"><span>🎵</span>배경음악<i></i></button>
+        <button type="button" data-sound="sfx"><span>🔔</span>효과음<i></i></button>
+        <button type="button" data-sound="voice"><span>🗣️</span>목소리 안내<i></i></button>
+        <div class="zoom-row"><span>🔍 화면 크기</span><button type="button" data-zoom="out" aria-label="화면 작게 (멀리 보기)">➖</button><button type="button" data-zoom="in" aria-label="화면 크게 (가까이 보기)">➕</button></div>
+        <button type="button" id="guide-again"><span>🧭</span>토리 대장 설명 다시 듣기</button>
+      </div>
+      <div class="zoom" aria-label="화면 크기 조절">
+        <button type="button" id="zoom-in" aria-label="화면 크게 (가까이 보기)">➕</button>
+        <button type="button" id="zoom-out" aria-label="화면 작게 (멀리 보기)">➖</button>
+      </div>
+      <div id="guide" class="guide" hidden>
+        <div class="g-face" aria-hidden="true"><span>🧭</span><small>토리 대장</small></div>
+        <div class="g-body">
+          <p id="g-text" aria-live="polite"></p>
+          <div class="g-btns">
+            <button type="button" id="g-voice" aria-label="다시 듣기">🔊</button>
+            <span id="g-step"></span>
+            <button type="button" id="g-skip" class="ghost">건너뛰기</button>
+            <button type="button" id="g-next" class="ok">다음 ▶</button>
+          </div>
+        </div>
+      </div>
       <div id="stamps" class="stamps" aria-label="모은 도장"></div>
+      <canvas id="minimap" class="minimap" width="272" height="272" aria-label="마을 지도: 누르면 그곳으로 걸어가요" hidden></canvas>
       <div id="emotes" class="emotes" hidden></div>
       <div id="toast" class="toast" aria-live="polite"></div>
       <button type="button" id="act" class="act" hidden></button>
