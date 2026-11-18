@@ -1,7 +1,7 @@
 // 앱 파일을 기기에 담아 두어 인터넷이 없어도 열리게 한다.
 // 3D 엔진·연결 프로그램은 vendor/ 에 있다. 체육관의 몸 인식 엔진은 처음 쓸 때 무궁화 폴더에서 불러와 담아 둔다.
 const PREFIX = 'yeolsoe-';
-const CACHE = `${PREFIX}v1`;
+const CACHE = `${PREFIX}v2`;
 const FILES = [
   './',
   './index.html',

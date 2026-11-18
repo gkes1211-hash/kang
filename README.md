@@ -10,7 +10,6 @@
 | [풍선 터트리기](balloon/) | [▶ 하러 가기](https://gkes1211-hash.github.io/kang/balloon/) | 카메라로 손을 인식해 풍선을 터트리고 폭탄은 피하는 게임 |
 | [벽 통과하기](byeok/) | [▶ 하러 가기](https://gkes1211-hash.github.io/kang/byeok/) | 다가오는 벽의 구멍 모양대로 몸을 맞춰 통과하는 몸놀이 게임 |
 | [체력왕 운동 카운터](fitness/) | [▶ 하러 가기](https://gkes1211-hash.github.io/kang/fitness/) | 스쿼트·팔 벌려 뛰기·무릎 들기 횟수를 카메라가 세어 주는 운동 게임 |
-| [열쇠 학교](escape/) | [▶ 하러 가기](https://gkes1211-hash.github.io/kang/escape/) | 과목 교실 9개의 1~6학년 문제를 풀고 열쇠를 모아 탈출하는 3D 방탈출 (반 전체 동시 접속) |
 | [제기차기](jegi/) | [▶ 하러 가기](https://gkes1211-hash.github.io/kang/jegi/) | 화면 속 제기를 발과 무릎으로 차올리는 전통 놀이 게임 |
 
 ## 체육시간 앱으로 설치하기
@@ -42,8 +41,9 @@
 | `home.js` | 오프라인 준비, 설치 버튼·설치 안내 |
 | `manifest.webmanifest`, `sw.js`, `icons/` | 체육시간 앱 설치·오프라인 |
 | `desktop-shortcut/` | 윈도우 바탕화면 아이콘 만들기 (`make-shortcut.bat`·`.ps1`, `cheyuk.ico`, 묶음 `cheyuk-desktop-shortcut.zip`) |
-| `mugunghwa/`, `balloon/`, `byeok/`, `fitness/`, `jegi/`, `escape/` | 게임 (각 폴더 README 참고) |
+| `mugunghwa/`, `balloon/`, `byeok/`, `fitness/`, `jegi/` | 게임 (각 폴더 README 참고) |
 | `common/` | 체력왕·제기차기가 같이 쓰는 카메라·몸 인식·소리·꾸밈 도우미 |
 | `planner/` | 공부 플래너 (게임과 따로 쓰는 앱) |
 | `english/` | 여행 영어 첫걸음: 왕초보 단어·말하기·듣기·역할극 회화 (따로 쓰는 앱, https://gkes1211-hash.github.io/kang/english/) |
 | `sing/` | 노래 연습장: 음정 보기·음 맞추기·발성 연습·음역 찾기·반주 맞춰 부르기·녹음 (따로 쓰는 앱, https://gkes1211-hash.github.io/kang/sing/) |
+| `escape/` | 열쇠 학교: 1~6학년 과목별 3D 방탈출, 반 전체 함께하기 (따로 쓰는 앱, https://gkes1211-hash.github.io/kang/escape/) |

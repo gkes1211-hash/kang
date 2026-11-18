@@ -5,6 +5,17 @@
 
 **▶ 바로 가기: https://gkes1211-hash.github.io/kang/escape/**
 
+## 📲 열쇠 학교 아이콘 만들기 (따로 여는 앱)
+
+체육시간과 따로, 열쇠 학교만 여는 아이콘을 만들 수 있어요.
+
+- **안드로이드·크롬·엣지**: 열쇠 학교 첫 화면의 **📲 열쇠 학교 앱 설치하기** 단추를 누르거나, 주소창 메뉴 → "앱 설치"
+- **아이패드·아이폰 사파리**: 공유 버튼 → **홈 화면에 추가**
+- **윈도우 바탕화면**: 첫 화면 아래 **💻 윈도우 바탕화면 아이콘 받기**를 눌러 압축 파일을 받아요.
+  (또는 저장소의 [`desktop-shortcut/yeolsoe-desktop-shortcut.zip`](desktop-shortcut/yeolsoe-desktop-shortcut.zip) → Download)
+  압축을 풀고 **`make-shortcut.bat`**을 두 번 누르면 바탕화면에 **열쇠 학교** 아이콘이 생겨요.
+  ("Windows의 PC 보호" 창이 나오면 "추가 정보" → "실행")
+
 ## 어떻게 놀아요?
 
 1. 이름(별명), 학년, 옷 색깔을 고르고 들어가요.
@@ -77,3 +88,4 @@ O('계절 순서대로 놓아요.', ['봄', '여름', '가을', '겨울']),
 | `net.js` | 함께하기 (선생님 기기 = 방장, 수업 코드로 연결) |
 | `vendor/` | 3D 엔진 [three.js](https://threejs.org) r170, 연결 프로그램 [PeerJS](https://peerjs.com) 1.5.4 (둘 다 MIT) |
 | `sw.js`, `manifest.webmanifest`, `icons/` | 홈 화면 설치·오프라인 |
+| `desktop-shortcut/` | 윈도우 바탕화면 아이콘 만들기 (`make-shortcut.bat`·`.ps1`, `yeolsoe.ico`, 묶음 zip) |

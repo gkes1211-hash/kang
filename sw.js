@@ -2,7 +2,7 @@
 // 게임 파일은 한 번 연 것을 담아 둔다. (벽 통과하기·무궁화는 자기 폴더의 sw.js 가 따로 담는다)
 // 카메라 영상과는 아무 관련이 없다.
 const PREFIX = 'cheyuk-';
-const CACHE = `${PREFIX}v6`;
+const CACHE = `${PREFIX}v7`;
 const FILES = [
   './',
   './index.html',
@@ -17,7 +17,6 @@ const FILES = [
   './mugunghwa/icons/icon-192.png',
   './fitness/icons/icon-192.png',
   './jegi/icons/icon-192.png',
-  './escape/icons/icon-192.png',
 ];
 
 // 화면·코드 파일은 매번 서버에 새것인지 물어본다 (바뀌지 않았으면 금방 끝난다).
