@@ -249,3 +249,37 @@ canvas.roll.mini { height: 130px; min-height: 0; }
 @media (prefers-reduced-motion: reduce) {
   .breath, .breath.ready, .mic.on { animation: none; transition: none; }
 }
+
+/* 반주 맞춰 부르기 */
+.file-btn { margin-top: 14px; cursor: pointer; }
+.row.song { padding: 0; gap: 0; }
+.row.song:active { transform: none; }
+.song-main { flex: 1; min-width: 0; display: flex; align-items: center; gap: 14px; border: 0; background: none; padding: 14px; text-align: left; }
+.song-main:active { transform: scale(.985); }
+.row.song .icon-btn { margin-right: 12px; }
+.kk-now { text-align: center; margin: 0 0 8px; }
+.kk-now b { font-size: 40px; font-weight: 900; line-height: 1.1; margin-right: 8px; transition: color .15s; }
+.kk-now b.ok { color: var(--good); }
+.kk-now span { color: var(--ink-2); font-weight: 700; }
+canvas.roll.kk { height: 26vh; min-height: 170px; }
+.kk-time { display: flex; align-items: center; gap: 10px; margin: 12px 0 4px; font-size: 14px; font-weight: 700; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.kk-seekwrap { flex: 1; position: relative; display: flex; align-items: center; }
+.kk-seekwrap input { width: 100%; position: relative; z-index: 1; accent-color: var(--accent); background: transparent; }
+.ab-zone { position: absolute; top: 50%; height: 16px; margin-top: -8px; background: var(--target); border-radius: 6px; }
+.kk-ctrl { display: flex; align-items: center; justify-content: center; gap: 22px; margin: 6px 0 10px; }
+.icon-btn.big { width: 52px; height: 52px; font-size: 22px; }
+.kk-play { width: 76px; height: 76px; border-radius: 50%; border: 0; background: var(--accent); color: var(--on-accent); font-size: 32px; box-shadow: 0 5px 0 var(--accent-ink); }
+.kk-play:active { transform: translateY(2px); box-shadow: 0 3px 0 var(--accent-ink); }
+.kk-ab { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+.chip { border: 1px solid var(--line); background: var(--surface); border-radius: 99px; padding: 7px 14px; font-size: 15px; font-weight: 800; }
+.chip:active { transform: scale(.96); }
+#kk-abtext { margin: 8px 0 12px; }
+.kk-opts { padding: 4px 16px; }
+.kk-opts input[type=range] { flex: 1; max-width: 60%; accent-color: var(--accent); }
+.seg { display: flex; background: var(--surface-2); border-radius: 12px; padding: 3px; gap: 3px; }
+.seg button { border: 0; background: none; border-radius: 9px; padding: 6px 8px; font-size: 13px; font-weight: 800; color: var(--ink-2); white-space: nowrap; }
+.seg button[aria-pressed="true"] { background: var(--surface); color: var(--accent); box-shadow: var(--shadow); }
+.rec-btn.on { animation: pulse 1.1s infinite; }
+.lyrics { margin-top: 14px; padding: 14px 16px; }
+.lyrics summary { font-weight: 800; cursor: pointer; }
+.lyrics textarea { width: 100%; min-height: 220px; margin-top: 10px; border: 1px solid var(--line); border-radius: 12px; padding: 12px; background: var(--surface-2); font-size: 18px; line-height: 1.7; resize: vertical; }
