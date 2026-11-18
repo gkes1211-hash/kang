@@ -84,6 +84,7 @@ async function addSong(file) {
 
 // ---------- 반주 틀고 부르기 ----------
 async function exKaraoke(id) {
+  Mic.ensureCtx(); // 아이폰: 버튼을 누른 그 순간에 깨워야 소리를 듣는다
   const song = await SongDB.get(id).catch(() => null);
   if (!song) { toast('반주를 찾을 수 없어요'); loadSongs(); return; }
   openPlay(`🎶 ${song.name}`);
