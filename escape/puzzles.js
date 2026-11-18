@@ -161,21 +161,26 @@ const RENDER = {
     const screen = el('div', 'pz-lock', '<span>?</span>');
     const pad = el('div', 'pz-pad');
     const show = () => { screen.innerHTML = `<span>${val || '?'}</span>`; };
+    const decimal = pz.a.includes('.');
+    const same = (v) => (decimal ? Math.abs(Number(v) - Number(pz.a)) < 1e-9 : v === pz.a);
     const press = (k) => {
       beep(700 + (Number(k) || 0) * 40, 0.05, 'square', 0.06);
       if (k === '⌫') val = val.slice(0, -1);
-      else if (k === '확인') { if (!val) return; if (val === pz.a) { screen.classList.add('open'); api.win(); } else { val = ''; api.wrong(); } }
+      else if (k === '확인') { if (!val) return; if (same(val)) { screen.classList.add('open'); api.win(); } else { val = ''; api.wrong(); } }
+      else if (k === '.') { if (decimal && !val.includes('.')) val = (val || '0') + '.'; }
       else if (val.length < 7) val += k;
       show();
     };
-    ['1', '2', '3', '4', '5', '6', '7', '8', '9', '⌫', '0', '확인'].forEach((k) => {
+    const keys = decimal ? ['1', '2', '3', '4', '5', '6', '7', '8', '9', '.', '0', '⌫', '확인'] : ['1', '2', '3', '4', '5', '6', '7', '8', '9', '⌫', '0', '확인'];
+    if (decimal) pad.classList.add('dec');
+    keys.forEach((k) => {
       const b = el('button', k === '확인' ? 'ok' : '', k); b.type = 'button';
       b.addEventListener('click', () => press(k));
       pad.append(b);
     });
     api.body.append(screen, pad);
     const onKey = (e) => {
-      if (/^[0-9]$/.test(e.key)) press(e.key);
+      if (/^[0-9.]$/.test(e.key)) press(e.key);
       else if (e.key === 'Backspace') press('⌫');
       else if (e.key === 'Enter') press('확인');
     };
@@ -265,9 +270,112 @@ const RENDER = {
     api.onHint2 = () => api.say(`💡 "${mix.parts[0]}"이(가) 꼭 들어가요. 모두 ${mix.parts.length}가지!`, 'hint');
   },
 
+  // O / X
+  ox(pz, api) {
+    const row = el('div', 'pz-ox');
+    [[true, '⭕', '맞아요'], [false, '❌', '아니에요']].forEach(([v, icon, word]) => {
+      const b = el('button', `ox ${v ? 'o' : 'x'}`, `<span>${icon}</span>${word}`); b.type = 'button';
+      b.addEventListener('click', () => { if (v === pz.ans) { b.classList.add('right'); api.win(); } else { b.classList.add('nope'); b.disabled = true; api.wrong('다시 생각해 봐요!'); } });
+      row.append(b);
+    });
+    api.body.append(row);
+    api.onHint2 = () => api.say(`💡 ${pz.ex || pz.hint || '천천히 다시 읽어 봐요.'}`, 'hint');
+  },
+
+  // 짝 맞추기: 왼쪽 하나 → 오른쪽 하나
+  match(pz, api) {
+    const left = el('div', 'col'); const right = el('div', 'col');
+    const wrap = el('div', 'pz-match'); wrap.append(left, right);
+    let pick = null; let done = 0;
+    const colors = ['#ffb3c7', '#ffe08a', '#b8f0c8', '#cfe3ff', '#e2d4ff'];
+    const lefts = shuffle(pz.pairs.map((p, i) => ({ t: p[0], i })));
+    const rights = shuffle(pz.pairs.map((p, i) => ({ t: p[1], i })));
+    const lb = lefts.map((o) => {
+      const b = el('button', 'mcard', esc(o.t)); b.type = 'button';
+      b.addEventListener('click', () => {
+        if (b.classList.contains('done')) return;
+        lb.forEach((x) => x.b.classList.remove('sel')); b.classList.add('sel'); pick = o; sfx.pop();
+        if (pz.speakLeft) sayEnglish(o.t);
+      });
+      left.append(b); return { b, o };
+    });
+    const rb = rights.map((o) => {
+      const b = el('button', 'mcard', esc(o.t)); b.type = 'button';
+      b.addEventListener('click', () => {
+        if (b.classList.contains('done')) return;
+        if (!pick) { api.say('왼쪽 카드를 먼저 골라요 👈', 'hint'); return; }
+        const L = lb.find((x) => x.o === pick);
+        if (pick.i === o.i) {
+          const c = colors[done % colors.length]; done += 1;
+          [L.b, b].forEach((x) => { x.classList.remove('sel'); x.classList.add('done'); x.style.background = c; });
+          sfx.good(done); pick = null;
+          if (done === pz.pairs.length) api.win();
+        } else { b.classList.add('shake1'); setTimeout(() => b.classList.remove('shake1'), 400); api.wrong('짝이 아니에요. 다시 골라 봐요!'); }
+      });
+      right.append(b); return { b, o };
+    });
+    api.body.append(el('p', 'pz-sub', '👈 왼쪽 카드를 누르고, 짝이 되는 오른쪽 카드를 눌러요 👉'), wrap);
+    api.onHint2 = () => {
+      const L = lb.find((x) => !x.b.classList.contains('done'));
+      if (!L) return;
+      L.b.click();
+      const R = rb.find((x) => x.o.i === L.o.i); R.b.classList.add('hintglow');
+      api.say('💡 반짝이는 카드가 짝이에요!', 'hint');
+    };
+  },
+
+  // 나누어 담기: 카드를 하나씩 알맞은 바구니에
+  sort(pz, api) {
+    const items = shuffle(pz.items);
+    let k = 0;
+    const card = el('div', 'pz-sortcard');
+    const left = el('div', 'pz-sortleft');
+    const bins = el('div', 'pz-bins');
+    const lists = pz.bins.map(() => el('div', 'binlist'));
+    const show = () => { card.textContent = items[k][0]; card.classList.remove('pop'); void card.offsetWidth; card.classList.add('pop'); left.textContent = `남은 카드 ${items.length - k}장`; };
+    pz.bins.forEach((name, bi) => {
+      const b = el('button', `bin b${bi}`, `<b>${esc(name)}</b>`); b.type = 'button';
+      b.append(lists[bi]);
+      b.addEventListener('click', () => {
+        if (k >= items.length) return;
+        if (items[k][1] === bi) {
+          lists[bi].append(el('span', '', esc(items[k][0])));
+          sfx.good(k); k += 1;
+          if (k >= items.length) { card.textContent = '🎉'; left.textContent = ''; api.win(); } else show();
+        } else { b.classList.add('shake1'); setTimeout(() => b.classList.remove('shake1'), 400); api.wrong('다른 바구니일 것 같아요!'); }
+      });
+      bins.append(b);
+    });
+    api.body.append(card, left, bins);
+    show();
+    api.onHint2 = () => { if (k < items.length) api.say(`💡 "${items[k][0]}"은(는) "${pz.bins[items[k][1]]}" 쪽이에요.`, 'hint'); };
+  },
+
+  // 시계 읽기
+  clock(pz, api) {
+    const c = el('canvas', 'pz-clock'); c.width = 360; c.height = 360;
+    drawClock(c, pz.h, pz.m);
+    api.body.append(c);
+    RENDER.choice({ ...pz, type: 'choice' }, api);
+  },
+
   move: (pz, api) => movePuzzle(pz, api),
   code: (pz, api) => codePuzzle(pz, api),
 };
+
+// 바늘 시계
+function drawClock(c, h, m) {
+  const x = c.getContext('2d'); const W = c.width; const r = W / 2 - 14; const cx = W / 2; const cy = W / 2;
+  x.fillStyle = '#fff8ea'; x.strokeStyle = '#5b3a1e'; x.lineWidth = 12;
+  x.beginPath(); x.arc(cx, cy, r, 0, Math.PI * 2); x.fill(); x.stroke();
+  x.fillStyle = '#5b3a1e'; x.font = '36px Jua, sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle';
+  for (let i = 1; i <= 12; i++) { const a = (i / 12) * Math.PI * 2 - Math.PI / 2; x.fillText(String(i), cx + Math.cos(a) * (r - 34), cy + Math.sin(a) * (r - 34) + 2); }
+  for (let i = 0; i < 60; i++) { const a = (i / 60) * Math.PI * 2; const l = i % 5 ? 6 : 12; x.lineWidth = i % 5 ? 2 : 4; x.beginPath(); x.moveTo(cx + Math.cos(a) * (r - 4), cy + Math.sin(a) * (r - 4)); x.lineTo(cx + Math.cos(a) * (r - 4 - l), cy + Math.sin(a) * (r - 4 - l)); x.stroke(); }
+  const hand = (ang, len, w, col) => { x.strokeStyle = col; x.lineWidth = w; x.lineCap = 'round'; x.beginPath(); x.moveTo(cx, cy); x.lineTo(cx + Math.cos(ang) * len, cy + Math.sin(ang) * len); x.stroke(); };
+  hand((((h % 12) + m / 60) / 12) * Math.PI * 2 - Math.PI / 2, r * 0.5, 14, '#e8574d');
+  hand((m / 60) * Math.PI * 2 - Math.PI / 2, r * 0.78, 9, '#3c8dde');
+  x.fillStyle = '#5b3a1e'; x.beginPath(); x.arc(cx, cy, 10, 0, Math.PI * 2); x.fill();
+}
 
 // 물감 섞은 색 (대략)
 function mixColor(parts) {
@@ -339,6 +447,7 @@ function tiles(api, answer, { letters = false, join = '' } = {}) {
 const EX_INFO = {
   squat: { name: '스쿼트', emoji: '🏋️', how: '카메라에서 2~3걸음 뒤로 가서 온몸이 보이게 서요. 의자에 앉듯 깊이 앉았다 일어나요.' },
   jack: { name: '팔 벌려 뛰기', emoji: '🙆', how: '온몸이 보이게 서요. 팔을 머리 위로, 다리는 옆으로 벌렸다가 모아요.' },
+  knee: { name: '제자리 무릎 들기', emoji: '🏃', how: '온몸이 보이게 서요. 무릎을 번갈아 허리 높이까지 올려요.' },
 };
 function movePuzzle(pz, api) {
   const info = EX_INFO[pz.ex];
@@ -437,6 +546,18 @@ class RepCounter {
       this.tip = this.state === 'down' ? '⬆️ 일어나요!' : '⬇️ 깊이 앉아요!';
       if (this.state !== 'down') { if (this.depth >= 1) { this.state = 'down'; sfx.pop(); } }
       else if (this.depth < 0.3) { this.state = 'up'; return 'rep'; }
+      return null;
+    }
+    if (this.ex === 'knee') {
+      // 엉덩이 높이와 무릎 높이를 비교: 무릎이 엉덩이 가까이 올라오면 한 번
+      if (![23, 24, 25, 26].every((i) => vis(pts, i))) { this.depth = 0; this.tip = '무릎이 보이게 조금 뒤로 가요 🔙'; return null; }
+      const lift = (h, k) => c01((0.75 - (pts[k].y - pts[h].y) / S) / 0.5);
+      const l = this.smooth('kl', lift(23, 25)); const r = this.smooth('kr', lift(24, 26));
+      const side = l > r ? 'L' : 'R';
+      this.depth = Math.max(l, r);
+      this.tip = '🦵 무릎을 번갈아 높이!';
+      if (this.depth >= 1 && this.last !== side && this.state !== 'up') { this.state = 'up'; this.last = side; return 'rep'; }
+      if (this.depth < 0.35) this.state = 'down';
       return null;
     }
     if (![11, 12, 15, 16].every((i) => vis(pts, i))) { this.depth = 0; this.tip = '두 팔이 보이게 서요 🙆'; return null; }

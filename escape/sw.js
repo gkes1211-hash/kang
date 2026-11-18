@@ -1,15 +1,25 @@
 // 앱 파일을 기기에 담아 두어 인터넷이 없어도 열리게 한다.
-// 3D 엔진·연결 프로그램은 vendor/ 에 있다. 체육관의 몸 인식 엔진은 처음 쓸 때 무궁화 폴더에서 불러와 담아 둔다.
+// 3D 엔진·연결 프로그램·주아체 글꼴은 vendor/ 에 있다. 글꼴 조각과 튼튼 운동장의 몸 인식 엔진은 처음 쓸 때 담아 둔다.
 const PREFIX = 'yeolsoe-';
-const CACHE = `${PREFIX}v2`;
+const CACHE = `${PREFIX}v3`;
 const FILES = [
   './',
   './index.html',
   './style.css',
   './app.js',
   './world.js',
+  './avatar.js',
+  './toon.js',
   './puzzles.js',
   './content.js',
+  './content/h.js',
+  './content/kor.js',
+  './content/eng.js',
+  './content/math.js',
+  './content/soc.js',
+  './content/sci.js',
+  './content/code.js',
+  './content/arts.js',
   './net.js',
   './manifest.webmanifest',
   './icons/icon-192.png',
@@ -18,9 +28,9 @@ const FILES = [
   './icons/apple-touch-icon.png',
   './vendor/three.module.min.js',
   './vendor/peerjs.min.js',
+  './vendor/jua/jua.css',
   '../common/camera.js',
   '../common/sound.js',
-  '../common/game.css',
   '../mugunghwa/pose.js',
 ];
 

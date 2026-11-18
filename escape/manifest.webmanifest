@@ -1,7 +1,7 @@
 {
-  "name": "열쇠 학교",
-  "short_name": "열쇠 학교",
-  "description": "과목마다 다른 교실의 수수께끼를 풀고 열쇠를 모아 탈출하는 3D 공부 방탈출",
+  "name": "꼬마 탐험대 공원",
+  "short_name": "탐험대 공원",
+  "description": "공원 곳곳의 보물 상자 문제를 풀고 열쇠를 모아 열기구를 타고 떠나는 3D 공부 탐험",
   "lang": "ko",
   "id": "./",
   "start_url": "./",
@@ -9,8 +9,8 @@
   "display": "fullscreen",
   "display_override": ["fullscreen", "standalone"],
   "orientation": "any",
-  "background_color": "#f1efff",
-  "theme_color": "#5b4bff",
+  "background_color": "#fff8ea",
+  "theme_color": "#8fd46f",
   "categories": ["education", "games", "kids"],
   "icons": [
     { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
