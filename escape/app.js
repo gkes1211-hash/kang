@@ -5,7 +5,8 @@ import { openPuzzle } from './puzzles.js';
 import { Host, Client, EMOTES, cleanName } from './net.js';
 import { THREE } from './toon.js';
 import { buildAvatar, buildPet, animateBody, randomLook, cleanLook, SKINS, HAIR_COLORS, SHIRTS, HAIRS, CATS, SPECIALS, nextSpecial } from './avatar.js';
-import { unlockAudio, sfx, speak, makeStore } from '../common/sound.js';
+import { makeStore } from '../common/sound.js';
+import { unlockAudio, sfx, speak, speakNow, hush, sound, setSound, bgm } from './audio.js';
 
 const $ = (id) => document.getElementById(id);
 const store = makeStore('kkoma');
@@ -168,6 +169,7 @@ let final = null; // 열기구: {puzzles, solved[], digits[], code, done}
 
 function ensureWorld() {
   if (!world) world = new World($('world'), { onInteract: interact, onPrompt: prompt, onArea: areaChanged });
+  world.onZoom = (z) => store.set('zoom', z.toFixed(2));
   return world;
 }
 function areaName(a) {
@@ -214,9 +216,95 @@ function startGame(how) {
   if (TOUCH) $('help').textContent = '👆 가고 싶은 곳을 누르거나 왼쪽 아래 동그라미로 움직여요. 문이나 상자를 누르면 걸어가서 열어요.';
   $('help').classList.remove('gone');
   setTimeout(() => $('help').classList.add('gone'), 9000);
-  speak(`${me.name}, 꼬마 탐험대 공원에 온 걸 환영해요!`);
-  toast(`🗺️ 아치 문으로 들어가 보물 상자를 열어요! 도장 ${STAMPS_TO_FLY}개를 모으면 열기구를 탈 수 있어요.`, 5000);
+  world.addGuide(GUIDE_LOOK, '🧭 토리 대장');
+  world.setZoom(Number(store.get('zoom', '1')) || 1);
+  bgm.wanted = true;
+  if (sound.music) bgm.start();
+  paintSettings();
+  if (store.get(`guided.${me.name}`, '') !== 'yes') setTimeout(() => runGuide(true), 600);
+  else {
+    speak(`${me.name}, 꼬마 탐험대 공원에 온 걸 환영해요!`);
+    toast(`🗺️ 아치 문으로 들어가 보물 상자를 열어요! 도장 ${STAMPS_TO_FLY}개를 모으면 열기구를 탈 수 있어요.`, 5000);
+  }
 }
+
+// ---------------- 안내하는 탐험대장 토리 ----------------
+const GUIDE_LOOK = { skin: '#f6c9a0', hair: 'messy', hairColor: '#7a4a24', shirt: '#6cc96c', hat: 'explorer', face: 'glasses', back: 'magnifier', pattern: 'stripes', pet: 'none' };
+function guideLines() {
+  return [
+    ['👋', `안녕, ${me.name}! 나는 꼬마 탐험대의 대장, 토리야. 꼬마 탐험대 공원에 온 걸 환영해!`],
+    ['🗺️', '여기는 만남의 분수 광장이야. 광장 둘레에 반짝이는 아치 문이 9개 있지? 문으로 들어가면 놀이 구역이 나와.'],
+    ['🎁', '놀이 구역마다 보물 상자가 3개 있어. 상자를 눌러서 퀴즈를 풀면 상자가 열려!'],
+    ['🗝️', '상자 3개를 다 열면 열쇠가 나타나. 열쇠를 받으면 탐험 수첩에 도장도 쾅 찍혀.'],
+    ['🎈', `도장 ${STAMPS_TO_FLY}개를 모두 모으면, 광장 뒤쪽 열기구를 타고 하늘로 날아갈 수 있어!`],
+    ['👕', '열쇠를 모을수록 날개나 왕관 같은 특별한 꾸미기가 열려. 구역에 다시 가면 새 문제가 나오니까 또 도전해 봐.'],
+    ['🕹️', TOUCH ? '가고 싶은 곳을 손가락으로 누르면 걸어가. 모르는 게 있으면 언제든 나한테 와서 물어봐. 자, 출발!' : '가고 싶은 곳을 누르거나 방향키로 움직여. 모르는 게 있으면 언제든 나한테 와서 물어봐. 자, 출발!'],
+  ];
+}
+let guideState = null;
+function runGuide(first = false) {
+  if (!world || guideState) return;
+  const lines = guideLines();
+  guideState = { i: 0, lines, first };
+  world.paused = true; prompt(null); world.keysDown.clear();
+  world.guideTalk(true);
+  $('settings').hidden = true; $('emotes').hidden = true;
+  $('guide').hidden = false;
+  document.querySelector('.zoom').hidden = true;
+  showGuideLine();
+}
+function showGuideLine() {
+  const g = guideState; if (!g) return;
+  const [face, text] = g.lines[g.i];
+  $('guide').querySelector('.g-face span').textContent = face;
+  $('g-step').textContent = `${g.i + 1} / ${g.lines.length}`;
+  $('g-next').textContent = g.i === g.lines.length - 1 ? '출발! 🚀' : '다음 ▶';
+  // 자막: 한 글자씩
+  const p = $('g-text'); p.textContent = '';
+  clearInterval(g.typer);
+  let k = 0;
+  g.typer = setInterval(() => { k += 2; p.textContent = text.slice(0, k); if (k >= text.length) clearInterval(g.typer); }, 30);
+  speak(text);
+  sfx.pop();
+}
+function endGuide() {
+  const g = guideState; if (!g) return;
+  clearInterval(g.typer);
+  guideState = null;
+  hush();
+  $('guide').hidden = true;
+  document.querySelector('.zoom').hidden = false;
+  world.guideTalk(false);
+  world.paused = false; prompt(world.near);
+  store.set(`guided.${me.name}`, 'yes');
+  if (g.first) toast('🗺️ 반짝이는 아치 문으로 들어가 봐요!', 3500);
+}
+$('g-next').addEventListener('click', () => {
+  const g = guideState; if (!g) return;
+  if (g.i < g.lines.length - 1) { g.i += 1; showGuideLine(); } else endGuide();
+});
+$('g-skip').addEventListener('click', endGuide);
+$('g-voice').addEventListener('click', () => { const g = guideState; if (g) speakNow(g.lines[g.i][1]); });
+$('guide-again').addEventListener('click', () => { $('settings').hidden = true; runGuide(false); });
+
+// ---------------- 소리·화면 크기 설정 ----------------
+function paintSettings() {
+  document.querySelectorAll('#settings [data-sound]').forEach((b) => b.classList.toggle('on', !!sound[b.dataset.sound]));
+  $('set-btn').textContent = sound.music || sound.sfx || sound.voice ? '⚙️' : '🔇';
+}
+document.querySelectorAll('#settings [data-sound]').forEach((b) => b.addEventListener('click', () => {
+  unlockAudio();
+  const k = b.dataset.sound;
+  setSound(k, !sound[k]);
+  paintSettings();
+  if (k === 'sfx' && sound.sfx) sfx.good(3);
+  if (k === 'voice' && sound.voice) speak('목소리 안내를 켰어요.');
+}));
+$('set-btn').addEventListener('click', () => { $('settings').hidden = !$('settings').hidden; $('emotes').hidden = true; paintSettings(); });
+const zoomBy = (f) => { if (!world) return; world.setZoom(world.zoom * f); sfx.pop(); };
+$('zoom-in').addEventListener('click', () => zoomBy(1 / 1.2));
+$('zoom-out').addEventListener('click', () => zoomBy(1.2));
+document.querySelectorAll('[data-zoom]').forEach((b) => b.addEventListener('click', () => zoomBy(b.dataset.zoom === 'in' ? 1 / 1.2 : 1.2)));
 function resetZoneView(subj) {
   const area = `zone:${subj}`;
   for (let i = 0; i < 3; i++) world.setStation(area, i, { solved: false });
@@ -233,6 +321,7 @@ function interact(it) {
     case 'key': return takeKey(AREAS[it.data.area].subj);
     case 'roofdoor': return enterBalloon();
     case 'gate': return openGate();
+    case 'guide': return runGuide(false);
     default: return null;
   }
 }
@@ -257,11 +346,12 @@ function openPz(pz, { title, color, onSolved }) {
   world.paused = true;
   prompt(null);
   world.keysDown.clear();
+  bgm.duck(['melody', 'listen'].includes(pz.type) || (pz.type === 'match' && pz.speakLeft) ? 0.05 : 0.35);
   openPuzzle($('puzzle'), pz, {
-    title, color, grade: me.grade,
-    onSolved: (st) => { world.paused = false; prompt(world.near); onSolved(st); },
+    title, color, grade: me.grade, voice: sound.voice,
+    onSolved: (st) => { bgm.duck(1); world.paused = false; prompt(world.near); onSolved(st); },
     onWrong: () => sendEv({ kind: 'wrong' }),
-    onClose: () => { world.paused = false; prompt(world.near); },
+    onClose: () => { bgm.duck(1); world.paused = false; prompt(world.near); },
   });
   $('puzzle').querySelector('.pz-icon[aria-label="힌트 보기"]')?.addEventListener('click', () => sendEv({ kind: 'hint' }));
 }
@@ -290,7 +380,7 @@ function openStation(area, i) {
 
 function takeKey(subj) {
   const z = zones[subj];
-  if (!z || z.taken) return;
+  if (!z || z.taken || z.solved.some((x) => !x)) return;
   z.taken = true;
   const area = `zone:${subj}`;
   world.setKeyVisible(area, false);
@@ -438,7 +528,7 @@ function banner(text, ms = 6000) {
 }
 
 // ---------------- 기분 표현·움직이기 막대·나가기 ----------------
-$('emote-btn').addEventListener('click', () => { $('emotes').hidden = !$('emotes').hidden; });
+$('emote-btn').addEventListener('click', () => { $('emotes').hidden = !$('emotes').hidden; $('settings').hidden = true; });
 EMOTES.forEach((em) => {
   const b = document.createElement('button');
   b.type = 'button'; b.textContent = em; b.setAttribute('aria-label', `기분 ${em}`);
@@ -464,6 +554,8 @@ $('quit').addEventListener('click', () => {
   modal('<div class="m-emoji">🚪</div><h2>공원에서 나갈까요?</h2><p>모은 열쇠와 도장은 이 기기에 저장돼요.</p>', [['나가기', leaveGame, 'ok'], ['계속 탐험하기', null, 'ghost']]);
 });
 function leaveGame() {
+  bgm.wanted = false; bgm.stop();
+  if (guideState) endGuide();
   client?.leave(); client = null;
   for (const id of [...world.remotes.keys()]) world.removeRemote(id);
   $('puzzle').hidden = true; $('frozen').hidden = true;

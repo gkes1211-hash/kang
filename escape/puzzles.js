@@ -2,7 +2,7 @@
 // 모양: choice(고르기) number(숫자 자물쇠) order(순서) listen(듣고 고르기) spell(철자)
 //       melody(건반) color(물감 섞기) move(몸 움직이기) code(블록 코딩)
 import { shuffle, PAINTS } from './content.js';
-import { unlockAudio, beep, sfx, speak, hush } from '../common/sound.js';
+import { unlockAudio, beep, note, sfx, speakNow, hush } from './audio.js';
 
 const el = (tag, cls, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; };
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -26,7 +26,7 @@ export function sayEnglish(text) {
 const NOTE_HZ = { 도: 261.63, 레: 293.66, 미: 329.63, 파: 349.23, 솔: 392.0, 라: 440.0, 시: 493.88, 도2: 523.25 };
 const NOTE_COLOR = { 도: '#ff5c5c', 레: '#ff9f40', 미: '#ffd23f', 파: '#5ccf6b', 솔: '#3fb5ff', 라: '#5b6cff', 시: '#b05cff', 도2: '#ff5c9e' };
 const noteName = (n) => (n === '도2' ? '높은 도' : n);
-function playNote(n, when = 0, dur = 0.38) { beep(NOTE_HZ[n], dur, 'triangle', 0.22, when); }
+function playNote(n, when = 0, dur = 0.38) { note(NOTE_HZ[n], dur, 'triangle', 0.22, when); }
 
 // ------------------------------------------------------------
 // 퍼즐 열기. 결과: onSolved({wrong, hints}) / onClose()
@@ -101,7 +101,7 @@ export function openPuzzle(host, pz, { title, color = '#5b4bff', grade = 3, onSo
   closeBtn.addEventListener('click', () => { close(); onClose?.(); });
   readBtn.addEventListener('click', () => {
     if (pz.type === 'listen') sayEnglish(pz.say);
-    else speak((pz.q || '').replace(/[^\p{L}\p{N}\s?.,!/×÷+\-=]/gu, ' '), true);
+    else speakNow((pz.q || '').replace(/[^\p{L}\p{N}\s?.,!/×÷+\-=]/gu, ' '));
   });
   host.onkeydown = (e) => { if (e.key === 'Escape') { close(); onClose?.(); } };
 

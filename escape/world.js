@@ -196,6 +196,8 @@ export class World {
     this.rot = Math.PI;
     this.clock = new THREE.Clock();
     this.time = 0;
+    this.zoom = 1;
+    this.onZoom = () => {};
 
     this.buildPlaza();
     SUBJECTS.forEach((s) => this.buildZone(s));
@@ -839,8 +841,25 @@ export class World {
     window.addEventListener('blur', () => this.keysDown.clear());
     const ray = new THREE.Raycaster();
     let down = null;
-    this.canvas.addEventListener('pointerdown', (e) => { down = { x: e.clientX, y: e.clientY }; });
+    // 마우스 휠·두 손가락으로 화면 크게/작게
+    this.canvas.addEventListener('wheel', (e) => { e.preventDefault(); this.setZoom(this.zoom * (1 + Math.sign(e.deltaY) * 0.1)); }, { passive: false });
+    const touches = new Map(); let pinch = null;
+    this.canvas.addEventListener('pointerdown', (e) => {
+      touches.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      if (touches.size === 2) { const [a, b] = [...touches.values()]; pinch = { d: Math.hypot(a.x - b.x, a.y - b.y), z: this.zoom }; down = null; }
+    });
+    this.canvas.addEventListener('pointermove', (e) => {
+      if (!touches.has(e.pointerId)) return;
+      touches.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      if (pinch && touches.size === 2) { const [a, b] = [...touches.values()]; const d = Math.hypot(a.x - b.x, a.y - b.y); if (d > 10) this.setZoom(pinch.z * (pinch.d / d)); }
+    });
+    const lift = (e) => { touches.delete(e.pointerId); if (touches.size < 2) pinch = null; };
+    this.canvas.addEventListener('pointercancel', lift);
+    this.canvas.addEventListener('pointerdown', (e) => { if (touches.size === 1) down = { x: e.clientX, y: e.clientY }; });
     this.canvas.addEventListener('pointerup', (e) => {
+      const wasPinch = touches.size >= 2 || pinch;
+      lift(e);
+      if (wasPinch) { down = null; return; }
       if (!down || this.spectating || this.frozen || this.paused || this.flying) return;
       const moved = Math.hypot(e.clientX - down.x, e.clientY - down.y);
       down = null;
@@ -860,6 +879,56 @@ export class World {
       if (fh) { this.target = fh.point.clone(); this.target.y = 0; this.pending = null; }
     });
   }
+  setZoom(z) {
+    this.zoom = Math.max(0.55, Math.min(1.8, z));
+    this.onZoom(this.zoom);
+  }
+
+  // ---------- 안내하는 탐험대장 (광장을 천천히 돌아다닌다) ----------
+  addGuide(look, name) {
+    if (this.guide) return this.guide;
+    const av = makeCharacter(look, name, false);
+    setSprite(av.userData.label, [name], { size: 46, bg: '#ffd36b', pad: 12, radius: 18 });
+    av.position.set(4, 0, 6.5);
+    this.add(av);
+    const it = this.addInteract({ id: 'guide', kind: 'guide', area: 'plaza', x: 4, z: 6.5, r: 2.0, label: `💬 ${name}에게 물어보기`, data: {}, mesh: av });
+    this.guide = { av, it, pts: [[4, 6.5], [8, 4], [6, 10], [-5, 9.5], [-7, 5]], i: 0, wait: 2, talking: false };
+    return this.guide;
+  }
+  guideTalk(on) {
+    if (!this.guide) return;
+    this.guide.talking = on;
+    if (on) emoteOn(this.guide.av, '💬');
+  }
+  tickGuide(dt, T) {
+    const g = this.guide;
+    if (!g) return;
+    const av = g.av;
+    let moving = false;
+    if (g.talking && this.player) {
+      // 이야기할 때는 멈춰서 나를 본다
+      const want = Math.atan2(this.pos.x - av.position.x, this.pos.z - av.position.z);
+      let diff = want - av.rotation.y; diff = Math.atan2(Math.sin(diff), Math.cos(diff));
+      av.rotation.y += diff * Math.min(1, dt * 6);
+    } else if (g.wait > 0) g.wait -= dt;
+    else {
+      const [tx, tz] = g.pts[g.i];
+      const dx = tx - av.position.x; const dz = tz - av.position.z; const d = Math.hypot(dx, dz);
+      if (d < 0.15) { g.i = (g.i + 1) % g.pts.length; g.wait = 2 + Math.random() * 3; }
+      else {
+        const sp = Math.min(d, 1.6 * dt);
+        av.position.x += (dx / d) * sp; av.position.z += (dz / d) * sp;
+        let diff = Math.atan2(dx, dz) - av.rotation.y; diff = Math.atan2(Math.sin(diff), Math.cos(diff));
+        av.rotation.y += diff * Math.min(1, dt * 8);
+        moving = true;
+      }
+    }
+    animateBody(av.userData.body, moving, dt, T);
+    g.it.x = av.position.x; g.it.z = av.position.z;
+    const u = av.userData;
+    if (u.bubble) { u.bubbleT -= dt; if (u.bubbleT <= 0 && !g.talking) { av.remove(u.bubble); u.bubble = null; } }
+  }
+
   setJoystick(x, z) { this.input.x = x; this.input.z = z; if (x || z) { this.target = null; this.pending = null; } }
 
   resize() {
@@ -990,6 +1059,8 @@ export class World {
       if (f.t > 6 && f.done) { const d = f.done; f.done = null; d(); }
     }
 
+    this.tickGuide(dt, T);
+
     // 친구들
     for (const r of this.remotes.values()) {
       const p = r.av.position;
@@ -1040,7 +1111,7 @@ export class World {
       look = new THREE.Vector3(a.cx + (this.pos.x - a.cx) * f, 0.8, a.cz + (this.pos.z - a.cz) * f - (a.ahead ?? (f === 1 ? 4 : 1)));
       off = a.cam;
     }
-    const k = this.camera.aspect < 1 ? 1.45 : 1;
+    const k = (this.camera.aspect < 1 ? 1.45 : 1) * (this.flying ? 1 : this.zoom);
     const want = new THREE.Vector3(look.x + off[0] * k, look.y + off[1] * k, look.z + off[2] * k);
     if (this.snapCamera) { this.camera.position.copy(want); this.snapCamera = false; }
     else this.camera.position.lerp(want, Math.min(1, dt * 6));
