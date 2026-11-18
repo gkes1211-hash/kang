@@ -1,9 +1,11 @@
 // 열쇠 학교 함께하기: 선생님 기기가 "방장"이 되고, 아이들 기기가 수업 코드로 들어온다.
 // 기기끼리 바로 이어지는 WebRTC(PeerJS)를 쓴다. 서로를 찾는 데만 PeerJS 연결 서버를 잠깐 쓰고,
-// 주고받는 것은 이름(별명)·학년·아바타 색·위치·푼 문제 수뿐이다. 카메라 영상은 절대 보내지 않는다.
+// 주고받는 것은 별명·학년·캐릭터 모습·위치·푼 문제 수·열쇠와 도장 수뿐이다. 카메라 영상은 절대 보내지 않는다.
 // 선생님 창을 닫으면 수업이 끝나고, 어디에도 기록이 남지 않는다.
 
-const PREFIX = 'yeolsoe-school-v1-';
+import { cleanLook } from './avatar.js';
+
+const PREFIX = 'kkoma-park-v1-';
 const MAX_STUDENTS = 30;
 
 // 시험할 때 ?peerhost=localhost&peerport=9000 으로 다른 연결 서버를 쓸 수 있다
@@ -43,7 +45,7 @@ const SLOW = { type: 'slow', message: '연결 서버에 닿지 못했어요. 인
 // 연결 서버가 막혀 있으면 아무 대답이 없을 수 있어서, 15초 뒤에는 실패로 친다
 function waitOpen(peer) {
   return new Promise((resolve, reject) => {
-    const t = setTimeout(() => { peer.off('open', ok); peer.off('error', fail); reject(SLOW); }, 15000);
+    const t = setTimeout(() => { peer.off('open', ok); peer.off('error', fail); reject(SLOW); }, 25000);
     const ok = () => { clearTimeout(t); peer.off('error', fail); resolve(); };
     const fail = (e) => { clearTimeout(t); peer.off('open', ok); reject(e); };
     peer.once('open', ok);
@@ -104,29 +106,32 @@ export class Host {
       const onlineCount = [...this.students.values()].filter((x) => x.online).length;
       if (!s && onlineCount >= MAX_STUDENTS) { conn.send({ t: 'full' }); setTimeout(() => conn.close(), 500); return; }
       if (s?.conn && s.conn !== conn) { try { s.conn.close(); } catch { /* 이미 닫힘 */ } }
-      s ||= { pid, right: 0, wrong: 0, hints: 0, escaped: false, x: 0, z: 0, r: 0, a: 'lobby', joined: Date.now() };
+      const isNew = !s || !s.online;
+      s ||= { pid, right: 0, wrong: 0, hints: 0, flights: 0, x: 0, z: 0, r: 0, a: 'plaza', joined: Date.now() };
       Object.assign(s, {
-        conn, online: true, name: cleanName(m.name), grade: clampGrade(m.grade), color: cleanColor(m.color),
-        keys: Array.isArray(m.keys) ? m.keys.slice(0, 9).map(String) : [], last: Date.now(),
+        conn, online: true, name: cleanName(m.name), grade: clampGrade(m.grade), look: cleanLook(m.look),
+        keys: Math.max(0, Math.min(999, m.keys | 0)), stamps: cleanStamps(m.stamps), last: Date.now(),
       });
+      s.color = s.look.shirt;
       this.students.set(pid, s);
       conn.send({ t: 'welcome', id: pid, frozen: this.frozen });
       this.sendRoster();
       this.onRoster();
-      this.onEvent(s, { kind: 'join' });
+      if (isNew) this.onEvent(s, { kind: 'join' });
       return;
     }
     const s = [...this.students.values()].find((x) => x.conn === conn);
     if (!s) return;
     s.last = Date.now();
     if (m.t === 'st') {
-      s.x = num(m.x); s.z = num(m.z); s.r = num(m.r); s.a = typeof m.a === 'string' ? m.a.slice(0, 20) : 'lobby';
+      s.x = num(m.x); s.z = num(m.z); s.r = num(m.r); s.a = typeof m.a === 'string' ? m.a.slice(0, 20) : 'plaza';
     } else if (m.t === 'ev') {
       if (m.kind === 'solve') s.right += 1;
       if (m.kind === 'wrong') s.wrong += 1;
       if (m.kind === 'hint') s.hints += 1;
-      if (m.kind === 'key' && typeof m.subj === 'string' && !s.keys.includes(m.subj)) s.keys.push(m.subj.slice(0, 10));
-      if (m.kind === 'escape') s.escaped = true;
+      if (m.kind === 'key') { s.keys = Math.max(0, Math.min(999, m.keys | 0)); s.stamps = cleanStamps(m.stamps); }
+      if (m.kind === 'escape') s.flights += 1;
+      if (m.kind === 'look') { s.look = cleanLook(m.look); s.color = s.look.shirt; this.sendRoster(); }
       this.onEvent(s, m);
       if (m.kind === 'key' || m.kind === 'escape') { this.sendRoster(); this.sendAll({ t: 'cheer', id: s.pid, name: s.name, kind: m.kind, subj: m.subj }); }
       this.onRoster();
@@ -138,7 +143,7 @@ export class Host {
   }
 
   rosterList() {
-    return [...this.students.values()].filter((s) => s.online).map((s) => ({ id: s.pid, n: s.name, c: s.color, g: s.grade, k: s.keys.length }));
+    return [...this.students.values()].filter((s) => s.online).map((s) => ({ id: s.pid, n: s.name, l: s.look, g: s.grade, k: s.keys }));
   }
   sendRoster() { this.sendAll({ t: 'ros', list: this.rosterList() }); }
   broadcastSnap() {
@@ -151,7 +156,7 @@ export class Host {
   freeze(on) { this.frozen = on; this.sendAll({ t: 'freeze', on }); }
   callLobby() { this.sendAll({ t: 'call' }); }
   ranking() {
-    const list = [...this.students.values()].sort((a, b) => (b.escaped - a.escaped) || (b.keys.length - a.keys.length) || (b.right - a.right)).slice(0, 5).map((s) => ({ n: s.name, k: s.keys.length, e: s.escaped }));
+    const list = [...this.students.values()].sort((a, b) => (b.stamps.length - a.stamps.length) || (b.keys - a.keys) || (b.right - a.right)).slice(0, 5).map((s) => ({ n: s.name, k: s.keys, st: s.stamps.length, e: s.flights > 0 }));
     this.sendAll({ t: 'rank', list });
     return list;
   }
@@ -186,7 +191,12 @@ export class Client {
     this.peer = new Peer(undefined, peerOptions());
     try { await waitOpen(this.peer); } catch (e) { throw new Error(errText(e)); }
     this.peer.on('disconnected', () => { if (!this.closed) setTimeout(() => { try { this.peer.reconnect(); } catch { /* 다시 시도 */ } }, 1500); });
-    await this.connect(true);
+    // 교실 와이파이가 붐비면 처음 연결이 늦을 수 있어서 한 번 더 해 본다
+    try { await this.connect(true); } catch (e) {
+      if (/찾지 못했어요|꽉 찼어요/.test(e.message)) throw e;
+      try { this.conn?.close(); } catch { /* 무시 */ }
+      await this.connect(true);
+    }
   }
 
   connect(first = false) {
@@ -194,7 +204,7 @@ export class Client {
       const conn = this.peer.connect(PREFIX + this.code, { reliable: true, serialization: 'json' });
       this.conn = conn;
       let ok = false;
-      const timeout = setTimeout(() => { if (!ok) { conn.close(); fail({ type: 'timeout', message: '선생님 기기에 연결하지 못했어요. 같은 와이파이인지, 수업 코드가 맞는지 확인해 주세요.' }); } }, 15000);
+      const timeout = setTimeout(() => { if (!ok) { conn.close(); fail({ type: 'timeout', message: '선생님 기기에 연결하지 못했어요. 같은 와이파이인지, 수업 코드가 맞는지 확인해 주세요.' }); } }, 20000);
       const fail = (e) => {
         clearTimeout(timeout);
         this.peer.off('error', onPeerErr);
@@ -236,11 +246,12 @@ export const EMOTES = ['👍', '😀', '🎉', '❤️', '🙋', '😮'];
 const num = (v) => (Number.isFinite(+v) ? Math.round(+v * 100) / 100 : 0);
 const clampGrade = (g) => Math.min(6, Math.max(1, Number(g) | 0 || 1));
 export function cleanName(n) { return String(n || '').replace(/[<>&"'`]/g, '').trim().slice(0, 8) || '친구'; }
-export function cleanColor(c) { return /^#[0-9a-f]{6}$/i.test(String(c)) ? c : '#5b4bff'; }
+const SUBJ_IDS = ['kor', 'eng', 'math', 'soc', 'sci', 'code', 'music', 'art', 'pe'];
+function cleanStamps(a) { return Array.isArray(a) ? [...new Set(a.map(String).filter((x) => SUBJ_IDS.includes(x)))] : []; }
 function getPid() {
   try {
-    let id = sessionStorage.getItem('yeolsoe.pid');
-    if (!id) { id = Math.random().toString(36).slice(2, 12); sessionStorage.setItem('yeolsoe.pid', id); }
+    let id = sessionStorage.getItem('kkoma.pid');
+    if (!id) { id = Math.random().toString(36).slice(2, 12); sessionStorage.setItem('kkoma.pid', id); }
     return id;
   } catch { return Math.random().toString(36).slice(2, 12); }
 }

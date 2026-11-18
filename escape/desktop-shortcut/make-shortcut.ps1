@@ -1,16 +1,16 @@
-﻿# 열쇠 학교 - 바탕화면에 열쇠 학교 앱 아이콘을 만듭니다.
-# 아이콘을 누르면 크롬(없으면 엣지)이 주소창 없는 앱 창으로 열쇠 학교를 열어요.
+﻿# 꼬마 탐험대 공원 - 바탕화면에 꼬마 탐험대 공원 앱 아이콘을 만듭니다.
+# 아이콘을 누르면 크롬(없으면 엣지)이 주소창 없는 앱 창으로 꼬마 탐험대 공원을 열어요.
 # 다른 주소로 바꾸려면 아래 $url 만 고치면 돼요.
 $url  = 'https://gkes1211-hash.github.io/kang/escape/'
-$name = '열쇠 학교'
+$name = '꼬마 탐험대 공원'
 
 $ErrorActionPreference = 'Stop'
 try {
     # 아이콘을 사용자 폴더에 복사 (내려받은 폴더를 지워도 아이콘이 남도록)
-    $dir = Join-Path $env:LOCALAPPDATA 'Yeolsoe'
+    $dir = Join-Path $env:LOCALAPPDATA 'KkomaPark'
     New-Item -ItemType Directory -Force -Path $dir | Out-Null
-    $ico = Join-Path $dir 'yeolsoe.ico'
-    Copy-Item -Force (Join-Path $PSScriptRoot 'yeolsoe.ico') $ico
+    $ico = Join-Path $dir 'kkoma-park.ico'
+    Copy-Item -Force (Join-Path $PSScriptRoot 'kkoma-park.ico') $ico
 
     # 바탕화면 위치 (OneDrive 바탕화면도 자동으로 찾음)
     $desktop = [Environment]::GetFolderPath('Desktop')
@@ -34,7 +34,7 @@ try {
         $lnk.Arguments = "--app=$url"
         $lnk.WorkingDirectory = Split-Path -Parent $browser
         $lnk.IconLocation = "$ico,0"
-        $lnk.Description = '열쇠 학교: 1~6학년 과목별 3D 방탈출'
+        $lnk.Description = '꼬마 탐험대 공원: 1~6학년 3D 공부 탐험'
         $lnk.Save()
     } else {
         # 크롬·엣지가 없으면 기본 브라우저로 여는 인터넷 바로가기 (.url)
@@ -45,7 +45,7 @@ try {
     }
 
     Write-Host ''
-    Write-Host '  바탕화면에 "열쇠 학교" 아이콘을 만들었어요!' -ForegroundColor Green
+    Write-Host '  바탕화면에 "꼬마 탐험대 공원" 아이콘을 만들었어요!' -ForegroundColor Green
     Write-Host "  위치: $file"
     Write-Host '  (아이콘 그림이 바로 안 바뀌면 바탕화면에서 F5 를 눌러 새로고침해 주세요)'
 } catch {
