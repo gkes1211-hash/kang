@@ -112,7 +112,7 @@ function render() {
   const st = streak();
   $('#top-streak').textContent = st ? `🔥 ${st}일` : '';
   const v = $('#view');
-  v.innerHTML = ({ home: viewHome, rec: viewRec, stats: viewStats, settings: viewSettings })[tab]();
+  v.innerHTML = ({ home: viewHome, karaoke: viewKaraoke, rec: viewRec, stats: viewStats, settings: viewSettings })[tab]();
   if (tab === 'rec') drawRecList();
 }
 
@@ -143,6 +143,7 @@ function viewHome() {
       <button type="button" class="big-btn" data-act="routine">${done ? '↺ 한 번 더 하기' : '▶ 오늘의 연습 시작'} <small>(약 5분)</small></button>
     </div>
     <div class="sec-title">연습 골라 하기</div>
+    <button type="button" class="row" data-act="tab" data-tab-to="karaoke"><span class="ico">🎶</span><span class="txt"><b>반주 맞춰 부르기</b><small>내 반주 파일을 틀어 놓고 따라 불러요. 구간 반복·느리게·녹음</small></span><span class="go">›</span></button>
     ${row('tuner', '🎚️', '음정 보기', '부르는 음이 무슨 음인지, 높은지 낮은지 바로 보여 줘요')}
     ${row('match', '🎯', '음 맞추기', '들려주는 음을 똑같이 불러요', S.best.match != null ? `최고 ${S.best.match}점` : '')}
     ${row('warm', '🪜', '발성 연습 (목 풀기)', '도레미 오르내리기, 화음 타기, 사이렌')}
@@ -163,11 +164,11 @@ function viewRec() {
     <div class="card"><h2>📼 녹음해서 들어 보기</h2>
       <p>노래를 녹음하면 내가 부른 음 높이 그래프도 같이 남아요. 들으면서 음이 흔들리는 곳을 찾아봐요.</p>
       <button type="button" class="big-btn rec-btn" data-act="ex" data-ex="record">🎙️ 녹음 시작</button>
-      <p class="small muted" style="margin-top:10px">반주는 다른 기기로 작게 틀거나, 반주 없이 불러요. 녹음은 앱을 닫으면 지워지니 남기고 싶으면 💾 저장을 눌러요.</p>
+      <p class="small muted" style="margin-top:10px">반주에 맞춰 녹음하려면 🎶 반주 탭에서 해요. 녹음은 앱을 닫으면 지워지니 남기고 싶으면 💾 저장을 눌러요.</p>
     </div>
     ${recordings.length ? recordings.map((r, i) => `
       <div class="card rec-item">
-        <div class="rec-head"><b>🎵 ${esc(r.at)}</b><span class="muted small">${r.dur.toFixed(1)}초</span></div>
+        <div class="rec-head"><b>${r.name ? `${esc(r.name)} <span class="muted small">${esc(r.at)}</span>` : `🎵 ${esc(r.at)}`}</b><span class="muted small">${r.dur.toFixed(1)}초</span></div>
         <canvas class="roll mini" data-rec="${i}"></canvas>
         <audio controls preload="metadata" src="${r.url}" data-rec="${i}"></audio>
         <div class="btn-row"><a class="big-btn ghost small-btn" href="${r.url}" download="노래연습-${esc(r.at.replace(/[: ]/g, ''))}.${r.type.includes('mp4') ? 'm4a' : r.type.includes('ogg') ? 'ogg' : 'webm'}">💾 저장</a>
@@ -798,12 +799,18 @@ document.addEventListener('click', (e) => {
   if (act === 'ex') { routine = null; EX[b.dataset.ex](); }
   else if (act === 'warm') exWarm(b.dataset.id);
   else if (act === 'routine') startRoutine();
+  else if (act === 'tab') { tab = b.dataset.tabTo; render(); window.scrollTo(0, 0); }
   else if (act === 'next-step') nextStep();
   else if (act === 'close') closePlay();
   else if (act === 'voice') {
     S.settings.voice = b.dataset.id; save(); render();
     const v = VOICES[b.dataset.id];
     toast(`${v.emoji} ${esc(v.name)}에 맞춰 연습해요`);
+  } else if (act === 'sing-song') {
+    routine = null; exKaraoke(Number(b.dataset.id));
+  } else if (act === 'del-song') {
+    const s = (songs || []).find((x) => x.id === Number(b.dataset.id));
+    if (s && confirm(`'${s.name}' 반주를 지울까요?`)) SongDB.del(s.id).then(loadSongs, () => toast('지우지 못했어요'));
   } else if (act === 'del-rec') {
     const [r] = recordings.splice(Number(b.dataset.i), 1);
     if (r) URL.revokeObjectURL(r.url);
@@ -813,6 +820,7 @@ document.addEventListener('click', (e) => {
   }
 });
 document.addEventListener('change', (e) => {
+  if (e.target.id === 'song-file') { addSong(e.target.files[0]); e.target.value = ''; return; }
   const k = e.target.dataset.set;
   if (!k) return;
   S.settings[k] = e.target.value; save();

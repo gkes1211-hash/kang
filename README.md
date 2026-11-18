@@ -45,4 +45,4 @@
 | `common/` | 체력왕·제기차기가 같이 쓰는 카메라·몸 인식·소리·꾸밈 도우미 |
 | `planner/` | 공부 플래너 (게임과 따로 쓰는 앱) |
 | `english/` | 여행 영어 첫걸음: 왕초보 단어·말하기·듣기·역할극 회화 (따로 쓰는 앱, https://gkes1211-hash.github.io/kang/english/) |
-| `sing/` | 노래 연습장: 음정 보기·음 맞추기·발성 연습·음역 찾기·녹음 (따로 쓰는 앱, https://gkes1211-hash.github.io/kang/sing/) |
+| `sing/` | 노래 연습장: 음정 보기·음 맞추기·발성 연습·음역 찾기·반주 맞춰 부르기·녹음 (따로 쓰는 앱, https://gkes1211-hash.github.io/kang/sing/) |

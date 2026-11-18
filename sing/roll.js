@@ -44,7 +44,7 @@ class Roll {
       if (Notes.pc(m) === 0) { g.fillStyle = C.line; g.fillRect(LW, yy + row - dpr, w - LW, dpr); }
     }
     // 음 이름
-    const fs = Math.min(12 * dpr, row * 0.9);
+    const fs = Math.max(9 * dpr, Math.min(12 * dpr, row * 0.9)); // 그림판이 작아도 읽을 수 있게
     g.font = `700 ${fs}px system-ui, sans-serif`; g.textBaseline = 'middle'; g.textAlign = 'right';
     for (let m = this.lo; m <= this.hi; m++) {
       const pc = Notes.pc(m);
