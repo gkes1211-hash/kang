@@ -38,7 +38,7 @@ function pattern(kind, color) {
   return t;
 }
 const matCache = new Map();
-function texMat(kind, color, rx = 1, ry = 1) {
+export function texMat(kind, color, rx = 1, ry = 1) {
   const key = `${kind}|${color}|${rx}|${ry}`;
   if (matCache.has(key)) return matCache.get(key);
   const t = pattern(kind, color).clone(); t.needsUpdate = true; t.repeat.set(rx, ry);
@@ -65,7 +65,7 @@ function gableRoof(g, { w, d, rise, y, color, wall, over = 0.6, z = 0 }) {
   ridge.rotation.x = Math.PI / 2;
 }
 // 창문: 테두리·유리·십자 창살·덧창·꽃상자
-function windowAt(g, x, y, z, { w = 1.3, h = 1.4, shutter = '#4f8f4a', flowers = true, round = false } = {}) {
+export function windowAt(g, x, y, z, { w = 1.3, h = 1.4, shutter = '#4f8f4a', flowers = true, round = false } = {}) {
   if (round) {
     const fr = P(g, cyl(w / 2 + 0.12, w / 2 + 0.12, 0.2, 20), '#ffffff', x, y, z + 0.05, { t: 0.02 }); fr.rotation.x = Math.PI / 2;
     const gl = at(new THREE.Mesh(cyl(w / 2, w / 2, 0.22, 20), toon('#8fd3ff')), x, y, z + 0.07); gl.rotation.x = Math.PI / 2; g.add(gl);
@@ -84,7 +84,7 @@ function windowAt(g, x, y, z, { w = 1.3, h = 1.4, shutter = '#4f8f4a', flowers =
   }
 }
 // 문: 위가 둥근 나무문·손잡이·디딤돌·작은 차양
-function doorAt(g, x, z, { w = 1.4, h = 2.2, color = '#a8743e', awning = null, steps = true } = {}) {
+export function doorAt(g, x, z, { w = 1.4, h = 2.2, color = '#a8743e', awning = null, steps = true } = {}) {
   P(g, box(w + 0.3, h + 0.15, 0.2), '#ffffff', x, h / 2 + 0.1, z + 0.02, { t: 0.02 });
   M(g, box(w, h - w / 2, 0.24), texMat('plank', color, 0.5, 1), x, (h - w / 2) / 2 + 0.1, z + 0.05, { t: 0.02 });
   const top = M(g, new THREE.CylinderGeometry(w / 2, w / 2, 0.24, 16, 1, false, -Math.PI / 2, Math.PI), texMat('plank', color, 0.5, 0.5), x, h - w / 2 + 0.1, z + 0.05, { t: 0.02 });
@@ -120,7 +120,7 @@ function hangingSign(g, x, y, z, emoji, color = '#f6e1b8') {
   pl.position.set(x, y, z + 1.18); g.add(pl);
   return b;
 }
-function emblem(g, x, y, z, emoji, size = 1.6) {
+export function emblem(g, x, y, z, emoji, size = 1.6) {
   const c = document.createElement('canvas'); c.width = c.height = 128; const cx = c.getContext('2d'); cx.font = '100px sans-serif'; cx.textAlign = 'center'; cx.textBaseline = 'middle'; cx.fillText(emoji, 64, 72);
   const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
   const pl = new THREE.Mesh(new THREE.PlaneGeometry(size, size), new THREE.MeshBasicMaterial({ map: t, transparent: true }));

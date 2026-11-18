@@ -13,14 +13,14 @@ export { shuffle, PAINTS, MIXES };
 
 // 놀이 구역. host = 구역을 지키는 동물 친구, hello = 들어갈 때 하는 말
 export const SUBJECTS = [
-  { id: 'kor', name: '이야기 숲', short: '국어', emoji: '📚', color: '#ff8a7a', host: '🦉', hostName: '부엉이 박사', hello: '책 요정이 글자를 몽땅 숨겼어! 보물 상자 3개의 수수께끼를 풀어 줄래?' },
+  { id: 'kor', name: '이야기 숲 도서관', short: '국어', emoji: '📚', color: '#ff8a7a', host: '🦉', hostName: '부엉이 박사', hello: '책 요정이 글자를 몽땅 숨겼어! 보물 상자 3개의 수수께끼를 풀어 줄래?' },
   { id: 'eng', name: 'ABC 놀이터', short: '영어', emoji: '🔤', color: '#5aa9f0', host: '🦜', hostName: '앵무새 헬로', hello: 'Hello! 영어 단어가 미끄럼틀에서 굴러떨어졌어. 같이 찾아 줘!' },
   { id: 'math', name: '숫자 성', short: '수학', emoji: '🏰', color: '#f4b33a', host: '🦁', hostName: '사자 임금님', hello: '성문 자물쇠는 숫자로 열린단다. 셈 박사님, 도와주겠나?' },
   { id: 'soc', name: '세계 여행 기차역', short: '사회', emoji: '🚂', color: '#3fbf7f', host: '🐻', hostName: '곰 역장님', hello: '칙칙폭폭! 여행 기차표를 받으려면 퀴즈 3개를 맞혀야 해요!' },
-  { id: 'sci', name: '신기한 실험 텐트', short: '과학', emoji: '🔬', color: '#2bb5c8', host: '🐙', hostName: '문어 박사', hello: '실험실이 엉망진창이야! 과학 수수께끼를 풀어서 정리해 줘!' },
+  { id: 'sci', name: '반짝 별 실험실', short: '과학', emoji: '🔬', color: '#2bb5c8', host: '🐙', hostName: '문어 박사', hello: '실험실이 엉망진창이야! 과학 수수께끼를 풀어서 정리해 줘!' },
   { id: 'code', name: '삐뽀 로봇 공장', short: '코딩', emoji: '🤖', color: '#7b6cf0', host: '🐧', hostName: '펭귄 공장장', hello: '삐뽀삐뽀! 로봇이 길을 잃었어. 명령 블록으로 열쇠까지 데려가 줘!' },
   { id: 'music', name: '딩동 음악 무대', short: '음악', emoji: '🎤', color: '#f06aa8', host: '🐦', hostName: '꾀꼬리 가수', hello: '오늘 밤 공연인데 악보가 흩어졌어! 노래로 금고를 열어 줘!' },
-  { id: 'art', name: '무지개 물감 언덕', short: '미술', emoji: '🌈', color: '#ff9346', host: '🦊', hostName: '여우 화가', hello: '무지개 색이 사라졌어! 물감을 섞어서 색을 되찾아 줄래?' },
+  { id: 'art', name: '무지개 물감 공방', short: '미술', emoji: '🌈', color: '#ff9346', host: '🦊', hostName: '여우 화가', hello: '무지개 색이 사라졌어! 물감을 섞어서 색을 되찾아 줄래?' },
   { id: 'pe', name: '튼튼 운동장', short: '체육', emoji: '⚽', color: '#5cbf3c', host: '🐯', hostName: '호랑이 코치', hello: '어흥! 몸을 움직여야 상자가 열린다! 준비됐지?' },
 ];
 export const SUBJECT = Object.fromEntries(SUBJECTS.map((s) => [s.id, s]));

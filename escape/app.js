@@ -170,15 +170,19 @@ let final = null; // 열기구: {puzzles, solved[], digits[], code, done}
 function ensureWorld() {
   if (!world) world = new World($('world'), { onInteract: interact, onPrompt: prompt, onArea: areaChanged });
   world.onZoom = (z) => store.set('zoom', z.toFixed(2));
+  if (!world.minimap) {
+    const mm = $('minimap'); world.minimap = mm;
+    mm.addEventListener('pointerdown', (e) => { e.stopPropagation(); const r = mm.getBoundingClientRect(); world.mapTap((e.clientX - r.left) / r.width, (e.clientY - r.top) / r.height); });
+  }
   return world;
 }
 function areaName(a) {
-  if (a === 'plaza') return '🗺️ 광장';
+  if (a === 'plaza') return '🏡 마을';
   if (a === 'balloon') return '🎈 열기구 탈출장';
   const s = SUBJECT[AREAS[a]?.subj];
   return s ? `${s.emoji} ${s.name}` : a;
 }
-function areaChanged(a) { $('where').textContent = `${areaName(a)} · ${me.grade}학년`; sendState(true); }
+function areaChanged(a) { $('where').textContent = `${areaName(a)} · ${me.grade}학년`; $('minimap').hidden = a !== 'plaza'; sendState(true); }
 function prompt(it) {
   const b = $('act');
   if (!it || world.paused) { b.hidden = true; return; }
@@ -224,7 +228,7 @@ function startGame(how) {
   if (store.get(`guided.${me.name}`, '') !== 'yes') setTimeout(() => runGuide(true), 600);
   else {
     speak(`${me.name}, 꼬마 탐험대 공원에 온 걸 환영해요!`);
-    toast(`🗺️ 아치 문으로 들어가 보물 상자를 열어요! 도장 ${STAMPS_TO_FLY}개를 모으면 열기구를 탈 수 있어요.`, 5000);
+    toast(`🏠 건물 문으로 들어가 보물 상자를 열어요! 도장 ${STAMPS_TO_FLY}개를 모으면 열기구를 탈 수 있어요.`, 5000);
   }
 }
 
@@ -233,11 +237,11 @@ const GUIDE_LOOK = { skin: '#f6c9a0', hair: 'messy', hairColor: '#7a4a24', shirt
 function guideLines() {
   return [
     ['👋', `안녕, ${me.name}! 나는 꼬마 탐험대의 대장, 토리야. 꼬마 탐험대 공원에 온 걸 환영해!`],
-    ['🗺️', '여기는 만남의 분수 광장이야. 광장 둘레에 반짝이는 아치 문이 9개 있지? 문으로 들어가면 놀이 구역이 나와.'],
-    ['🎁', '놀이 구역마다 보물 상자가 3개 있어. 상자를 눌러서 퀴즈를 풀면 상자가 열려!'],
+    ['🗺️', '여기는 마을 한가운데 분수 광장이야. 길을 따라가면 도서관, 성, 기차역 같은 건물이 9개 있어. 반짝이는 문으로 들어가면 놀이방이 나와. 왼쪽 위 작은 지도도 봐!'],
+    ['🎁', '건물 안 놀이방마다 보물 상자가 3개 있어. 상자를 눌러서 퀴즈를 풀면 상자가 열려!'],
     ['🗝️', '상자 3개를 다 열면 열쇠가 나타나. 열쇠를 받으면 탐험 수첩에 도장도 쾅 찍혀.'],
-    ['🎈', `도장 ${STAMPS_TO_FLY}개를 모두 모으면, 광장 뒤쪽 열기구를 타고 하늘로 날아갈 수 있어!`],
-    ['👕', '열쇠를 모을수록 날개나 왕관 같은 특별한 꾸미기가 열려. 구역에 다시 가면 새 문제가 나오니까 또 도전해 봐.'],
+    ['🎈', `도장 ${STAMPS_TO_FLY}개를 모두 모으면, 마을 북쪽 언덕의 열기구를 타고 하늘로 날아갈 수 있어!`],
+    ['👕', '열쇠를 모을수록 날개나 왕관 같은 특별한 꾸미기가 열려. 건물에 다시 들어가면 새 문제가 나오니까 또 도전해 봐.'],
     ['🕹️', TOUCH ? '가고 싶은 곳을 손가락으로 누르면 걸어가. 모르는 게 있으면 언제든 나한테 와서 물어봐. 자, 출발!' : '가고 싶은 곳을 누르거나 방향키로 움직여. 모르는 게 있으면 언제든 나한테 와서 물어봐. 자, 출발!'],
   ];
 }
@@ -277,7 +281,7 @@ function endGuide() {
   world.guideTalk(false);
   world.paused = false; prompt(world.near);
   store.set(`guided.${me.name}`, 'yes');
-  if (g.first) toast('🗺️ 반짝이는 아치 문으로 들어가 봐요!', 3500);
+  if (g.first) toast('🏠 반짝이는 건물 문으로 들어가 봐요!', 3500);
 }
 $('g-next').addEventListener('click', () => {
   const g = guideState; if (!g) return;
@@ -316,7 +320,7 @@ function interact(it) {
   unlockAudio();
   switch (it.kind) {
     case 'door': return enterZone(it.data.subj);
-    case 'exit': { const subj = AREAS[world.area]?.subj; return world.goTo('plaza', subj ? world.plazaSpotFor(subj) : { x: 0, z: -9 }); }
+    case 'exit': { const subj = AREAS[world.area]?.subj; return world.goTo('plaza', subj ? world.plazaSpotFor(subj) : { x: -6, z: -33 }); }
     case 'station': return openStation(it.data.area, it.data.index);
     case 'key': return takeKey(AREAS[it.data.area].subj);
     case 'roofdoor': return enterBalloon();
@@ -398,15 +402,15 @@ function takeKey(subj) {
   const s = SUBJECT[subj];
   const n = stampList().length;
   const unlocked = SPECIALS.filter((x) => x.need > before && x.need <= prog.keys);
-  const next = n >= STAMPS_TO_FLY ? '🎈 도장을 다 모았어요! 광장 뒤쪽 열기구 탈출장으로 가 봐요!' : `열기구까지 도장 ${STAMPS_TO_FLY - n}개 더!`;
+  const next = n >= STAMPS_TO_FLY ? '🎈 도장을 다 모았어요! 마을 북쪽 언덕의 열기구로 가 봐요!' : `열기구까지 도장 ${STAMPS_TO_FLY - n}개 더!`;
   speak(first ? `${s.name} 도장 쾅! 열쇠를 얻었어요!` : '열쇠를 하나 더 얻었어요!');
   const after = () => { if (unlocked.length) showUnlock(unlocked); };
   modal(`
     <div class="m-emoji">🗝️</div>
     <h2>${first ? `${esc(s.name)} 도장 쾅! 📒` : '열쇠를 하나 더 얻었어요!'}</h2>
     <p class="m-stars">${'⭐'.repeat(stars)}${'☆'.repeat(3 - stars)}</p>
-    <p>🗝️ 모은 열쇠 <b>${prog.keys}</b>개 · 📒 도장 <b>${n}</b>/${STAMPS_TO_FLY}<br>${first ? next : '이 구역에 다시 들어오면 새 문제가 나와요.'}</p>
-  `, [['🏠 광장으로 가기', () => { world.goTo('plaza', world.plazaSpotFor(subj)); after(); }, 'ok'], ['여기 더 있기', after, 'ghost']]);
+    <p>🗝️ 모은 열쇠 <b>${prog.keys}</b>개 · 📒 도장 <b>${n}</b>/${STAMPS_TO_FLY}<br>${first ? next : '이 건물에 다시 들어오면 새 문제가 나와요.'}</p>
+  `, [['🏡 마을로 나가기', () => { world.goTo('plaza', world.plazaSpotFor(subj)); after(); }, 'ok'], ['여기 더 있기', after, 'ghost']]);
 }
 
 // 새로 열린 특별 꾸미기
@@ -481,7 +485,7 @@ function openGate() {
           <h2>탐험 성공!</h2>
           <p><b>${esc(me.name)}</b> 탐험대원, 열기구를 타고 날아올랐어요!</p>
           <p class="m-stars">🗝️ ${prog.keys} · ⭐ ${stars} · 🎈 ${prog.flights}번째 비행</p>
-          <p>구역을 다시 깨면 열쇠가 더 모이고, 특별 꾸미기가 계속 열려요!</p>
+          <p>건물 놀이방을 다시 깨면 열쇠가 더 모이고, 특별 꾸미기가 계속 열려요!</p>
         `, [['🗺️ 공원으로 돌아가기', () => { world.landBalloon(); world.goTo('plaza'); }, 'ok']]);
       });
     },
@@ -594,7 +598,7 @@ function onNet(m) {
     case 'call':
       $('puzzle').hidden = true; $('puzzle').innerHTML = ''; world.paused = false;
       if ($('screen-avatar').classList.contains('active')) { show('screen-game'); world.resize(); }
-      world.landBalloon(); world.goTo('plaza'); banner('🏠 선생님이 모두 광장으로 불렀어요!'); speak('모두 광장으로 모여요!');
+      world.landBalloon(); world.goTo('plaza'); banner('🏠 선생님이 모두 분수 광장으로 불렀어요!'); speak('모두 분수 광장으로 모여요!');
       break;
     case 'cheer':
       if (m.id !== myId) { toast(m.kind === 'escape' ? `🎈 ${m.name} 대원이 열기구를 탔어요!` : `🗝️ ${m.name} 대원이 ${SUBJECT[m.subj]?.name || ''}에서 열쇠를 찾았어요!`); world.celebrateRemote(m.id); }
@@ -692,7 +696,7 @@ function drawAreas() {
   if (host) for (const s of host.students.values()) if (s.online) counts[s.a] = (counts[s.a] || 0) + 1;
   const box = $('t-areas');
   if (!box.children.length) {
-    const list = [['plaza', '🗺️ 광장'], ...SUBJECTS.map((s) => [`zone:${s.id}`, `${s.emoji} ${s.short}`]), ['balloon', '🎈 열기구']];
+    const list = [['plaza', '🏡 마을'], ...SUBJECTS.map((s) => [`zone:${s.id}`, `${s.emoji} ${s.short}`]), ['balloon', '🎈 열기구']];
     for (const [a, label] of list) {
       const b = document.createElement('button'); b.type = 'button'; b.dataset.area = a;
       b.innerHTML = `${label} <b hidden></b>`;
