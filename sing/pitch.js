@@ -51,13 +51,16 @@ function yin(buf, sr) {
 
 // ---------- 마이크 ----------
 const Mic = {
-  ctx: null, stream: null, src: null, analyser: null, buf: null, hist: [], gate: 0.006, openedAt: 0,
+  ctx: null, stream: null, src: null, analyser: null, buf: null, hist: [], gate: 0.003, floor: 0.001, openedAt: 0,
   ensureCtx() {
     if (!this.ctx) this.ctx = new (window.AudioContext || window.webkitAudioContext)();
-    if (this.ctx.state === 'suspended') this.ctx.resume();
+    if (this.ctx.state !== 'running' && this.ctx.state !== 'closed') this.ctx.resume().catch(() => {});
     return this.ctx;
   },
   get on() { return !!this.stream; },
+  // 마이크가 끊겼는지 (다른 앱이 마이크를 가져가거나, 이어폰을 뺐을 때)
+  get lost() { const t = this.stream?.getAudioTracks()[0]; return !!t && (t.readyState === 'ended' || t.muted); },
+  get asleep() { return !!this.ctx && this.ctx.state !== 'running'; },
   async open() {
     this.ensureCtx();
     if (this.stream) return;
@@ -72,6 +75,7 @@ const Mic = {
     this.src.connect(this.analyser);
     this.buf = new Float32Array(this.analyser.fftSize);
     this.hist = [];
+    this.floor = 0.001;
     this.openedAt = performance.now();
   },
   close() {
@@ -81,6 +85,14 @@ const Mic = {
     this.stream = this.src = this.analyser = null;
     return (performance.now() - this.openedAt) / 1000;
   },
+  // 조용할 때의 바탕 소리(방 소음)를 따라가서 문턱을 맞춘다. 조용한 방에서는 작은 목소리도 잡는다.
+  // 노래(음 높이가 있는 소리)일 때는 문턱을 올리지 않아서, 길게 불러도 끊기지 않는다.
+  track(rms, voiced) {
+    if (rms < this.floor) this.floor = this.floor * 0.9 + rms * 0.1;
+    else if (!voiced && rms < this.floor * 4) this.floor *= 1.003; // 바탕 소리와 비슷한 크기일 때만 천천히 올린다
+    this.floor = Math.min(0.004, Math.max(0.0003, this.floor));
+    this.gate = Math.min(0.008, Math.max(0.0025, this.floor * 3));
+  },
   // 지금 들리는 소리: { rms, voiced, midi, freq }
   read() {
     if (!this.analyser) return { rms: 0, voiced: false };
@@ -88,9 +100,10 @@ const Mic = {
     let sum = 0;
     for (let i = 0; i < this.buf.length; i++) sum += this.buf[i] * this.buf[i];
     const rms = Math.sqrt(sum / this.buf.length);
-    if (rms < this.gate) { this.hist = []; return { rms, voiced: false }; }
+    if (rms < this.gate) { this.track(rms, false); this.hist = []; return { rms, voiced: false }; }
     const r = yin(this.buf, this.ctx.sampleRate);
-    if (!r || r.freq < MIN_F || r.freq > MAX_F) { this.hist.length = Math.max(0, this.hist.length - 1); return { rms, voiced: false }; }
+    if (!r || r.freq < MIN_F || r.freq > MAX_F) { this.track(rms, false); this.hist.length = Math.max(0, this.hist.length - 1); return { rms, voiced: false }; }
+    this.track(rms, true);
     const m = Notes.midi(r.freq);
     // 가끔 한 옥타브 튀는 값을 가운데 값으로 걸러 낸다
     this.hist.push(m);

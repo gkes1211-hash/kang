@@ -150,7 +150,7 @@ function viewHome() {
     ${row('long', '💨', '길게 소리 내기', '숨을 아껴 쓰는 연습. 몇 초 버틸까요?', S.best.long != null ? `최고 ${S.best.long}초` : '')}
     ${row('range', '📏', '내 음역 찾기', '가장 낮은 음과 가장 높은 음을 재요', S.measured ? `${Notes.en(S.measured.lo)}~${Notes.en(S.measured.hi)}` : '')}
     <div class="card tip"><b>💡 노래 꿀팁</b><p>${pick(TIPS)}</p></div>
-    <p class="note">🔒 마이크 소리는 이 기기 안에서만 써요. 어디로도 보내지 않아요.<br>🎧 이어폰을 끼면 기준음이 마이크로 새지 않아 더 정확해요.</p>`;
+    <p class="note">🎙️ 연습 화면 오른쪽 위 막대가 움직이면 내 목소리를 잘 듣고 있는 거예요.<br>🔒 마이크 소리는 이 기기 안에서만 써요. 어디로도 보내지 않아요.<br>🎧 이어폰을 끼면 기준음이 마이크로 새지 않아 더 정확해요.</p>`;
 }
 function row(ex, ico, title, sub, pill = '') {
   return `<button type="button" class="row" data-act="ex" data-ex="${ex}"><span class="ico">${ico}</span>
@@ -249,6 +249,8 @@ function viewSettings() {
       <div class="setting"><div><span class="lbl">화면</span></div>
         <select data-set="theme">${opt('system', st.theme, '기기 설정 따라')}${opt('light', st.theme, '밝게')}${opt('dark', st.theme, '어둡게')}</select></div>
     </div>
+    <div class="card"><div class="setting"><div><span class="lbl">🎙️ 마이크 확인</span><small>"아~" 하면 음 이름이 나오고, 위쪽 막대가 움직이면 잘 듣고 있는 거예요</small></div>
+      <button type="button" class="big-btn ghost small-btn" data-act="ex" data-ex="tuner">확인하기</button></div></div>
     <div class="card"><div class="setting"><div><span class="lbl danger">기록 모두 지우기</span><small>연속 일, 최고 기록, 음역이 지워져요</small></div>
       <button type="button" class="big-btn ghost small-btn" data-act="reset">지우기</button></div></div>
     <p class="note">🔒 마이크 소리는 이 기기 안에서만 음 높이를 계산하는 데 써요. 녹음은 내가 💾 저장하지 않으면 앱을 닫을 때 지워져요.</p>`;
@@ -288,6 +290,7 @@ function closePlay() {
   addTime(Mic.close());
   routine = null;
   $('#play').hidden = true;
+  $('#mic-meter').hidden = true;
   document.body.classList.remove('playing');
   render();
 }
@@ -306,9 +309,44 @@ function frame(fn) {
   Run.raf = requestAnimationFrame(tick);
 }
 function mute(sec) { Run.muteUntil = Math.max(Run.muteUntil, nowS() + sec); }
-function hear(now) { return now < Run.muteUntil ? { rms: 0, voiced: false, muted: true } : Mic.read(); }
+function hear(now) {
+  const r = now < Run.muteUntil ? { rms: 0, voiced: false, muted: true } : Mic.read();
+  meter(r, now);
+  return r;
+}
+// 위쪽 마이크 표시: 지금 내 소리가 들리는지 늘 보여 준다
+const MM = { at: 0, prev: 0, quiet: 0, loud: false, warned: false, peak: 0 };
+function meterReset() { Object.assign(MM, { at: 0, prev: nowS(), quiet: 0, loud: false, warned: false, peak: 0 }); $('#mic-meter').hidden = false; }
+function meter(r, now) {
+  if (r.rms > Mic.gate * 1.3) MM.loud = true;
+  if (!r.muted && !MM.loud) MM.quiet += Math.min(0.1, now - MM.prev); // 내가 불러야 할 때 조용했던 시간만 센다
+  MM.prev = now;
+  MM.peak = Math.max(r.rms, MM.peak * 0.9);
+  if (now - MM.at < 0.08) return;
+  MM.at = now;
+  const el = $('#mic-meter');
+  const lv = clamp((20 * Math.log10(MM.peak + 1e-6) + 58) / 40, 0, 1); // 소리 크기 0~1 (약 -58dB ~ -18dB)
+  const bars = r.muted ? 0 : Math.ceil(lv * 5);
+  el.querySelectorAll('.mm-bars i').forEach((b, i) => b.classList.toggle('on', i < bars));
+  let st, txt;
+  if (Mic.lost) { st = 'bad'; txt = '마이크 끊김'; }
+  else if (Mic.asleep) { st = 'bad'; txt = '화면을 눌러요'; Mic.ensureCtx(); }
+  else if (r.muted) { st = 'muted'; txt = '🔊 앱 소리'; }
+  else if (r.voiced) { st = 'good'; txt = '들려요 👍'; }
+  else if (r.rms > Mic.gate) { st = 'some'; txt = '소리 들려요'; }
+  else if (!MM.loud && MM.quiet > 8) { st = 'bad'; txt = '안 들려요'; }
+  else { st = ''; txt = '듣는 중'; }
+  el.className = `mic-meter ${st}`;
+  $('#mm-txt').textContent = txt;
+  if (st === 'bad' && !MM.warned) {
+    MM.warned = true;
+    toast(Mic.lost ? '마이크가 끊겼어요 😢<br><span class="small">✕ 로 닫고 다시 열어 주세요. 다른 앱이 마이크를 쓰고 있으면 꺼 주세요.</span>'
+      : Mic.asleep ? '화면을 한 번 눌러 주세요 👆<br><span class="small">그래야 소리를 듣기 시작해요</span>'
+        : '목소리가 안 들려요 🎙️<br><span class="small">휴대폰 아래쪽 마이크 가까이에서 "아~" 해 보세요. 이어폰 마이크를 쓰는 중이면 그 마이크에 대고 불러요.</span>');
+  }
+}
 async function needMic() {
-  try { await Mic.open(); return true; } catch (e) {
+  try { await Mic.open(); meterReset(); return true; } catch (e) {
     body(`<div class="done-pic">🎙️</div><div class="done-title">마이크를 쓸 수 없어요</div>
       <div class="feedback bad">${e && e.message === 'nomic' ? '이 브라우저는 마이크를 지원하지 않아요. 크롬이나 사파리로 열어 주세요.'
     : '마이크 사용을 <b>허용</b>해 주세요.<br><span class="small">주소창 왼쪽 🔒(또는 ⓘ) → 마이크 → 허용, 그다음 다시 해 봐요.</span>'}</div>
@@ -537,6 +575,7 @@ async function exWarm(pid, reps = 5) {
   $('#wm-redo').onclick = () => { if (phase === 'listen' || phase === 'sing' || phase === 'ready') rep(); };
   frame((now, dt) => {
     let t = now - at;
+    if (phase !== 'sing') hear(now); // 듣는 동안에도 위쪽 마이크 표시를 움직인다
     if (phase === 'listen' && t > seq.len + 0.3) {
       phase = 'ready'; at = now; t = 0;
       $('#wm-label').textContent = '🎤 준비…';
@@ -796,6 +835,7 @@ document.addEventListener('click', (e) => {
   const b = e.target.closest('[data-act]');
   if (!b) return;
   const act = b.dataset.act;
+  if (['ex', 'warm', 'routine', 'next-step', 'sing-song'].includes(act)) Mic.ensureCtx();
   if (act === 'ex') { routine = null; EX[b.dataset.ex](); }
   else if (act === 'warm') exWarm(b.dataset.id);
   else if (act === 'routine') startRoutine();
@@ -828,6 +868,8 @@ document.addEventListener('change', (e) => {
   render();
 });
 $('#play-close').addEventListener('click', closePlay);
+// 소리 엔진이 잠들었으면 (아이폰에서 전화가 오거나 잠깐 다른 앱에 다녀오면) 화면을 누를 때 깨운다
+document.addEventListener('pointerdown', () => { if (Mic.ctx && Mic.ctx.state !== 'running') Mic.ensureCtx(); }, true);
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !$('#play').hidden) closePlay(); });
 // 다른 앱으로 가면 마이크를 끈다
 document.addEventListener('visibilitychange', () => { if (document.hidden && !$('#play').hidden) closePlay(); });

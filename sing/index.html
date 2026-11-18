@@ -43,6 +43,9 @@
     <div class="play-bar">
       <button type="button" class="icon-btn" id="play-close" aria-label="그만하기">✕</button>
       <div class="play-head"><b id="play-title"></b><div class="progress" aria-hidden="true"><i id="play-progress"></i></div></div>
+      <div class="mic-meter" id="mic-meter" hidden role="status" aria-live="polite">
+        <span class="mm-bars" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span><span class="mm-txt" id="mm-txt">듣는 중</span>
+      </div>
       <span id="play-count" class="play-count"></span>
     </div>
     <div id="play-body" class="play-body"></div>
