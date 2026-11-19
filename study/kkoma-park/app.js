@@ -4,7 +4,7 @@ import { SUBJECTS, SUBJECT, STAMPS_TO_FLY, puzzlesFor, finalPuzzles, JOBS, JOB, 
 import { ISLANDS } from './islands.js';
 import { openPuzzle } from './puzzles.js';
 import { Host, Client, EMOTES, cleanName } from './net.js';
-import { randomLook, cleanLook, HAIR_COLORS, CLOTH_COLORS, CATS, SPECIALS, nextSpecial, loadChars, charsReady, drawChar, partThumb } from './chars.js';
+import { randomLook, cleanLook, CHARACTERS, CATS, SPECIALS, nextSpecial, loadChars, charsReady, drawChar } from './chars.js';
 loadChars().catch(() => {});
 import { makeStore } from '../../pe/common/sound.js';
 import { unlockAudio, sfx, speak, speakNow, hush, sound, setSound, bgm } from './audio.js';
@@ -63,9 +63,9 @@ const saveLook = () => store.set(`look.${me.name}`, JSON.stringify(me.look));
 // ============================================================
 // 캐릭터 꾸미기 화면
 // ============================================================
-const dresser = { tab: 'face', onDone: null, mode: 'start', r: null, view: 0 };
-const VIEWS = ['front', 'side', 'back', 'sideL'];
-// 미리보기: 2D 캐릭터 그림. 누르거나 밀면 앞 → 옆 → 뒤 → 옆으로 돈다
+const dresser = { tab: 'char', onDone: null, mode: 'start', r: null, view: 0 };
+const VIEWS = ['front', 'sideL', 'front', 'sideL'];
+// 미리보기: 고른 캐릭터 그림. 누르면 좌우로 뒤집어 본다
 function setupPreview() {
   if (dresser.r) return;
   const canvas = $('av-canvas'); const g = canvas.getContext('2d');
@@ -93,13 +93,10 @@ function setupPreview() {
   requestAnimationFrame(loop);
 }
 function refreshPreview() { /* 그림은 매 화면마다 다시 그린다 */ }
-const n = (k) => Array.from({ length: k }, (_, i) => i);
 const TABS = {
-  face: () => [['피부', 'thumbs', 'skin', n(8)], ['표정', 'thumbs', 'face', n(16)]],
-  hair: () => [['앞머리', 'thumbs', 'front', n(8)], ['뒷머리', 'thumbs', 'back', [-1, ...n(8)]], ['머리 색', 'swatch', 'hairColor', HAIR_COLORS]],
-  clothes: () => [['윗옷', 'thumbs', 'top', n(16)], ['윗옷 색', 'swatch', 'topColor', CLOTH_COLORS], ['아랫옷', 'thumbs', 'bottom', n(8)], ['아랫옷 색', 'swatch', 'bottomColor', CLOTH_COLORS], ['신발', 'thumbs', 'shoe', n(8)], ['신발 색', 'swatch', 'shoeColor', CLOTH_COLORS]],
-  items: () => [['머리에 쓰기', 'chips', 'hat', CATS.hat], ['머리 핀', 'chips', 'deco', CATS.deco], ['안경', 'chips', 'glasses', CATS.glasses], ['등·손', 'chips', 'gear', CATS.gear], ['직업 옷 (🏢 직업 체험관에서 체험하면 열려요)', 'chips', 'job', CATS.job]],
+  char: () => [['내 캐릭터 고르기', 'chars', 'char', CHARACTERS]],
   pet: () => [['같이 다니는 친구', 'chips', 'pet', CATS.pet]],
+  job: () => [['직업 배지 (🏢 직업 체험관에서 체험하면 열려요. 이름표 옆에 달려요)', 'chips', 'job', CATS.job]],
 };
 function renderDresser() {
   $('av-name').textContent = me.name;
@@ -108,14 +105,13 @@ function renderDresser() {
   for (const [title, kind, key, list] of TABS[dresser.tab]()) {
     const h = document.createElement('h3'); h.textContent = title; body.append(h);
     const row = document.createElement('div'); row.className = kind === 'swatch' ? 'swatches' : 'chips';
-    if (kind === 'thumbs') {
-      row.className = 'thumbs';
-      const colorKey = { front: 'hairColor', back: 'hairColor', top: 'topColor', bottom: 'bottomColor', shoe: 'shoeColor' }[key];
-      list.forEach((i) => {
-        const b = document.createElement('button'); b.type = 'button'; b.setAttribute('aria-pressed', String(me.look[key] === i)); b.setAttribute('aria-label', `${title} ${i + 1}`);
-        const th = i < 0 ? null : partThumb(key, i, colorKey ? me.look[colorKey] : null);
-        if (th) { const c = document.createElement('canvas'); c.width = th.width; c.height = th.height; c.getContext('2d').drawImage(th, 0, 0); b.append(c); } else b.textContent = '없음';
-        b.addEventListener('click', () => { me.look[key] = i; sfx.pop(); if (key === 'back' || key === 'front') dresser.view = key === 'back' ? 2 : 0; renderDresser(); });
+    if (kind === 'chars') {
+      row.className = 'charpick';
+      list.forEach((nm, i) => {
+        const b = document.createElement('button'); b.type = 'button'; b.setAttribute('aria-pressed', String(me.look.char === i)); b.setAttribute('aria-label', nm); b.title = nm;
+        const th = drawChar({ v: 3, char: i });
+        if (th) { const c = document.createElement('canvas'); c.width = th.width; c.height = th.height; c.getContext('2d').drawImage(th, 0, 0); b.append(c); } else b.textContent = String(i + 1);
+        b.addEventListener('click', () => { me.look.char = i; dresser.view = 0; sfx.pop(); renderDresser(); });
         row.append(b);
       });
     } else if (kind === 'swatch') {
@@ -276,7 +272,7 @@ function startGame(how) {
 }
 
 // ---------------- 안내하는 탐험대장 토리 ----------------
-const GUIDE_LOOK = { v: 2, skin: 1, face: 0, front: 4, back: 1, hairColor: '#7a4a35', top: 9, topColor: '#a8e08a', bottom: 0, bottomColor: '#c9a46b', shoe: 4, shoeColor: '#c98a52', hat: 'cap', deco: 'none', glasses: 'glasses', gear: 'backpack', pet: 'none', job: 'none' };
+const GUIDE_LOOK = { v: 3, char: 9, pet: 'none', job: 'none' }; // 야구모자 친구
 function guideLines() {
   return [
     ['👋', `안녕, ${me.name}! 나는 꼬마 탐험대의 대장, 토리야. 꼬마 탐험대 공원에 온 걸 환영해!`],
@@ -381,8 +377,8 @@ function pickJob(onPick) {
   modal(`
     <div class="m-emoji">🃏</div>
     <h2>오늘은 어떤 직업을 해 볼까?</h2>
-    <p>카드를 고르면 그 직업 미션 3개가 나와요. 해내면 직업 옷이 열려요!</p>
-    <div class="job-grid">${JOBS.map((j) => `<button type="button" class="job-card${prog.jobs?.[j.id] ? ' done' : ''}" data-job="${j.id}" style="--c:${j.color}"><i>${j.emoji}</i>${esc(j.name)}${prog.jobs?.[j.id] ? '<small>✅ 옷 열림</small>' : ''}</button>`).join('')}</div>
+    <p>카드를 고르면 그 직업 미션 3개가 나와요. 해내면 그 직업 배지가 열려요!</p>
+    <div class="job-grid">${JOBS.map((j) => `<button type="button" class="job-card${prog.jobs?.[j.id] ? ' done' : ''}" data-job="${j.id}" style="--c:${j.color}"><i>${j.emoji}</i>${esc(j.name)}${prog.jobs?.[j.id] ? '<small>✅ 배지 열림</small>' : ''}</button>`).join('')}</div>
   `, [['나중에 할래요', null, 'ghost']]);
   $('modal').querySelectorAll('.job-card').forEach((b) => b.addEventListener('click', () => { $('modal').hidden = true; $('modal').innerHTML = ''; if (world) world.paused = false; onPick(b.dataset.job); }));
 }
@@ -401,7 +397,7 @@ function enterZone(subj, jobId = null) {
   const times = prog.stamps[subj] | 0;
   if (subj === 'job') {
     const j = JOB[z.job];
-    world.setBoardText(area, `오늘의 직업: ${j.emoji} ${j.name} · 미션 3개를 해내면 직업 옷! · ${me.grade}학년`);
+    world.setBoardText(area, `오늘의 직업: ${j.emoji} ${j.name} · 미션 3개를 해내면 직업 배지! · ${me.grade}학년`);
     toast(`${s.host} ${s.hostName}: "${j.say} 미션 상자 3개를 열어 봐!"`, 5200); speak(`${j.say}`);
     return;
   }
@@ -494,12 +490,12 @@ function showUnlock(list) {
 }
 function showJobUnlock(j, then) {
   sfx.win();
-  speak(`${j.name} 옷이 열렸어요!`);
+  speak(`${j.name} 배지가 열렸어요!`);
   modal(`
     <div class="m-emoji">${j.emoji}</div>
-    <h2>${esc(j.name)} 옷이 열렸어요!</h2>
-    <p>꾸미기 → 🎒 소품 → <b>직업 옷</b>에서 언제든 입을 수 있어요.<br>📒 직업 도감: <b>${jobList().length}</b> / ${JOBS.length}</p>
-  `, [['👕 지금 입어 보기', () => { me.look.job = j.id; saveLook(); openDresser('edit', afterDress); }, 'ok'], ['계속 탐험하기', then, 'ghost']]);
+    <h2>${esc(j.name)} 배지가 열렸어요!</h2>
+    <p>꾸미기 → 🏢 <b>직업 배지</b>에서 달면 이름표 옆에 ${JOB[j.id]?.emoji || ''}가 보여요.<br>📒 직업 도감: <b>${jobList().length}</b> / ${JOBS.length}</p>
+  `, [['🏅 지금 달기', () => { me.look.job = j.id; saveLook(); openDresser('edit', afterDress); }, 'ok'], ['계속 탐험하기', then, 'ghost']]);
 }
 function afterDress() {
   world.setPlayer(me.name, me.look, prog.keys);

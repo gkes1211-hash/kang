@@ -33,7 +33,7 @@ export const SUBJECTS = [
   { id: 'fire', name: '삐뽀 소방서', short: '안전', emoji: '🚒', color: '#e8322d', host: '🐶', hostName: '강아지 소방관', hello: '삐뽀삐뽀! 출동 준비! 안전 퀴즈 3개를 풀면 꼬마 소방관이 될 수 있어!', island: 'life' },
   { id: 'market', name: '알뜰 꼬마 시장', short: '경제', emoji: '🛒', color: '#f2a516', host: '🐿️', hostName: '다람쥐 사장님', hello: '어서 오세요! 돈을 똑똑하게 쓰는 꼬마 손님을 찾고 있어요. 도전해 볼래요?', island: 'life' },
   { id: 'post', name: '마음 우체국', short: '마음', emoji: '💌', color: '#ff6b8b', host: '🐰', hostName: '토끼 우체부', hello: '마음 편지가 뒤죽박죽 섞였어! 친구 마음을 알아맞히고 편지를 배달해 줄래?', island: 'life' },
-  { id: 'job', name: '두근두근 직업 체험관', short: '직업', emoji: '🏢', color: '#6a5ae0', host: '🐨', hostName: '코알라 진로 선생님', hello: '어서 와! 직업 카드 벽에서 해 보고 싶은 직업을 골라 봐. 미션 3개를 해내면 그 직업 옷을 줄게!', island: 'life' },
+  { id: 'job', name: '두근두근 직업 체험관', short: '직업', emoji: '🏢', color: '#6a5ae0', host: '🐨', hostName: '코알라 진로 선생님', hello: '어서 와! 직업 카드 벽에서 해 보고 싶은 직업을 골라 봐. 미션 3개를 해내면 그 직업 배지를 줄게!', island: 'life' },
 ];
 export const SUBJECT = Object.fromEntries(SUBJECTS.map((s) => [s.id, s]));
 // 열기구는 도장 10개면 탈 수 있다. 건물은 앞으로도 계속 늘어나지만 "보너스 건물"을 따로 두지 않는다:
