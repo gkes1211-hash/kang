@@ -267,8 +267,9 @@ function startGame(how) {
   paintSettings();
   if (store.get(`guided.${me.name}`, '') !== 'yes') setTimeout(() => runGuide(true), 600);
   else {
-    speak(`${me.name}, 꼬마 탐험대 공원에 온 걸 환영해요!`);
-    toast(`🏠 건물 문으로 들어가 보물 상자를 열어요! 도장 ${STAMPS_TO_FLY}개를 모으면 열기구를 탈 수 있어요.`, 5000);
+    speak(`${me.name}, 꼬마 탐험대 공원에 온 걸 환영해요! 가고 싶은 건물을 골라 봐요.`);
+    // 처음 화면은 섬 전체 보기: 섬마다 건물 이름을 한눈에 보고 고른다
+    setTimeout(() => world.setView('all'), 300);
   }
 }
 
@@ -321,7 +322,7 @@ function endGuide() {
   world.guideTalk(false);
   world.paused = false; prompt(world.near);
   store.set(`guided.${me.name}`, 'yes');
-  if (g.first) toast('🏠 반짝이는 건물 문으로 들어가 봐요!', 3500);
+  if (g.first) world.setView('all'); // 안내가 끝나면 섬 전체 보기에서 가고 싶은 건물 고르기
 }
 $('g-next').addEventListener('click', () => {
   const g = guideState; if (!g) return;
