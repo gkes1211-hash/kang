@@ -12,9 +12,9 @@ import { ISLANDS, ISLAND, BRIDGES, SLOTS, LOTS, ROADS, walkable, islandAt, shore
 // ---------- 장소 ----------
 export const AREAS = {
   plaza: { cx: 0, cz: 0, hw: 110, hd: 100, cam: [0, 21, 21], spec: [0, 64, 56], follow: 1, ahead: 3 },
-  balloon: { cx: -320, cz: 0, hw: 13, hd: 9, cam: [0, 16, 15], spec: [0, 21, 19], follow: 0.45 },
+  balloon: { cx: -900, cz: 0, hw: 13, hd: 9, cam: [0, 16, 15], spec: [0, 21, 19], follow: 0.45 },
 };
-SUBJECTS.forEach((s, i) => { AREAS[`zone:${s.id}`] = { cx: 320 + i * 80, cz: 0, hw: 12, hd: 8, cam: [0, 15, 15], spec: [0, 19, 18], follow: 0.35, subj: s.id }; });
+SUBJECTS.forEach((s, i) => { AREAS[`zone:${s.id}`] = { cx: 900 + i * 80, cz: 0, hw: 12, hd: 8, cam: [0, 15, 15], spec: [0, 19, 18], follow: 0.35, subj: s.id }; });
 export const PLAZA_SPAWN = { x: 1.5, z: 9.5 };
 
 // ---------- 섬 마을 배치 (islands.js) ----------
