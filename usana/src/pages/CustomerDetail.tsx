@@ -1,8 +1,11 @@
+import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
+import ContactSheet from '../components/ContactSheet';
+import { taskTitle } from '../lib/todo';
 import ConfirmButton from '../components/ConfirmButton';
 import { Header, StageBadge, digits } from '../components/ui';
 import { useQuery } from '../data/useQuery';
-import { deleteCustomerCompletely, deletePurchase, getCustomer, listContactsByCustomer, listProducts, listPurchasesByCustomer } from '../data/repo';
+import { deleteContact, deleteCustomerCompletely, deletePurchase, getCustomer, listContactsByCustomer, listProducts, listPurchasesByCustomer, listTasksByCustomer } from '../data/repo';
 import { won } from '../lib/calc';
 import type { Purchase } from '../types';
 import { CONTACT_METHODS } from '../types';
@@ -15,6 +18,8 @@ export default function CustomerDetail() {
   const purchases = useQuery(() => listPurchasesByCustomer(id), [id]);
   const contacts = useQuery(() => listContactsByCustomer(id), [id]);
   const products = useQuery(listProducts, []);
+  const tasks = useQuery(() => listTasksByCustomer(id), [id]);
+  const [sheet, setSheet] = useState(false);
   const productName = (pid: string) => products?.find((p) => p.id === pid)?.name ?? '삭제된 제품';
 
   if (c === undefined) return null;
@@ -34,6 +39,7 @@ export default function CustomerDetail() {
 
   const methodLabel = CONTACT_METHODS.find((m) => m.value === c.preferredMethod)?.label;
   const late = c.nextContactDate && c.nextContactDate < today();
+  const pending = (tasks ?? []).filter((t) => !t.done);
 
   return (
     <>
@@ -63,6 +69,18 @@ export default function CustomerDetail() {
         <p className={'big ' + (late ? 'late' : '')}>
           {c.nextContactDate ? `${fmtDate(c.nextContactDate)} (${relativeLabel(c.nextContactDate)})` : '정해지지 않음'}
         </p>
+        {pending.length > 0 && (
+          <>
+            <h3 className="sub-h">자동 연락 일정</h3>
+            {pending.map((t) => (
+              <div key={t.id} className={'sched small' + (t.dueDate < today() ? ' late' : '')}>
+                <span className="sched-date">{fmtDate(t.dueDate)}</span>
+                <span>{taskTitle(t.kind, t.note)}</span>
+              </div>
+            ))}
+          </>
+        )}
+        <button className="btn primary block" onClick={() => setSheet(true)}>+ 연락 기록</button>
       </div>
 
       <div className="card">
@@ -102,11 +120,22 @@ export default function CustomerDetail() {
 
       <div className="card">
         <h3>연락 기록</h3>
-        {contacts?.length === 0 && <p className="muted">연락 기록이 없어요. (연락 기록 추가는 3단계에서 만들어요)</p>}
+        {contacts?.length === 0 && <p className="muted">연락 기록이 없어요. 통화·카톡 후 [+ 연락 기록]으로 바로 남겨 주세요.</p>}
         {contacts?.map((x) => (
-          <div key={x.id} className="small">{fmtDate(x.date)} · {x.content}</div>
+          <div key={x.id} className="log">
+            <div className="row-between">
+              <b className="small">{fmtDate(x.date)} · {CONTACT_METHODS.find((m) => m.value === x.method)?.label}</b>
+            </div>
+            <div className="pre">{x.content}</div>
+            <details className="more">
+              <summary>이 기록 지우기</summary>
+              <ConfirmButton label="지우기" question="이 연락 기록을 지울까요?" confirmLabel="지우기" onConfirm={() => deleteContact(x.id)} />
+            </details>
+          </div>
         ))}
       </div>
+
+      {sheet && <ContactSheet customer={c} onClose={() => setSheet(false)} />}
 
       <ConfirmButton
         label="이 고객 정보 완전히 삭제"

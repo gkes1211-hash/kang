@@ -1,5 +1,5 @@
 // 테스트용 가짜 데이터. 실제 제품 정보가 아님.
-import { addCustomer, addProduct } from './repo';
+import { addCustomer, addProduct, addPurchase } from './repo';
 import { addDays, today } from '../lib/date';
 
 export async function addSampleData(): Promise<void> {
@@ -13,8 +13,9 @@ export async function addSampleData(): Promise<void> {
     { name: '정나무', phone: '010-5555-6666', birthday: '1982-09-09', stage: 'partner', interestTags: ['면역', '수면'], consent: true, next: 14, medication: true, memo: '테스트용 가짜 고객' },
   ] as const;
 
+  const ids: Record<string, string> = {};
   for (const p of people) {
-    await addCustomer({
+    const c = await addCustomer({
       name: p.name,
       phone: p.phone,
       birthday: p.birthday,
@@ -31,6 +32,7 @@ export async function addSampleData(): Promise<void> {
       nextContactDate: addDays(t, p.next),
       memo: p.memo,
     });
+    ids[p.name] = c.id;
   }
 
   const products = [
@@ -38,8 +40,9 @@ export async function addSampleData(): Promise<void> {
     { name: '[테스트] 미네랄 B', category: '뼈·관절', claim: '(테스트 문구) 라벨의 기능성 문구를 여기에 적어요', days: 30, price: 40000, tags: ['뼈·관절'] },
     { name: '[테스트] 오메가 C', category: '혈행', claim: '(테스트 문구) 라벨의 기능성 문구를 여기에 적어요', days: 60, price: 45000, tags: ['혈행', '눈 건강'] },
   ];
+  const pids: string[] = [];
   for (const p of products) {
-    await addProduct({
+    const prod = await addProduct({
       name: p.name,
       category: p.category,
       functionalClaim: p.claim,
@@ -50,5 +53,10 @@ export async function addSampleData(): Promise<void> {
       interestTags: p.tags,
       cautions: '테스트용 가짜 제품입니다.',
     });
+    pids.push(prod.id);
   }
+
+  // 구매 예시: 어제 산 이바다(오늘 D+1 감사 인사), 21일 전에 산 박산들(오늘 소진 7일 전)
+  await addPurchase({ customerId: ids['이바다'], productId: pids[2], quantity: 1, people: 1, purchaseDate: addDays(t, -1), amount: 45000 });
+  await addPurchase({ customerId: ids['박산들'], productId: pids[0], quantity: 1, people: 1, purchaseDate: addDays(t, -21), amount: 50000 });
 }

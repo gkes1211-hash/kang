@@ -1,5 +1,5 @@
 import Dexie, { type Table } from 'dexie';
-import type { Customer, Product, Purchase, ContactLog, Template } from '../types';
+import type { Customer, Product, Purchase, ContactLog, Template, Task } from '../types';
 
 // 폰 안 저장소(IndexedDB). 이 파일은 저장소 계층(repo.ts)에서만 불러 씀.
 class AppDB extends Dexie {
@@ -8,6 +8,7 @@ class AppDB extends Dexie {
   purchases!: Table<Purchase, string>;
   contacts!: Table<ContactLog, string>;
   templates!: Table<Template, string>;
+  tasks!: Table<Task, string>;
   settings!: Table<{ key: string; value: unknown }, string>;
 
   constructor() {
@@ -19,6 +20,10 @@ class AppDB extends Dexie {
       contacts: 'id, customerId, date, updatedAt',
       templates: 'id, situation, updatedAt',
       settings: 'key',
+    });
+    // 2판: 연락 할 일 묶음 추가 (기존 데이터는 그대로 유지됨)
+    this.version(2).stores({
+      tasks: 'id, customerId, purchaseId, dueDate, kind, done, updatedAt',
     });
   }
 }

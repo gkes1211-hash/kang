@@ -1,60 +1,90 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Header, StageBadge, digits } from '../components/ui';
+import ContactSheet from '../components/ContactSheet';
 import { useQuery } from '../data/useQuery';
-import { listCustomers } from '../data/repo';
+import { listAllContacts, listCustomers, listTasks } from '../data/repo';
+import { buildTodos, buildUpcoming, type TodoItem } from '../lib/todo';
 import { fmtDate, relativeLabel, today } from '../lib/date';
-import type { Customer } from '../types';
 
 export default function Home() {
-  const customers = useQuery(listCustomers, []);
+  const data = useQuery(async () => {
+    const [customers, tasks, contacts] = await Promise.all([listCustomers(), listTasks(), listAllContacts()]);
+    return { customers, tasks, contacts };
+  }, []);
+  const [active, setActive] = useState<TodoItem | null>(null);
   const t = today();
-  const due = (customers ?? []).filter((c) => c.nextContactDate === t);
-  const late = (customers ?? [])
-    .filter((c) => c.nextContactDate && c.nextContactDate < t)
-    .sort((a, b) => a.nextContactDate!.localeCompare(b.nextContactDate!));
+
+  if (!data) return null;
+  const { overdue, groups, total } = buildTodos(data.customers, data.tasks, data.contacts, t);
+  const upcoming = buildUpcoming(data.customers, data.tasks, t);
 
   return (
     <>
       <Header title="오늘 할 일" />
-      <p className="today-line">{fmtDate(t)}</p>
+      <p className="today-line">{fmtDate(t)} · 연락할 곳 {total}건</p>
 
-      {customers && customers.length === 0 && (
+      {data.customers.length === 0 && (
         <div className="empty">
           아직 고객이 없어요.<br />
           <Link to="/customers/new">고객을 추가</Link>하거나, 설정에서 테스트용 고객을 넣어 보세요.
         </div>
       )}
 
-      <Section title="오늘 연락할 고객" list={due} emptyText="오늘 정해 둔 연락은 없어요." />
-      {late.length > 0 && <Section title="밀린 연락" list={late} late />}
+      {overdue.length > 0 && (
+        <section className="section">
+          <h2 className="late">밀린 연락 <span className="count">{overdue.length}</span></h2>
+          {overdue.map((i) => <TodoCard key={i.key} item={i} onDone={() => setActive(i)} />)}
+        </section>
+      )}
 
-      <p className="hint">소진 임박·첫 구매 후 일정·생일 알림은 다음 단계에서 추가돼요.</p>
+      {groups.map((g) => (
+        <section key={g.title} className="section">
+          <h2>{g.title} <span className="count">{g.items.length}</span></h2>
+          {g.items.map((i) => <TodoCard key={i.key} item={i} onDone={() => setActive(i)} />)}
+        </section>
+      ))}
+
+      {data.customers.length > 0 && total === 0 && (
+        <div className="empty">🎉 오늘 연락할 곳을 모두 챙겼어요.</div>
+      )}
+
+      {upcoming.length > 0 && (
+        <section className="section">
+          <h2>이번 주 예정 <span className="count">{upcoming.length}</span></h2>
+          <div className="card">
+            {upcoming.map((u) => (
+              <Link key={u.key} to={`/customers/${u.customer.id}`} className="upcoming">
+                <span className="up-date">{fmtDate(u.dueDate).slice(5)}<br /><small>{relativeLabel(u.dueDate)}</small></span>
+                <span><b>{u.customer.name}</b><br /><span className="muted small">{u.title}</span></span>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {active && <ContactSheet customer={active.customer} item={active} onClose={() => setActive(null)} />}
     </>
   );
 }
 
-function Section({ title, list, emptyText, late }: { title: string; list: Customer[]; emptyText?: string; late?: boolean }) {
+function TodoCard({ item, onDone }: { item: TodoItem; onDone: () => void }) {
+  const c = item.customer;
   return (
-    <section className="section">
-      <h2 className={late ? 'late' : ''}>{title} <span className="count">{list.length}</span></h2>
-      {list.length === 0 && emptyText && <p className="muted">{emptyText}</p>}
-      {list.map((c) => (
-        <div key={c.id} className="card task">
-          <Link to={`/customers/${c.id}`} className="task-main">
-            <div className="row-between">
-              <b className="name">{c.name}</b>
-              <StageBadge stage={c.stage} />
-            </div>
-            <div className={late ? 'late small' : 'muted small'}>
-              다음 연락일 {fmtDate(c.nextContactDate)} ({relativeLabel(c.nextContactDate!)})
-            </div>
-          </Link>
-          <div className="btn-row">
-            <a className="btn" href={`tel:${digits(c.phone)}`}>📞 전화</a>
-            <a className="btn" href={`sms:${digits(c.phone)}`}>💬 문자</a>
-          </div>
+    <div className="card task">
+      <Link to={`/customers/${c.id}`} className="task-main">
+        <div className="row-between">
+          <b className="name">{c.name}</b>
+          <StageBadge stage={c.stage} />
         </div>
-      ))}
-    </section>
+        <div className="small">{item.title}</div>
+        {item.overdue && <div className="late small">{fmtDate(item.dueDate)} ({relativeLabel(item.dueDate)})</div>}
+      </Link>
+      <div className="btn-row">
+        <a className="btn" href={`tel:${digits(c.phone)}`}>📞 전화</a>
+        <a className="btn" href={`sms:${digits(c.phone)}`}>💬 문자</a>
+        <button className="btn primary" onClick={onDone}>✓ 완료</button>
+      </div>
+    </div>
   );
 }

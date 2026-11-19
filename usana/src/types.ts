@@ -83,6 +83,21 @@ export interface ContactLog extends BaseRecord {
   taskId?: string;
 }
 
+/** 할 일 종류 */
+export type TaskKind = 'd1' | 'd7' | 'refill' | 'd45' | 'birthday' | 'noContact' | 'manual';
+
+/** 저장되는 연락 할 일 (구매 시 자동 생성되거나, 완료 기록으로 남음) */
+export interface Task extends BaseRecord {
+  customerId: string;
+  kind: TaskKind;
+  dueDate: DateOnly;
+  purchaseId?: string;
+  note?: string; // 예: 제품명
+  done: boolean;
+  doneAt?: string;
+  contactId?: string; // 완료할 때 남긴 연락 기록
+}
+
 export interface Template extends BaseRecord {
   title: string;
   situation: string;

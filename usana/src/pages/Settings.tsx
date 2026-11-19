@@ -11,7 +11,7 @@ export default function Settings() {
 
   async function onSeed() {
     await addSampleData();
-    setMsg('테스트용 고객 5명과 제품 3개를 넣었어요.');
+    setMsg('테스트용 고객 5명, 제품 3개, 구매 예시 2건을 넣었어요.');
   }
 
   async function onClear() {
