@@ -52,7 +52,7 @@ export function loadChars() {
   return ready;
 }
 export const charsReady = () => !!META;
-export const CW = 147; export const CH = 151; // 캐릭터 한 칸 (presets.json 의 cw·ch, 발이 칸 바닥에 닿는다)
+export const CW = 129; export const CH = 151; // 캐릭터 한 칸 (presets.json 의 cw·ch, 발이 칸 바닥에 닿는다)
 
 // look → 캔버스. view: 'front' 또는 'sideL' 이면 왼쪽을 보도록 뒤집는다 (그 밖에는 그대로)
 const cache = new Map();
