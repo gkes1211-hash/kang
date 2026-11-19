@@ -66,7 +66,7 @@ button.opt:active, .opt-main:active { transform: translateY(3px); }
 .swatches button { width: 50px; height: 50px; border-radius: 16px; border: 4px solid #e2cfb0; }
 .swatches button[aria-pressed="true"] { border: 5px solid var(--brown); box-shadow: 0 0 0 4px var(--gold); }
 .chips { display: flex; flex-wrap: wrap; gap: 8px; }
-.charpick { display: grid; grid-template-columns: repeat(auto-fill, minmax(86px, 1fr)); gap: 10px; }
+.charpick { display: grid; grid-template-columns: repeat(auto-fill, minmax(86px, 1fr)); gap: 10px; max-height: min(430px, calc(100dvh - 330px)); min-height: 240px; overflow-y: auto; padding: 6px 6px 6px 2px; overscroll-behavior: contain; }
 .charpick button { height: 112px; display: grid; place-items: center; padding: 4px; border: 4px solid #e2cfb0; border-radius: 18px; background: #fffaf0; cursor: pointer; }
 .charpick button[aria-pressed="true"] { border: 5px solid var(--brown); box-shadow: 0 0 0 4px var(--gold); background: #fff3c4; }
 .charpick button:hover { background: #fff3c4; }
