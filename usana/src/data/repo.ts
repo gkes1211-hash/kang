@@ -7,6 +7,7 @@ import { db } from './db';
 import { newId } from '../lib/id';
 import { calcRunOutDate } from '../lib/calc';
 import { addDays, today } from '../lib/date';
+import { DEFAULT_TEMPLATES } from '../lib/templates';
 import type {
   BaseRecord, NewRecord, Customer, Product, Purchase, ContactLog, Template, Task, TaskKind, ContactMethod,
 } from '../types';
@@ -226,7 +227,46 @@ export async function recordContact(input: RecordContactInput): Promise<ContactL
 
 // ── 템플릿 ──
 export async function listTemplates(): Promise<Template[]> {
-  return db.templates.toArray();
+  return db.templates.orderBy('createdAt').toArray().catch(() => db.templates.toArray());
+}
+
+export async function getTemplate(id: string): Promise<Template | undefined> {
+  return db.templates.get(id);
+}
+
+export async function addTemplate(data: NewRecord<Template>): Promise<Template> {
+  const rec = stamp<Template>(data);
+  await db.templates.add(rec);
+  notify();
+  return rec;
+}
+
+export async function updateTemplate(id: string, changes: Partial<NewRecord<Template>>): Promise<void> {
+  await db.templates.update(id, { ...changes, updatedAt: new Date().toISOString() });
+  notify();
+}
+
+export async function deleteTemplate(id: string): Promise<void> {
+  await db.templates.delete(id);
+  notify();
+}
+
+/** 처음 실행할 때 기본 템플릿 넣기 (한 번만. 지운 템플릿이 다시 생기지 않게 표시를 남김) */
+export async function ensureDefaultTemplates(): Promise<void> {
+  const done = await db.settings.get('templatesSeeded');
+  if (done) return;
+  await db.transaction('rw', db.templates, db.settings, async () => {
+    if ((await db.templates.count()) === 0) {
+      // 순서를 지키려고 생성 시각을 1밀리초씩 다르게
+      const base = Date.now();
+      await db.templates.bulkAdd(DEFAULT_TEMPLATES.map((t, i) => {
+        const at = new Date(base + i).toISOString();
+        return { ...t, id: newId(), createdAt: at, updatedAt: at };
+      }));
+    }
+    await db.settings.put({ key: 'templatesSeeded', value: true });
+  });
+  notify();
 }
 
 // ── 전체 ──
@@ -245,5 +285,8 @@ export async function clearAll(): Promise<void> {
       db.contacts.clear(), db.templates.clear(), db.tasks.clear(),
     ]);
   });
+  // 템플릿은 기본 템플릿으로 되돌림
+  await db.settings.delete('templatesSeeded');
+  await ensureDefaultTemplates();
   notify();
 }

@@ -25,6 +25,10 @@ class AppDB extends Dexie {
     this.version(2).stores({
       tasks: 'id, customerId, purchaseId, dueDate, kind, done, updatedAt',
     });
+    // 3판: 템플릿을 만든 순서대로 보여 주려고 createdAt 색인 추가
+    this.version(3).stores({
+      templates: 'id, situation, createdAt, updatedAt',
+    });
   }
 }
 

@@ -5,6 +5,7 @@ import { addProduct, getProduct, listProducts, updateProduct } from '../data/rep
 import { useQuery } from '../data/useQuery';
 import { DEFAULT_INTEREST_TAGS, type NewRecord, type Product } from '../types';
 import { toNumber } from '../lib/calc';
+import { findBanned } from '../lib/compliance';
 
 // 숫자 칸은 입력 중에 문자열로 들고 있다가 저장할 때 숫자로 바꿈
 interface FormState extends Omit<NewRecord<Product>, 'daysPerUnit' | 'price'> {
@@ -17,8 +18,6 @@ const empty: FormState = {
   daysPerUnit: '', price: '', interestTags: [], cautions: '',
 };
 
-// 기능성 문구에 쓰면 안 되는 표현 (질병 예방·치료 효과)
-const BANNED = ['치료', '낫', '완치', '예방', '약 대신', '처방'];
 
 export default function ProductForm() {
   const { id } = useParams();
@@ -41,7 +40,7 @@ export default function ProductForm() {
   const toggleTag = (t: string) =>
     set('interestTags', f.interestTags.includes(t) ? f.interestTags.filter((x) => x !== t) : [...f.interestTags, t]);
 
-  const banned = BANNED.filter((w) => f.functionalClaim.includes(w));
+  const banned = findBanned(f.functionalClaim);
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();

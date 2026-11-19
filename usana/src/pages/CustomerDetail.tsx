@@ -60,7 +60,7 @@ export default function CustomerDetail() {
         <a className="phone" href={`tel:${digits(c.phone)}`}>{c.phone}</a>
         <div className="btn-row">
           <a className="btn" href={`tel:${digits(c.phone)}`}>📞 전화</a>
-          <a className="btn" href={`sms:${digits(c.phone)}`}>💬 문자</a>
+          <Link className="btn" to={`/customers/${c.id}/message`}>💬 메시지</Link>
         </div>
       </div>
 
@@ -102,7 +102,7 @@ export default function CustomerDetail() {
               {c.interestTags.length === 0 && <span className="muted">관심사 태그 없음</span>}
               {c.interestTags.map((t) => <span key={t} className="chip on static">{t}</span>)}
             </div>
-            <button className="btn block" disabled title="4단계에서 추가돼요">관심사 맞는 제품 보기 (준비 중)</button>
+            <Link className="btn block" to={`/customers/${c.id}/match`}>관심사 맞는 제품 보기</Link>
           </>
         ) : (
           <p className="muted">🔒 동의 전이라 관심사를 저장하지 않아요.</p>

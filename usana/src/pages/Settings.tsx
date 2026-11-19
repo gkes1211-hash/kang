@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Header } from '../components/ui';
 import ConfirmButton from '../components/ConfirmButton';
 import { useQuery } from '../data/useQuery';
@@ -30,6 +31,11 @@ export default function Settings() {
         )}
         <p className="muted small">데이터는 이 폰(브라우저) 안에만 저장돼요.</p>
       </div>
+
+      <Link to="/templates" className="card list-item row-between">
+        <b>💬 메시지 템플릿 관리</b>
+        <span className="muted" aria-hidden="true">›</span>
+      </Link>
 
       <div className="card">
         <h3>테스트</h3>

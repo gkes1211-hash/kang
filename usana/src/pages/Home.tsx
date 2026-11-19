@@ -82,7 +82,7 @@ function TodoCard({ item, onDone }: { item: TodoItem; onDone: () => void }) {
       </Link>
       <div className="btn-row">
         <a className="btn" href={`tel:${digits(c.phone)}`}>📞 전화</a>
-        <a className="btn" href={`sms:${digits(c.phone)}`}>💬 문자</a>
+        <Link className="btn" to={`/customers/${c.id}/message?kind=${item.kind}${item.note ? `&product=${encodeURIComponent(item.note)}` : ''}`}>💬 메시지</Link>
         <button className="btn primary" onClick={onDone}>✓ 완료</button>
       </div>
     </div>

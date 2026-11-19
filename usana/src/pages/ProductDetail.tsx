@@ -4,8 +4,8 @@ import { Header } from '../components/ui';
 import { useQuery } from '../data/useQuery';
 import { countPurchasesOfProduct, deleteProduct, getProduct } from '../data/repo';
 import { won } from '../lib/calc';
+import { DISCLAIMER } from '../lib/compliance';
 
-export const DISCLAIMER = '이 제품은 질병의 예방 및 치료를 위한 의약품이 아닙니다.';
 
 export default function ProductDetail() {
   const { id = '' } = useParams();
