@@ -5,7 +5,7 @@
 // 모든 장소를 한 장면 안에 멀리 떨어뜨려 두어서, 같은 구역에 있는 친구만 화면에 보인다.
 import { THREE, toon, part, at, sph, cap, cyl, box, OUTLINE } from './toon.js';
 import { buildPet } from './avatar.js';
-import { drawChar, loadChars, charsReady, cleanLook } from './chars.js';
+import { drawChar, loadChars, charsReady, cleanLook, jobEmoji, CW, CH } from './chars.js';
 import { buildBuilding, texMat, windowAt, doorAt, emblem } from './buildings.js';
 import { SUBJECTS, SUBJECT, STAMPS_TO_FLY } from './content.js';
 import { ISLANDS, ISLAND, BRIDGES, SLOTS, LOTS, ROADS, walkable, islandAt, shoreR, shorePoints } from './islands.js';
@@ -319,13 +319,13 @@ export function emoteOn(av, emoji) {
   u.bubbleT = 2.6;
   av.add(u.bubble);
 }
-// 2D 종이 인형 캐릭터: 늘 카메라를 보는 그림(Sprite). 걷는 방향에 따라 앞·옆·뒷모습으로 바뀐다
+// 2D 픽셀아트 캐릭터: 늘 카메라를 보는 그림(Sprite). 왼쪽으로 걸으면 좌우로 뒤집는다
 const CHAR_H = 3.0; // 세상 속 키
 function buildPaper(look) {
   const L = cleanLook(look);
   const mat = new THREE.SpriteMaterial({ transparent: true, alphaTest: 0.5, depthWrite: true });
   const sp = new THREE.Sprite(mat);
-  sp.center.set(0.5, 14 / 320); sp.scale.set(CHAR_H * 0.75, CHAR_H, 1);
+  sp.center.set(0.5, 1 / CH); sp.scale.set(CHAR_H * CW / CH, CHAR_H, 1);
   const shadow = new THREE.Mesh(new THREE.CircleGeometry(0.42, 20), new THREE.MeshBasicMaterial({ color: '#2b3a1e', transparent: true, opacity: 0.22, depthWrite: false }));
   shadow.rotation.x = -Math.PI / 2; shadow.position.y = 0.03; shadow.scale.set(1, 0.6, 1); shadow.userData.flat = true;
   const g = new THREE.Group(); g.add(sp, shadow);
@@ -347,9 +347,12 @@ function animatePaper(g, root, moving, dt, t, camYaw) {
   const s = Math.abs(Math.sin(u.walk));
   u.sprite.position.y = moving ? s * 0.12 : Math.sin(t * 2.2) * 0.02;
   u.sprite.scale.y = CHAR_H * (moving ? 1 - s * 0.03 : 1 + Math.sin(t * 2.2) * 0.008);
+  u.sprite.scale.x = CHAR_H * CW / CH * (moving ? 1 + s * 0.02 : 1);
   // 바라보는 방향(root.rotation.y: 0 = 화면 앞쪽)을 카메라 기준으로
   let a = root.rotation.y - camYaw; a = Math.atan2(Math.sin(a), Math.cos(a));
-  const view = Math.abs(a) < Math.PI * 0.3 ? 'front' : Math.abs(a) > Math.PI * 0.7 ? 'back' : a > 0 ? 'side' : 'sideL';
+  // 왼쪽으로 가면 그림을 뒤집고, 오른쪽으로 가면 되돌린다 (앞뒤로만 갈 때는 그대로)
+  const sx = Math.sin(a);
+  const view = sx < -0.35 ? 'sideL' : sx > 0.35 ? 'front' : (u.view || 'front');
   setPaperView(g, view);
 }
 // 캐릭터 + 이름표 + 같이 다니는 친구
@@ -357,7 +360,8 @@ function makeCharacter(look, name, me) {
   const root = new THREE.Group();
   const body = buildPaper(look);
   root.add(body);
-  const lb = label(name, me);
+  const je = jobEmoji(body.userData.look.job);
+  const lb = label(je ? `${je} ${name}` : name, me);
   lb.position.y = CHAR_H + 0.3;
   root.add(lb);
   root.userData = { body, label: lb, petId: body.userData.look.pet, bubble: null, bubbleT: 0 };
