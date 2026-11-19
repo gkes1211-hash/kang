@@ -1,6 +1,7 @@
 // 꼬마 탐험대 공원: 첫 화면 → 캐릭터 꾸미기 → 3D 공원(혼자 / 친구들과) 또는 선생님 화면
 import { World, AREAS } from './world.js';
 import { SUBJECTS, SUBJECT, STAMPS_TO_FLY, puzzlesFor, finalPuzzles, JOBS, JOB, jobPuzzles } from './content.js';
+import { ISLANDS } from './islands.js';
 import { openPuzzle } from './puzzles.js';
 import { Host, Client, EMOTES, cleanName } from './net.js';
 import { THREE } from './toon.js';
@@ -178,7 +179,8 @@ function ensureWorld() {
     // 섬 전체 → "돌아가기"(내 캐릭터 쪽으로), 섬 하나 → "전체"(섬 전체로)
     const toAll = v !== 'all';
     b.querySelector('small').textContent = toAll ? '전체' : '돌아가기'; b.title = toAll ? '섬 전체 보기' : '내 캐릭터 쪽으로 돌아가기';
-    if (v === 'all') toast('🗺️ 섬 이름을 누르면 그 섬만 크게 보여요!', 3200);
+    showIsleCards(v === 'all');
+    if (v === 'all') toast('🗺️ 가고 싶은 건물 이름을 누르면 바로 가요! 섬 이름을 누르면 그 섬을 크게 볼 수 있어요.', 4200);
     else if (on) toast('🏠 가고 싶은 건물을 누르면 그 건물 앞으로 바로 가요. 🗺️ 전체를 누르면 다른 섬도 볼 수 있어요.', 4200);
   };
   world.onQuick = (subj) => { const s2 = SUBJECT[subj]; toast(s2 ? `✨ ${s2.emoji} ${s2.name} 앞에 왔어요! 문으로 들어가 봐요.` : '✨ 열기구 언덕에 왔어요!', 3000); sfx.pop?.(); };
@@ -193,6 +195,32 @@ function areaName(a) {
   if (a === 'balloon') return '🎈 열기구 탈출장';
   const s = SUBJECT[AREAS[a]?.subj];
   return s ? `${s.emoji} ${s.name}` : a;
+}
+// ---------------- 섬 전체 보기: 섬마다 건물 이름 카드 ----------------
+// 3D 이름표는 멀리서 작아지거나 겹치니, 화면 위·아래·왼쪽·오른쪽에 섬 방향대로 늘 같은 크기로 읽히는 카드를 놓는다.
+function showIsleCards(on) {
+  const host = $('isle-cards');
+  if (!on) { host.hidden = true; host.innerHTML = ''; return; }
+  host.innerHTML = '';
+  for (const isl of ISLANDS) {
+    const card = document.createElement('div'); card.className = `isle-card isle-${isl.id}`; card.style.setProperty('--c', isl.color || '#c98a52'); card.dataset.isl = isl.id;
+    const t = document.createElement('button'); t.type = 'button'; t.className = 'isle-title';
+    t.textContent = isl.id === 'hub' ? '⛲ 분수 광장' : `${isl.emoji} ${isl.name}`;
+    if (isl.id !== 'hub') { t.title = `${isl.name} 크게 보기`; t.addEventListener('click', () => { sfx.pop(); world.setView(isl.id); }); }
+    else t.addEventListener('click', () => { sfx.pop(); world.setView('normal'); });
+    const list = document.createElement('div'); list.className = 'isle-blds';
+    const items = isl.id === 'hub' ? [{ id: 'balloon', emoji: '🎈', name: '열기구 탈출장' }] : SUBJECTS.filter((s) => s.island === isl.id);
+    for (const s of items) {
+      const b = document.createElement('button'); b.type = 'button'; b.className = 'isle-bld';
+      const done = prog.stamps[s.id] > 0;
+      b.innerHTML = `<i>${s.emoji}</i><span>${esc(s.name)}</span>${done ? '<em>✅</em>' : ''}`;
+      b.title = `${s.name} 앞으로 바로 가기`;
+      b.addEventListener('click', () => { sfx.pop(); world.quickTravel(s.id); });
+      list.append(b);
+    }
+    card.append(t, list); host.append(card);
+  }
+  host.hidden = false;
 }
 function areaChanged(a) { $('where').textContent = `${areaName(a)} · ${me.grade}학년`; $('minimap').hidden = a !== 'plaza'; $('overview').hidden = a !== 'plaza'; sendState(true); }
 function prompt(it) {
