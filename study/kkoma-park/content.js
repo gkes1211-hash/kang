@@ -1,4 +1,4 @@
-// 꼬마 탐험대 공원: 놀이 구역과 문제 고르기.
+// 꼬마 탐험대 공원: 마을 건물(놀이방)과 문제 고르기.
 // 문제는 content/ 폴더에 과목별로 있다. 문제를 더 넣으려면 그 파일의 학년 목록에 한 줄씩 더하면 된다.
 import KOR from './content/kor.js';
 import SOC from './content/soc.js';
@@ -7,6 +7,9 @@ import MATH from './content/math.js';
 import { WORDS, SENT } from './content/eng.js';
 import { MELODIES, MUSIC, PAINTS, MIXES, ART, PE_MOVES, PE } from './content/arts.js';
 import { LEVELS, CODE_Q } from './content/code.js';
+import FIRE from './content/fire.js';
+import MARKET from './content/market.js';
+import POST from './content/post.js';
 import { pickOne, shuffle } from './content/h.js';
 
 export { shuffle, PAINTS, MIXES };
@@ -22,9 +25,14 @@ export const SUBJECTS = [
   { id: 'music', name: '딩동 음악 무대', short: '음악', emoji: '🎤', color: '#f06aa8', host: '🐦', hostName: '꾀꼬리 가수', hello: '오늘 밤 공연인데 악보가 흩어졌어! 노래로 금고를 열어 줘!' },
   { id: 'art', name: '무지개 물감 공방', short: '미술', emoji: '🌈', color: '#ff9346', host: '🦊', hostName: '여우 화가', hello: '무지개 색이 사라졌어! 물감을 섞어서 색을 되찾아 줄래?' },
   { id: 'pe', name: '튼튼 운동장', short: '체육', emoji: '⚽', color: '#5cbf3c', host: '🐯', hostName: '호랑이 코치', hello: '어흥! 몸을 움직여야 상자가 열린다! 준비됐지?' },
+  { id: 'fire', name: '삐뽀 소방서', short: '안전', emoji: '🚒', color: '#e8322d', host: '🐶', hostName: '강아지 소방관', hello: '삐뽀삐뽀! 출동 준비! 안전 퀴즈 3개를 풀면 꼬마 소방관이 될 수 있어!' },
+  { id: 'market', name: '알뜰 꼬마 시장', short: '경제', emoji: '🛒', color: '#f2a516', host: '🐿️', hostName: '다람쥐 사장님', hello: '어서 오세요! 돈을 똑똑하게 쓰는 꼬마 손님을 찾고 있어요. 도전해 볼래요?' },
+  { id: 'post', name: '마음 우체국', short: '마음', emoji: '💌', color: '#ff6b8b', host: '🐰', hostName: '토끼 우체부', hello: '마음 편지가 뒤죽박죽 섞였어! 친구 마음을 알아맞히고 편지를 배달해 줄래?' },
 ];
 export const SUBJECT = Object.fromEntries(SUBJECTS.map((s) => [s.id, s]));
-export const STAMPS_TO_FLY = SUBJECTS.length; // 모든 구역 도장을 모으면 열기구를 탈 수 있다
+// 열기구는 도장 10개면 탈 수 있다. 건물은 앞으로도 계속 늘어나지만 "보너스 건물"을 따로 두지 않는다:
+// 새 건물도 다른 건물과 똑같이 도장을 주고, 어느 건물이든 10곳을 깨면 된다.
+export const STAMPS_TO_FLY = 10;
 
 const g6 = (g) => Math.min(6, Math.max(1, g | 0));
 
@@ -92,21 +100,25 @@ export function puzzlesFor(subj, grade) {
       const lv = draw(`code:${g}`, LEVELS[g], 2).map((l) => ({ type: 'code', ...l, q: '블록을 놓아 로봇을 열쇠까지 데려가요.' }));
       return [lv[0], ...draw(`codeq:${g}`, CODE_Q[g], 1), lv[1]];
     }
+    case 'fire': return draw(`fire:${g}`, FIRE[g], 3);
+    case 'market': return draw(`market:${g}`, MARKET[g], 3).map((p) => (typeof p === 'function' ? p() : p));
+    case 'post': return draw(`post:${g}`, POST[g], 3);
     default: return draw(`kor:${g}`, KOR[g], 3);
   }
 }
 
-// 열기구 탈출장: 여러 구역에서 하나씩 (몸 움직이기·코딩 판은 빼고 머리로 푸는 것만)
+// 열기구 탈출장: 여러 건물에서 하나씩 (몸 움직이기·코딩 판은 빼고 머리로 푸는 것만)
 export function finalPuzzles(grade) {
   const g = g6(grade);
   const pools = [
     ['kor', () => draw(`kor:${g}`, KOR[g])[0]], ['math', () => draw(`math:${g}`, MATH[g])[0]()], ['sci', () => draw(`sci:${g}`, SCI[g])[0]],
     ['soc', () => draw(`soc:${g}`, SOC[g])[0]], ['eng', () => englishPuzzle('listen', g)], ['music', () => draw(`music:${g}`, MUSIC[g])[0]],
     ['art', () => draw(`art:${g}`, ART[g])[0]], ['pe', () => draw(`pe:${g}`, PE[g])[0]], ['code', () => draw(`codeq:${g}`, CODE_Q[g])[0]],
+    ['fire', () => draw(`fire:${g}`, FIRE[g])[0]], ['market', () => { const p = draw(`market:${g}`, MARKET[g])[0]; return typeof p === 'function' ? p() : p; }], ['post', () => draw(`post:${g}`, POST[g])[0]],
   ];
   return shuffle(pools).slice(0, 4).map(([subj, f]) => ({ ...f(), subj }));
 }
 
 // 시험용
-export const BANK = { KOR, SOC, SCI, MATH, WORDS, SENT, MELODIES, MUSIC, ART, PE, PE_MOVES, LEVELS, CODE_Q };
+export const BANK = { KOR, SOC, SCI, MATH, WORDS, SENT, MELODIES, MUSIC, ART, PE, PE_MOVES, LEVELS, CODE_Q, FIRE, MARKET, POST };
 export { pickOne };

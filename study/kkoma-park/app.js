@@ -237,10 +237,10 @@ const GUIDE_LOOK = { skin: '#f6c9a0', hair: 'messy', hairColor: '#7a4a24', shirt
 function guideLines() {
   return [
     ['👋', `안녕, ${me.name}! 나는 꼬마 탐험대의 대장, 토리야. 꼬마 탐험대 공원에 온 걸 환영해!`],
-    ['🗺️', '여기는 마을 한가운데 분수 광장이야. 길을 따라가면 도서관, 성, 기차역 같은 건물이 9개 있어. 반짝이는 문으로 들어가면 놀이방이 나와. 왼쪽 위 작은 지도도 봐!'],
+    ['🗺️', `여기는 마을 한가운데 분수 광장이야. 길을 따라가면 도서관, 성, 소방서 같은 건물이 ${SUBJECTS.length}개 있어. 반짝이는 문으로 들어가면 놀이방이 나와. 오른쪽 위 작은 지도도 봐!`],
     ['🎁', '건물 안 놀이방마다 보물 상자가 3개 있어. 상자를 눌러서 퀴즈를 풀면 상자가 열려!'],
     ['🗝️', '상자 3개를 다 열면 열쇠가 나타나. 열쇠를 받으면 탐험 수첩에 도장도 쾅 찍혀.'],
-    ['🎈', `도장 ${STAMPS_TO_FLY}개를 모두 모으면, 마을 북쪽 언덕의 열기구를 타고 하늘로 날아갈 수 있어!`],
+    ['🎈', `아무 건물이든 도장 ${STAMPS_TO_FLY}개를 모으면, 마을 북쪽 언덕의 열기구를 타고 하늘로 날아갈 수 있어!`],
     ['👕', '열쇠를 모을수록 날개나 왕관 같은 특별한 꾸미기가 열려. 건물에 다시 들어가면 새 문제가 나오니까 또 도전해 봐.'],
     ['🕹️', TOUCH ? '가고 싶은 곳을 손가락으로 누르면 걸어가. 모르는 게 있으면 언제든 나한테 와서 물어봐. 자, 출발!' : '가고 싶은 곳을 누르거나 방향키로 움직여. 모르는 게 있으면 언제든 나한테 와서 물어봐. 자, 출발!'],
   ];
@@ -402,7 +402,7 @@ function takeKey(subj) {
   const s = SUBJECT[subj];
   const n = stampList().length;
   const unlocked = SPECIALS.filter((x) => x.need > before && x.need <= prog.keys);
-  const next = n >= STAMPS_TO_FLY ? '🎈 도장을 다 모았어요! 마을 북쪽 언덕의 열기구로 가 봐요!' : `열기구까지 도장 ${STAMPS_TO_FLY - n}개 더!`;
+  const next = n >= STAMPS_TO_FLY ? `🎈 도장 ${STAMPS_TO_FLY}개를 모았어요! 마을 북쪽 언덕의 열기구로 가 봐요!` : `열기구까지 도장 ${STAMPS_TO_FLY - n}개 더!`;
   speak(first ? `${s.name} 도장 쾅! 열쇠를 얻었어요!` : '열쇠를 하나 더 얻었어요!');
   const after = () => { if (unlocked.length) showUnlock(unlocked); };
   modal(`
@@ -757,7 +757,7 @@ function drawTeacher() {
         <td><i class="dot" style="background:${esc(s.color)}"></i>${esc(s.name)}${s.flights ? ` 🎈${s.flights > 1 ? s.flights : ''}` : ''}</td>
         <td>${s.grade}</td>
         <td>${s.online ? areaName(s.a) : '⚪ 나감'}</td>
-        <td class="st">${SUBJECTS.map((x) => (s.stamps.includes(x.id) ? x.emoji : '·')).join('')} <small>${s.stamps.length}/9</small></td>
+        <td class="st">${SUBJECTS.map((x) => (s.stamps.includes(x.id) ? x.emoji : '·')).join('')} <small>${s.stamps.length}/${SUBJECTS.length}</small></td>
         <td>${s.keys}</td><td>${s.right}</td><td>${s.wrong}</td><td>${s.hints}</td>
         <td><button type="button" class="kick" data-id="${esc(s.pid)}" title="내보내기" aria-label="${esc(s.name)} 내보내기">✕</button></td>
       </tr>`).join('') : '<tr><td colspan="9" class="empty">아직 아무도 안 들어왔어요. 수업 코드를 알려 주세요!</td></tr>';
