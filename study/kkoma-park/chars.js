@@ -1,5 +1,5 @@
 // 꼬마 탐험대 공원: 2D 픽셀아트 캐릭터 고르기
-// chars/presets.png 에 완성된 캐릭터 16명이 있다 (chars/presets.json: 칸 자리). 하나를 골라 쓴다.
+// chars/presets.png 에 완성된 캐릭터 32명이 있다 (chars/presets.json: 칸 자리). 하나를 골라 쓴다.
 // 마을에서는 걷는 방향에 따라 그림을 좌우로 뒤집는다.
 
 export const CHARACTERS = [
@@ -7,6 +7,10 @@ export const CHARACTERS = [
   '베레모 친구', '곱슬머리 친구', '보라 긴머리 친구', '주황머리 친구',
   '민트머리 친구', '야구모자 친구', '똥머리 친구', '웨이브 친구',
   '은발 친구', '빨간 리본 친구', '노랑머리 친구', '고양이 헤드폰 친구',
+  '별핀 후드 친구', '파란 리본 친구', '헤드폰 친구', '꽃 똥머리 친구',
+  '야구 점퍼 친구', '크로스백 친구', '민트 후드 친구', '조끼 안경 친구',
+  '보라 고양이귀 친구', '줄무늬 곱슬 친구', '세일러 친구', '별핀 은발 친구',
+  '새싹 친구', '꼬마 뿔 친구', '파란 모자 친구', '하얀 리본 친구',
 ];
 // [아이디, 이름, 열쇠 수(0 = 처음부터)]
 export const PETS = [['none', '없음', 0], ['chick', '🐥 병아리', 1], ['puppy', '🐶 강아지', 4], ['kitty', '🐱 고양이', 7], ['turtle', '🐢 거북이', 12], ['dragon', '🐉 아기 용', 18]];
@@ -48,7 +52,7 @@ export function loadChars() {
   return ready;
 }
 export const charsReady = () => !!META;
-export const CW = 129; export const CH = 150; // 캐릭터 한 칸 (발이 칸 바닥에 닿는다)
+export const CW = 147; export const CH = 151; // 캐릭터 한 칸 (presets.json 의 cw·ch, 발이 칸 바닥에 닿는다)
 
 // look → 캔버스. view: 'front' 또는 'sideL' 이면 왼쪽을 보도록 뒤집는다 (그 밖에는 그대로)
 const cache = new Map();
