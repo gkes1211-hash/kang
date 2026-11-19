@@ -521,3 +521,56 @@ Object.assign(BUILDERS, {
     return { w: w + 2, d: d + 6, door: [0, d / 2 + 1.6], front: d / 2 + 4.6, sign: [3.6, d / 2 + 3.4], obs: [[3.1, d / 2 + 1.2, 4.3, d / 2 + 2.4], [-4.5, d / 2 + 1.2, -3.1, d / 2 + 2.4], [-3.1, d / 2 + 4.1, -2.5, d / 2 + 4.7], [2.5, d / 2 + 4.1, 3.1, d / 2 + 4.7], [-2.0, d / 2 + 0.6, -1.1, d / 2 + 1.4], [1.1, d / 2 + 0.6, 2.0, d / 2 + 1.4]] };
   },
 });
+
+// 코딩 섬 건물: 거북이 그림 공방 · 버그 탐정 사무소
+Object.assign(BUILDERS, {
+  // 🐢 거북이 그림 공방: 거북이 등딱지 지붕 + 고개 내민 거북이 + 그림판 + 연필 굴뚝
+  turtle(g) {
+    const w = 8; const d = 6.4; const h = 3.4;
+    walls(g, { w, d, h, wall: '#dff7e8', frame: '#2f8f5a' });
+    const shell = P(g, new THREE.SphereGeometry(5.2, 28, 14, 0, Math.PI * 2, 0, Math.PI / 2), '#3f9b5a', 0, 0.6 + h - 0.2, 0, { t: 0.05 }); shell.scale.set(1, 0.62, 0.86);
+    for (let i = 0; i < 7; i++) { const a = (i / 7) * Math.PI * 2; const r = i === 0 ? 0 : 2.8; const p = P(g, sph(1.15, 14, 8), '#7ccf8a', Math.cos(a) * r, 0.6 + h + (i === 0 ? 3.0 : 1.95), Math.sin(a) * r * 0.86, { line: false }); p.scale.y = 0.35; }
+    // 거북이 머리
+    const head = P(g, sph(1.05, 18, 14), '#9be3a9', 0, 0.6 + h + 1.2, d / 2 + 1.2, { t: 0.04 }); head.scale.set(1, 0.9, 1.1);
+    for (const s of [-1, 1]) { P(g, sph(0.24, 10, 8), '#ffffff', s * 0.42, 0.6 + h + 1.55, d / 2 + 2.0, { t: 0.01 }); P(g, sph(0.12, 8, 6), '#2b1a10', s * 0.42, 0.6 + h + 1.55, d / 2 + 2.2, { line: false }); }
+    P(g, sph(0.12, 8, 6), '#ff8fa8', -0.55, 0.6 + h + 1.2, d / 2 + 2.15, { line: false }); P(g, sph(0.12, 8, 6), '#ff8fa8', 0.55, 0.6 + h + 1.2, d / 2 + 2.15, { line: false });
+    windowAt(g, -2.4, 2.2, d / 2, { shutter: '#ffd23f' }); windowAt(g, 2.4, 2.2, d / 2, { shutter: '#ffd23f' });
+    doorAt(g, 0, d / 2, { color: '#2f8f5a', awning: '#48b4e8' });
+    // 연필 굴뚝
+    P(g, cyl(0.45, 0.45, 2.4, 6), '#ffd23f', 2.6, 0.6 + h + 2.4, -1.4, { t: 0.03 }); P(g, new THREE.ConeGeometry(0.45, 0.8, 6), '#f6d7a7', 2.6, 0.6 + h + 4.0, -1.4, { t: 0.02 }); P(g, new THREE.ConeGeometry(0.16, 0.3, 6), '#3b2414', 2.6, 0.6 + h + 4.32, -1.4, { line: false });
+    // 그림판 (거북이가 그린 별)
+    const ez = new THREE.Group(); ez.position.set(-4.6, 0, d / 2 + 1.4); ez.rotation.y = 0.35; g.add(ez);
+    for (const s of [-1, 1]) { const l = at(part(box(0.12, 2.6, 0.12), '#8d5a34'), s * 0.6, 1.3, 0); l.rotation.z = s * 0.12; ez.add(l); }
+    const c = document.createElement('canvas'); c.width = c.height = 128; const x = c.getContext('2d'); x.fillStyle = '#ffffff'; x.fillRect(0, 0, 128, 128); x.strokeStyle = '#2f8f5a'; x.lineWidth = 6; x.beginPath();
+    for (let i = 0; i <= 5; i++) { const a = -Math.PI / 2 + i * Math.PI * 0.8; const px = 64 + Math.cos(a) * 46; const py = 68 + Math.sin(a) * 46; if (i) x.lineTo(px, py); else x.moveTo(px, py); } x.stroke();
+    const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
+    ez.add(at(part(box(1.5, 1.5, 0.08), '#ffffff'), 0, 1.9, 0.05)); const pl = new THREE.Mesh(new THREE.PlaneGeometry(1.36, 1.36), new THREE.MeshBasicMaterial({ map: t })); pl.position.set(0, 1.9, 0.1); ez.add(pl);
+    return { w: w + 3, d: d + 3, door: [0, d / 2 + 1.6], obs: [[-5.4, d / 2 + 0.8, -3.8, d / 2 + 2.0]] };
+  },
+
+  // 🐞 버그 탐정 사무소: 탐정 사무소 + 커다란 돋보기 간판 + 무당벌레 + 물음표 등불
+  bug(g) {
+    const w = 8.4; const d = 6; const h = 4.4;
+    walls(g, { w, d, h, wall: '#efe2cc', frame: '#5b4636', kind: 'plank' });
+    gableRoof(g, { w, d, rise: 2.4, y: 0.6 + h, color: '#4f5d75', wall: '#efe2cc' });
+    windowAt(g, -2.6, 2.3, d / 2, { shutter: '#2f4858', flowers: false }); windowAt(g, 2.6, 2.3, d / 2, { shutter: '#2f4858', flowers: false });
+    doorAt(g, 0, d / 2, { color: '#5b4636', awning: '#2f6e4f' });
+    // 돋보기 간판 (지붕 앞)
+    const mg = new THREE.Group(); mg.position.set(0, 0.6 + h + 1.3, d / 2 + 0.5); mg.rotation.z = -0.5; g.add(mg);
+    mg.add(at(part(new THREE.TorusGeometry(0.95, 0.18, 10, 28), '#ffd23f', { t: 0.02 }), 0, 0, 0));
+    mg.add(at(new THREE.Mesh(cyl(0.88, 0.88, 0.06, 24), new THREE.MeshBasicMaterial({ color: '#cfefff', transparent: true, opacity: 0.6 })), 0, 0, 0).rotateX(Math.PI / 2));
+    mg.add(at(part(cyl(0.16, 0.2, 1.4, 10), '#7a4a24', { t: 0.02 }), 0, -1.7, 0));
+    emblem(mg, 0, 0, 0.12, '🐞', 1.2);
+    // 물음표 등불
+    for (const s of [-1, 1]) { P(g, box(0.12, 0.7, 0.12), '#3b3b4f', s * 3.6, 0.6 + h - 0.6, d / 2 + 0.45); P(g, box(0.6, 0.7, 0.6), '#ffe98a', s * 3.6, 0.6 + h - 1.2, d / 2 + 0.6, { t: 0.02 }); emblem(g, s * 3.6, 0.6 + h - 1.2, d / 2 + 0.92, '❓', 0.5); }
+    // 큰 무당벌레 조각상
+    const lb = new THREE.Group(); lb.position.set(3.8, 0, d / 2 + 2.0); lb.rotation.y = -0.5; g.add(lb);
+    const bd = at(part(new THREE.SphereGeometry(0.8, 18, 10, 0, Math.PI * 2, 0, Math.PI / 2), '#e53935'), 0, 0.2, 0); bd.scale.z = 1.2; lb.add(bd);
+    lb.add(at(part(sph(0.4, 12, 10), '#2b2b3a'), 0, 0.35, 0.95));
+    for (const [x, z] of [[-0.35, -0.3], [0.35, -0.3], [-0.3, 0.3], [0.3, 0.3], [0, -0.7]]) lb.add(at(new THREE.Mesh(sph(0.14, 8, 6), toon('#2b2b3a')), x, 0.78 - Math.abs(z) * 0.25, z));
+    lb.add(at(new THREE.Mesh(box(0.04, 0.02, 1.9), toon('#2b2b3a')), 0, 1.0, -0.05));
+    // 발자국 단서
+    for (let i = 0; i < 5; i++) g.add(at(new THREE.Mesh(new THREE.CircleGeometry(0.16, 10), new THREE.MeshBasicMaterial({ color: '#8d6e63' })), -2.6 + i * 0.5 + (i % 2) * 0.1, 0.05, d / 2 + 2.6 + (i % 2) * 0.3).rotateX(-Math.PI / 2));
+    return { w: w + 2, d: d + 3, door: [0, d / 2 + 1.6], obs: [[3.0, d / 2 + 1.0, 4.6, d / 2 + 3.0]] };
+  },
+});

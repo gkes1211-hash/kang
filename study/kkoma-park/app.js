@@ -46,12 +46,12 @@ function homeError(text) { $('home-msg').textContent = text; $('home-msg').hidde
 // ---------------- 기록 (이름+학년마다) ----------------
 // keys: 모은 열쇠 수, stamps: {구역: 깬 횟수}, stars: {구역: 가장 많이 받은 별}, flights: 열기구 탄 횟수
 const progKey = () => `prog2.${me.grade}.${me.name}`;
-let prog = { keys: 0, stamps: {}, stars: {}, flights: 0, right: 0 };
+let prog = { keys: 0, stamps: {}, stars: {}, flights: 0, right: 0, stage: {} };
 function loadProg() {
   try {
     const p = JSON.parse(store.get(progKey(), '{}'));
-    return { keys: Math.max(0, p.keys | 0), stamps: p.stamps && typeof p.stamps === 'object' ? p.stamps : {}, stars: p.stars || {}, flights: p.flights | 0, right: p.right | 0 };
-  } catch { return { keys: 0, stamps: {}, stars: {}, flights: 0, right: 0 }; }
+    return { keys: Math.max(0, p.keys | 0), stamps: p.stamps && typeof p.stamps === 'object' ? p.stamps : {}, stars: p.stars || {}, flights: p.flights | 0, right: p.right | 0, stage: p.stage && typeof p.stage === 'object' ? p.stage : {} };
+  } catch { return { keys: 0, stamps: {}, stars: {}, flights: 0, right: 0, stage: {} }; }
 }
 const saveProg = () => store.set(progKey(), JSON.stringify(prog));
 const stampList = () => SUBJECTS.filter((s) => prog.stamps[s.id] > 0).map((s) => s.id);
@@ -170,12 +170,16 @@ let final = null; // 열기구: {puzzles, solved[], digits[], code, done}
 function ensureWorld() {
   if (!world) world = new World($('world'), { onInteract: interact, onPrompt: prompt, onArea: areaChanged });
   world.onZoom = (z) => store.set('zoom', z.toFixed(2));
-  world.onOverview = (on) => {
+  world.onOverview = (on, v) => {
     const b = $('overview'); b.classList.toggle('on', on); b.setAttribute('aria-pressed', String(on));
     $('stamps').hidden = on;
-    b.querySelector('small').textContent = on ? '돌아가기' : '전체'; b.title = on ? '내 캐릭터 쪽으로 돌아가기' : '마을 전체 보기';
-    if (on) toast('🗺️ 마을 전체예요! 가고 싶은 곳을 누르면 걸어가요. 🗺️ 를 다시 누르면 돌아와요.', 3500);
+    // 섬 전체 → "돌아가기"(내 캐릭터 쪽으로), 섬 하나 → "전체"(섬 전체로)
+    const toAll = v !== 'all';
+    b.querySelector('small').textContent = toAll ? '전체' : '돌아가기'; b.title = toAll ? '섬 전체 보기' : '내 캐릭터 쪽으로 돌아가기';
+    if (v === 'all') toast('🗺️ 섬 이름을 누르면 그 섬만 크게 보여요!', 3200);
+    else if (on) toast('🏠 가고 싶은 건물을 누르면 그 건물 앞으로 바로 가요. 🗺️ 전체를 누르면 다른 섬도 볼 수 있어요.', 4200);
   };
+  world.onQuick = (subj) => { const s2 = SUBJECT[subj]; toast(s2 ? `✨ ${s2.emoji} ${s2.name} 앞에 왔어요! 문으로 들어가 봐요.` : '✨ 열기구 언덕에 왔어요!', 3000); sfx.pop?.(); };
   if (!world.minimap) {
     const mm = $('minimap'); world.minimap = mm;
     mm.addEventListener('pointerdown', (e) => { e.stopPropagation(); const r = mm.getBoundingClientRect(); world.mapTap((e.clientX - r.left) / r.width, (e.clientY - r.top) / r.height); });
@@ -243,10 +247,10 @@ const GUIDE_LOOK = { skin: '#f6c9a0', hair: 'messy', hairColor: '#7a4a24', shirt
 function guideLines() {
   return [
     ['👋', `안녕, ${me.name}! 나는 꼬마 탐험대의 대장, 토리야. 꼬마 탐험대 공원에 온 걸 환영해!`],
-    ['🗺️', `여기는 마을 한가운데 분수 광장이야. 길을 따라가면 도서관, 성, 소방서 같은 건물이 ${SUBJECTS.length}개 있어. 반짝이는 문으로 들어가면 놀이방이 나와. 오른쪽 위 작은 지도도 봐!`],
+    ['🗺️', '여기는 섬마을 한가운데 분수 광장이야. 나무다리를 건너면 📚 공부 섬, 🎨 놀이 섬, 🏘️ 생활 섬, 💻 코딩 섬이 있어. 오른쪽 아래 🗺️ 전체를 누르고 섬 이름을 누르면 그 섬을 크게 볼 수 있어!'],
     ['🎁', '건물 안 놀이방마다 보물 상자가 3개 있어. 상자를 눌러서 퀴즈를 풀면 상자가 열려!'],
     ['🗝️', '상자 3개를 다 열면 열쇠가 나타나. 열쇠를 받으면 탐험 수첩에 도장도 쾅 찍혀.'],
-    ['🎈', `아무 건물이든 도장 ${STAMPS_TO_FLY}개를 모으면, 마을 북쪽 언덕의 열기구를 타고 하늘로 날아갈 수 있어!`],
+    ['🎈', `아무 건물이든 도장 ${STAMPS_TO_FLY}개를 모으면, 분수 광장 옆 언덕의 열기구를 타고 하늘로 날아갈 수 있어!`],
     ['👕', '열쇠를 모을수록 날개나 왕관 같은 특별한 꾸미기가 열려. 건물에 다시 들어가면 새 문제가 나오니까 또 도전해 봐.'],
     ['🕹️', TOUCH ? '가고 싶은 곳을 손가락으로 누르면 걸어가. 모르는 게 있으면 언제든 나한테 와서 물어봐. 자, 출발!' : '가고 싶은 곳을 누르거나 방향키로 움직여. 모르는 게 있으면 언제든 나한테 와서 물어봐. 자, 출발!'],
   ];
@@ -313,7 +317,7 @@ document.querySelectorAll('#settings [data-sound]').forEach((b) => b.addEventLis
 $('set-btn').addEventListener('click', () => { $('settings').hidden = !$('settings').hidden; $('emotes').hidden = true; paintSettings(); });
 const zoomBy = (f) => { if (!world) return; world.setZoom(world.zoom * f); sfx.pop(); };
 // 🗺️ 마을 전체 보기 (한 번 더 누르면 내 캐릭터 쪽으로 돌아와요)
-$('overview').addEventListener('click', () => { if (!world) return; world.setOverview(!world.overview); sfx.pop(); });
+$('overview').addEventListener('click', () => { if (!world) return; world.setView(world.view === 'all' ? 'normal' : 'all'); sfx.pop(); });
 $('zoom-in').addEventListener('click', () => zoomBy(1 / 1.2));
 $('zoom-out').addEventListener('click', () => zoomBy(1.2));
 document.querySelectorAll('[data-zoom]').forEach((b) => b.addEventListener('click', () => zoomBy(b.dataset.zoom === 'in' ? 1 / 1.2 : 1.2)));
@@ -343,13 +347,14 @@ function enterZone(subj) {
   let z = zones[subj];
   // 다 풀고 열쇠까지 받은 구역은 다시 들어오면 새 문제
   if (!z || z.taken) {
-    z = zones[subj] = { puzzles: puzzlesFor(subj, me.grade), solved: [false, false, false], wrong: 0, hints: 0, taken: false };
+    z = zones[subj] = { puzzles: puzzlesFor(subj, me.grade, prog.stage[subj] | 0), solved: [false, false, false], wrong: 0, hints: 0, taken: false, stage: prog.stage[subj] | 0 };
     resetZoneView(subj);
   }
   world.goTo(area);
   const s = SUBJECT[subj];
   const times = prog.stamps[subj] | 0;
-  world.setBoardText(area, times ? `도장 ✅ · 또 깨면 열쇠 하나 더! · ${me.grade}학년` : `보물 상자 3개를 열면 열쇠! · ${me.grade}학년`);
+  if (s.stages) world.setBoardText(area, `스테이지 ${(z.stage | 0) + 1} · 상자 3개를 열면 다음 스테이지! · ${me.grade}학년`);
+  else world.setBoardText(area, times ? `도장 ✅ · 또 깨면 열쇠 하나 더! · ${me.grade}학년` : `보물 상자 3개를 열면 열쇠! · ${me.grade}학년`);
   toast(`${s.host} ${s.hostName}: "${s.hello}"`, 5200);
   speak(s.hello);
 }
@@ -402,6 +407,7 @@ function takeKey(subj) {
   prog.keys += 1;
   prog.stamps[subj] = (prog.stamps[subj] | 0) + 1;
   prog.stars[subj] = Math.max(prog.stars[subj] || 0, stars);
+  if (SUBJECT[subj].stages) prog.stage[subj] = (z.stage | 0) + 1;
   saveProg();
   refreshHud();
   sendEv({ kind: 'key', subj, keys: prog.keys, stamps: stampList() });
@@ -410,7 +416,7 @@ function takeKey(subj) {
   const s = SUBJECT[subj];
   const n = stampList().length;
   const unlocked = SPECIALS.filter((x) => x.need > before && x.need <= prog.keys);
-  const next = n >= STAMPS_TO_FLY ? `🎈 도장 ${STAMPS_TO_FLY}개를 모았어요! 마을 북쪽 언덕의 열기구로 가 봐요!` : `열기구까지 도장 ${STAMPS_TO_FLY - n}개 더!`;
+  const next = n >= STAMPS_TO_FLY ? `🎈 도장 ${STAMPS_TO_FLY}개를 모았어요! 분수 광장 옆 열기구 언덕으로 가 봐요!` : `열기구까지 도장 ${STAMPS_TO_FLY - n}개 더!`;
   speak(first ? `${s.name} 도장 쾅! 열쇠를 얻었어요!` : '열쇠를 하나 더 얻었어요!');
   const after = () => { if (unlocked.length) showUnlock(unlocked); };
   modal(`

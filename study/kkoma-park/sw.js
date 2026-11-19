@@ -1,7 +1,7 @@
 // 앱 파일을 기기에 담아 두어 인터넷이 없어도 열리게 한다.
 // 3D 엔진·연결 프로그램·주아체 글꼴은 vendor/ 에 있다. 글꼴 조각과 튼튼 운동장의 몸 인식 엔진은 처음 쓸 때 담아 둔다.
 const PREFIX = 'yeolsoe-';
-const CACHE = `${PREFIX}v8`;
+const CACHE = `${PREFIX}v9`;
 const FILES = [
   './',
   './index.html',
@@ -10,6 +10,7 @@ const FILES = [
   './audio.js',
   './world.js',
   './buildings.js',
+  './islands.js',
   './avatar.js',
   './toon.js',
   './puzzles.js',
@@ -25,6 +26,8 @@ const FILES = [
   './content/fire.js',
   './content/market.js',
   './content/post.js',
+  './content/turtle.js',
+  './content/bug.js',
   './net.js',
   './manifest.webmanifest',
   './icons/icon-192.png',

@@ -44,7 +44,7 @@ export function openPuzzle(host, pz, { title, color = '#5b4bff', grade = 3, onSo
   const hintBtn = el('button', 'pz-icon', '💡'); hintBtn.type = 'button'; hintBtn.title = '힌트'; hintBtn.setAttribute('aria-label', '힌트 보기');
   const closeBtn = el('button', 'pz-icon', '✕'); closeBtn.type = 'button'; closeBtn.title = '닫기'; closeBtn.setAttribute('aria-label', '닫기');
   head.append(readBtn, hintBtn, closeBtn);
-  const q = el('div', 'pz-q', nl(pz.q || ''));
+  const q = el('div', 'pz-q', nl(pz.q || '').replace(/【(.*?)】/g, '<b class="pill">$1</b>'));
   const body = el('div', 'pz-body');
   const msg = el('div', 'pz-msg'); msg.setAttribute('aria-live', 'polite');
   card.append(head, q, body, msg);
@@ -105,6 +105,8 @@ export function openPuzzle(host, pz, { title, color = '#5b4bff', grade = 3, onSo
   });
   host.onkeydown = (e) => { if (e.key === 'Escape') { close(); onClose?.(); } };
 
+  // 블록 프로그램을 보여 주고 묻는 문제 (실행 결과 맞히기)
+  if (pz.prog && pz.type !== 'bug') body.append(renderProg(pz.prog));
   const R = RENDER[pz.type] || RENDER.choice;
   R(pz, api);
   if (voice && grade <= 2 && pz.type !== 'listen' && pz.type !== 'melody') setTimeout(() => readBtn.click(), 250);
@@ -361,6 +363,8 @@ const RENDER = {
 
   move: (pz, api) => movePuzzle(pz, api),
   code: (pz, api) => codePuzzle(pz, api),
+  turtle: (pz, api) => turtlePuzzle(pz, api),
+  bug: (pz, api) => bugPuzzle(pz, api),
 };
 
 // 바늘 시계
@@ -753,4 +757,184 @@ export function solve(level) {
     }
   }
   return null;
+}
+
+// ============================================================
+// 블록 코딩 프로그램 그리기 (엔트리·스크래치처럼 색깔 블록)
+// 블록: { k: 'ev'|'move'|'look'|'sound'|'flow'|'var'|'list'|'sig'|'calc'|'pen', t: '글자 【값】', body?: [...], else?: [...], bug?: true }
+// 프로그램: 블록 배열 하나, 또는 [{ obj: '🐶 강아지', code: [...] }, ...] 처럼 오브젝트마다 따로
+// ============================================================
+const pill = (t) => esc(t).replace(/【(.*?)】/g, '<b class="pill">$1</b>');
+export function renderProg(prog, { onTap } = {}) {
+  const scripts = Array.isArray(prog) && prog.length && prog[0].code ? prog : [{ code: prog }];
+  const wrap = el('div', `bp-wrap n${scripts.length}`);
+  const leaf = (b) => {
+    const row = el('div', `bp-blk k-${b.k}${b.k === 'ev' ? ' hat' : ''}`, pill(b.t));
+    if (onTap) { row.tabIndex = 0; row.setAttribute('role', 'button'); row.addEventListener('click', (e) => { e.stopPropagation(); onTap(b, row); }); row.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onTap(b, row); } }); }
+    b._el = row;
+    return row;
+  };
+  const list = (blocks) => {
+    const box2 = el('div', 'bp-list');
+    for (const b of blocks) {
+      if (b.body) {
+        const c = el('div', `bp-c c-${b.k}`);
+        c.append(leaf(b));
+        const inner = el('div', 'bp-in'); inner.append(list(b.body)); c.append(inner);
+        if (b.else) { c.append(el('div', `bp-blk k-${b.k} bp-else`, '아니면')); const in2 = el('div', 'bp-in'); in2.append(list(b.else)); c.append(in2); }
+        c.append(el('div', `bp-foot k-${b.k}`));
+        box2.append(c);
+      } else box2.append(leaf(b));
+    }
+    return box2;
+  };
+  for (const sc of scripts) {
+    const col = el('div', 'bp-script');
+    if (sc.obj) col.append(el('div', 'bp-obj', esc(sc.obj)));
+    col.append(list(sc.code));
+    wrap.append(col);
+  }
+  return wrap;
+}
+
+// 🐞 버그 찾기: 프로그램에서 잘못된 블록을 누르고, 알맞게 고친다
+function bugPuzzle(pz, api) {
+  const all = [];
+  const walk = (blocks) => blocks.forEach((b) => { all.push(b); if (b.body) walk(b.body); if (b.else) walk(b.else); });
+  const scripts = Array.isArray(pz.prog) && pz.prog[0]?.code ? pz.prog : [{ code: pz.prog }];
+  scripts.forEach((sc) => walk(sc.code));
+  const bug = all.find((b) => b.bug);
+  let found = false;
+  if (pz.goal) api.body.append(el('div', 'bp-goal', `🎯 하고 싶은 일: ${pill(pz.goal)}`));
+  if (pz.saw) api.body.append(el('div', 'bp-saw', `😵 실제로 일어난 일: ${pill(pz.saw)}`));
+  const view = renderProg(pz.prog, {
+    onTap: (b, row) => {
+      if (found) return;
+      if (b === bug) {
+        found = true; row.classList.add('bp-found'); beep(880, 0.08, 'triangle', 0.08);
+        api.say('🔍 찾았다! 버그가 숨은 블록이에요. 어떻게 고칠까요?', 'hint');
+        const opts = shuffle(pz.fix.map((t, i) => ({ t, ok: i === 0 })));
+        const grid = el('div', `pz-opts n${opts.length}`);
+        opts.forEach((o) => {
+          const btn = el('button', 'pz-opt', pill(o.t)); btn.type = 'button';
+          btn.addEventListener('click', () => {
+            if (o.ok) { btn.classList.add('right'); row.innerHTML = pill(pz.fix[0]); row.classList.remove('bp-found'); row.classList.add('bp-fixed'); api.win('🐞 버그를 잡았어요!'); }
+            else { btn.classList.add('nope'); btn.disabled = true; api.wrong('그렇게 바꾸면 아직 버그가 남아요.'); }
+          });
+          grid.append(btn);
+        });
+        api.body.append(grid);
+      } else { row.classList.add('bp-nope'); setTimeout(() => row.classList.remove('bp-nope'), 600); api.wrong('그 블록은 괜찮아요. 하고 싶은 일과 다른 블록을 찾아봐요!'); }
+    },
+  });
+  api.body.append(view, el('div', 'bp-tip', '👆 버그가 숨은 블록을 눌러요'));
+  api.onHint2 = () => { if (found) return; bug._el?.classList.add('bp-glow'); api.say('💡 반짝이는 블록을 잘 살펴봐요!', 'hint'); };
+}
+
+// 🐢 거북이 그림: 앞으로·돌기·반복 블록으로 본보기 그림과 똑같이 그린다
+const TURN = { R: 1, L: -1 };
+export function runTurtle(prog, maxSteps = 600) {
+  let x = 0; let y = 0; let h = 0; let steps = 0; // h: 0 = 위쪽, 시계 방향으로 커진다 (도)
+  const segs = new Set(); const moves = [];
+  const key = (ax, ay, bx, by) => { const a = `${Math.round(ax * 1000)},${Math.round(ay * 1000)}`; const b = `${Math.round(bx * 1000)},${Math.round(by * 1000)}`; return a < b ? `${a}|${b}` : `${b}|${a}`; };
+  const exec = (list) => {
+    for (const b of list) {
+      if (steps > maxSteps) return;
+      if (b.op === 'loop') { for (let i = 0; i < b.n; i++) exec(b.body); continue; }
+      if (b.op === 'F') {
+        for (let i = 0; i < b.n; i++) {
+          const r = (h * Math.PI) / 180; const nx = x + Math.sin(r); const ny = y - Math.cos(r);
+          segs.add(key(x, y, nx, ny)); moves.push({ x0: x, y0: y, x1: nx, y1: ny, h }); x = nx; y = ny; steps += 1;
+        }
+      } else { h = (h + TURN[b.op] * b.a + 360) % 360; moves.push({ turn: true, x0: x, y0: y, h }); steps += 1; }
+    }
+  };
+  exec(prog);
+  return { segs, moves, end: { x, y, h } };
+}
+const sameSegs = (a, b) => a.size === b.size && [...a].every((k) => b.has(k));
+const turtleText = (list) => list.map((b) => (b.op === 'loop' ? `🔁${b.n}[ ${turtleText(b.body)} ]` : b.op === 'F' ? `⬆️${b.n}` : `${b.op === 'R' ? '↪️' : '↩️'}${b.a}°`)).join(' ');
+
+function turtlePuzzle(pz, api) {
+  const goal = runTurtle(pz.sol);
+  const limit = pz.limit || 40;
+  const lens = pz.lens || [1, 2, 3];
+  const angles = pz.angles || [90];
+  let prog = []; let open = []; let running = false;
+  const cv = el('canvas', 'tt-canvas'); cv.width = 520; cv.height = 400;
+  const progEl = el('div', 'pz-prog'); const info = el('div', 'pz-info');
+  const palette = el('div', 'pz-palette'); const actions = el('div', 'pz-actions');
+  api.body.append(cv, info, progEl, palette, actions);
+  const g = cv.getContext('2d');
+  // 화면 크기: 본보기 그림이 꽉 차게
+  const pts = [{ x: 0, y: 0 }, ...goal.moves.map((m) => ({ x: m.x1 ?? m.x0, y: m.y1 ?? m.y0 }))];
+  const minX = Math.min(...pts.map((p) => p.x)) - 1; const maxX = Math.max(...pts.map((p) => p.x)) + 1;
+  const minY = Math.min(...pts.map((p) => p.y)) - 1; const maxY = Math.max(...pts.map((p) => p.y)) + 1;
+  const sc = Math.min(cv.width / (maxX - minX), cv.height / (maxY - minY));
+  const ox = (cv.width - (maxX - minX) * sc) / 2 - minX * sc; const oy = (cv.height - (maxY - minY) * sc) / 2 - minY * sc;
+  const X = (x) => ox + x * sc; const Y = (y) => oy + y * sc;
+  function paint(moves = [], turtle = { x: 0, y: 0, h: 0 }) {
+    g.fillStyle = '#fffdf6'; g.fillRect(0, 0, cv.width, cv.height);
+    g.fillStyle = '#e6dccb'; for (let gx = Math.ceil(minX); gx <= maxX; gx++) for (let gy = Math.ceil(minY); gy <= maxY; gy++) { if (angles.every((a) => a % 90 === 0)) { g.beginPath(); g.arc(X(gx), Y(gy), 3, 0, 7); g.fill(); } }
+    // 본보기 (연한 점선)
+    g.setLineDash([10, 10]); g.strokeStyle = '#c9b49a'; g.lineWidth = 10; g.lineCap = 'round';
+    for (const m of goal.moves) if (!m.turn) { g.beginPath(); g.moveTo(X(m.x0), Y(m.y0)); g.lineTo(X(m.x1), Y(m.y1)); g.stroke(); }
+    g.setLineDash([]);
+    // 거북이가 그린 선
+    g.strokeStyle = '#2f8f5a'; g.lineWidth = 7;
+    for (const m of moves) if (!m.turn) { g.beginPath(); g.moveTo(X(m.x0), Y(m.y0)); g.lineTo(X(m.x1), Y(m.y1)); g.stroke(); }
+    // 출발점
+    g.fillStyle = '#ff6b8b'; g.beginPath(); g.arc(X(0), Y(0), 7, 0, 7); g.fill();
+    // 거북이
+    g.save(); g.translate(X(turtle.x), Y(turtle.y)); g.rotate((turtle.h * Math.PI) / 180);
+    g.font = '34px sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.rotate(-Math.PI / 2); g.fillText('🐢', 0, 0); g.restore();
+  }
+  paint();
+  const target = () => { let list = prog; for (const o of open) list = o.body; return list; };
+  function draw() {
+    const render = (list) => list.map((b) => (b.op === 'loop' ? `<span class="loop${open.includes(b) ? ' open' : ''}">🔁${b.n} [ ${render(b.body)}${open.includes(b) ? '<b class="caret">▌</b>' : ''} ]</span>` : `<span class="blk">${b.op === 'F' ? `⬆️${b.n}` : `${b.op === 'R' ? '↪️' : '↩️'}${b.a}°`}</span>`)).join(' ');
+    progEl.innerHTML = prog.length ? render(prog) + (open.length ? '' : ' <b class="caret">▌</b>') : '<em>아래 블록을 눌러 거북이 명령을 만들어요</em>';
+    const n = countBlocks(prog);
+    info.textContent = `블록 ${n}${pz.limit ? ` / ${limit}개까지` : '개'}${open.length ? '  ·  반복 안에 넣는 중' : ''}`;
+    info.classList.toggle('full', n >= limit);
+  }
+  function add(b) {
+    if (running) return;
+    if (countBlocks(prog) >= limit) { api.say(`블록은 ${limit}개까지만 쓸 수 있어요. ${pz.loops ? '🔁 반복을 써 봐요!' : ''}`, 'bad'); return; }
+    target().push(b); beep(600, 0.05, 'square', 0.05); draw();
+  }
+  for (const n of lens) { const b = el('button', 'blockbtn tt-f', `⬆️<small>앞으로 ${n}</small>`); b.type = 'button'; b.addEventListener('click', () => add({ op: 'F', n })); palette.append(b); }
+  for (const a of angles) for (const op of ['L', 'R']) { const b = el('button', 'blockbtn tt-t', `${op === 'R' ? '↪️' : '↩️'}<small>${op === 'R' ? '오른쪽' : '왼쪽'} ${a}°</small>`); b.type = 'button'; b.addEventListener('click', () => add({ op, a })); palette.append(b); }
+  if (pz.loops) {
+    const lp = el('div', 'loopbtns'); lp.innerHTML = '<span>🔁 반복</span>';
+    const need = []; const walkN = (list) => list.forEach((b) => { if (b.op === 'loop') { need.push(b.n); walkN(b.body); } }); walkN(pz.sol);
+    [...new Set([2, 3, 4, 5, 6, 8, ...need])].sort((a, b) => a - b).forEach((n) => { const b = el('button', 'blockbtn loopn', `${n}번`); b.type = 'button'; b.addEventListener('click', () => { if (running) return; const blk = { op: 'loop', n, body: [] }; add(blk); if (target().includes(blk)) open.push(blk); draw(); }); lp.append(b); });
+    const end = el('button', 'blockbtn end', '🔚<small>반복 끝</small>'); end.type = 'button'; end.addEventListener('click', () => { if (open.length) { open.pop(); draw(); } }); lp.append(end);
+    palette.append(lp);
+  }
+  const back = el('button', 'ghost', '⌫ 하나 지우기'); back.type = 'button';
+  back.addEventListener('click', () => { if (running) return; const list = target(); if (list.length) { const last = list.pop(); if (last.op === 'loop') open = open.filter((o) => o !== last); } else if (open.length) { const lp = open.pop(); const parent = target(); parent.splice(parent.indexOf(lp), 1); } draw(); });
+  const reset = el('button', 'ghost', '🗑️ 모두 지우기'); reset.type = 'button';
+  reset.addEventListener('click', () => { if (running) return; prog = []; open = []; paint(); draw(); });
+  const run = el('button', 'ok', '▶ 그리기!'); run.type = 'button';
+  run.addEventListener('click', async () => {
+    if (running || !prog.length) return;
+    running = true; open = []; draw();
+    const res = runTurtle(prog);
+    const shown = [];
+    let tur = { x: 0, y: 0, h: 0 };
+    paint([], tur);
+    for (const m of res.moves) {
+      await new Promise((r) => setTimeout(r, m.turn ? 120 : 160));
+      shown.push(m); tur = m.turn ? { x: m.x0, y: m.y0, h: m.h } : { x: m.x1, y: m.y1, h: m.h };
+      paint(shown, tur); if (!m.turn) beep(420 + (shown.length % 8) * 40, 0.05, 'triangle', 0.05);
+    }
+    running = false;
+    if (sameSegs(res.segs, goal.segs)) { api.win(`🐢 본보기와 똑같아요! 블록 ${countBlocks(prog)}개를 썼어요.`); return; }
+    const extra = [...res.segs].filter((k) => !goal.segs.has(k)).length; const miss = [...goal.segs].filter((k) => !res.segs.has(k)).length;
+    api.wrong(extra && !miss ? '본보기보다 더 그렸어요. 거북이가 어디서 다른 길로 갔는지 살펴봐요! (디버깅)' : miss && !extra ? `거의 다 왔어요! 아직 ${miss}칸을 덜 그렸어요.` : '모양이 달라요. 거북이가 처음 보는 방향(위쪽)을 생각해 봐요.');
+  });
+  actions.append(back, reset, run);
+  draw();
+  api.onHint2 = () => api.say(`💡 이렇게 시작해 봐요: ${turtleText(pz.sol).split(' ').slice(0, 4).join(' ')} …`, 'hint');
 }
