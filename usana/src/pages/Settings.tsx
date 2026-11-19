@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Header } from '../components/ui';
+import ConfirmButton from '../components/ConfirmButton';
 import { useQuery } from '../data/useQuery';
 import { clearAll, countAll } from '../data/repo';
 import { addSampleData } from '../data/seed';
@@ -14,7 +15,6 @@ export default function Settings() {
   }
 
   async function onClear() {
-    if (!window.confirm('이 폰에 저장된 모든 고객·제품·기록을 지울까요? 되돌릴 수 없어요.')) return;
     await clearAll();
     setMsg('모든 데이터를 지웠어요.');
   }
@@ -34,7 +34,12 @@ export default function Settings() {
       <div className="card">
         <h3>테스트</h3>
         <button className="btn block" onClick={onSeed}>테스트용 가짜 고객 5명 · 제품 3개 넣기</button>
-        <button className="btn danger block" onClick={onClear}>모든 데이터 지우기</button>
+        <ConfirmButton
+          label="모든 데이터 지우기"
+          question="이 폰에 저장된 모든 고객·제품·기록을 지울까요? 되돌릴 수 없어요."
+          confirmLabel="모두 지우기"
+          onConfirm={onClear}
+        />
         {msg && <p className="ok">{msg}</p>}
       </div>
 

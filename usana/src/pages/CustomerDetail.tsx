@@ -1,4 +1,5 @@
 import { Link, useNavigate, useParams } from 'react-router-dom';
+import ConfirmButton from '../components/ConfirmButton';
 import { Header, StageBadge, digits } from '../components/ui';
 import { useQuery } from '../data/useQuery';
 import { deleteCustomerCompletely, getCustomer, listContactsByCustomer, listPurchasesByCustomer } from '../data/repo';
@@ -23,10 +24,6 @@ export default function CustomerDetail() {
 
   async function onDelete() {
     if (!c) return;
-    const ok = window.confirm(
-      `${c.name} 님의 정보를 완전히 삭제할까요?\n구매 기록과 연락 기록도 함께 지워지고, 되돌릴 수 없어요.`,
-    );
-    if (!ok) return;
     await deleteCustomerCompletely(c.id);
     nav('/customers', { replace: true });
   }
@@ -106,7 +103,12 @@ export default function CustomerDetail() {
         ))}
       </div>
 
-      <button className="btn danger block" onClick={onDelete}>이 고객 정보 완전히 삭제</button>
+      <ConfirmButton
+        label="이 고객 정보 완전히 삭제"
+        question={`${c.name} 님의 정보를 완전히 삭제할까요?\n구매 기록과 연락 기록도 함께 지워지고, 되돌릴 수 없어요.`}
+        confirmLabel="완전히 삭제"
+        onConfirm={onDelete}
+      />
     </>
   );
 }
