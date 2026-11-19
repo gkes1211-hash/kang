@@ -18,7 +18,8 @@ export const PLAZA_SPAWN = { x: 1.5, z: 9.5 };
 
 // ---------- 마을 배치 ----------
 // 건물 가운데 자리 (문은 앞(+z)쪽). 구불구불한 길과 제각각인 자리로 실제 마을처럼.
-const BLD = { code: [-27, -21], eng: [-9, -28], math: [15, -25], sci: [34, -9], music: [-37, -3], art: [-22, 9], kor: [19, 9], soc: [9, 23], pe: [-17, 28] };
+// 새 건물을 더할 때: content.js 의 SUBJECTS 에 한 줄, 여기 BLD 에 자리, ROADS 에 문까지 가는 길, INTERIOR 에 안 꾸밈, buildings.js 에 생김새.
+const BLD = { code: [-27, -21], eng: [-9, -28], math: [15, -25], sci: [34, -9], music: [-37, -3], art: [-22, 9], kor: [19, 9], soc: [9, 23], pe: [-17, 28], fire: [-42, -36], market: [40, 7], post: [-40, 27] };
 const BALLOON_HILL = { x: -6, z: -42 };
 const POND = { x: 31, z: 26, rx: 8, rz: 5.5 };
 // 길 (조절점을 부드럽게 잇는다): [점들, 너비]
@@ -35,6 +36,10 @@ const ROADS = [
   [[[-2, 13], [-8, 17], [-14, 22], [-17, 31]], 2.4],
   [[[26, -1], [29, 8], [27, 15], [25, 20]], 2.2],
   [[[2, 18], [1, 26], [-2, 34], [0, 44]], 2.6],
+  // 소방서 · 시장 · 마음 우체국 가는 길
+  [[[-24, -10], [-30, -14], [-35, -19], [-38.5, -25], [-39.3, -29]], 2.4],
+  [[[29, 8], [33, 11.5], [37, 12.8], [40, 12.8]], 2.2],
+  [[[-22, 14], [-27, 22], [-32, 30], [-36, 35.5], [-40, 36.6], [-40, 33]], 2.4],
 ];
 function smoothPath(pts) {
   const out = [];
@@ -130,6 +135,49 @@ const INTERIOR = {
     for (const [x, z, c] of [[R - 3.6, a.cz + 5, '#ff7043'], [R - 2.6, a.cz + 5.6, '#ffffff'], [R - 1.8, a.cz + 4.8, '#ffd23f']]) W.P(sph(0.32, 14, 10), c, x, 0.32, z);
     // 벽 암벽 손잡이
     for (let i = 0; i < 12; i++) W.P(sph(0.16, 6, 5), ['#ff6b8b', '#ffd23f', '#48b4e8', '#1dd1a1'][i % 4], L + 1.5 + (i % 4) * 0.9, 1.6 + Math.floor(i / 4) * 0.9, B + 0.15, { t: 0.01 });
+  } },
+  fire: { wall: '#fff0ec', wood: '#b5523b', trim: '#e8322d', floor: '#c98a52', rug: '#ffd0c8', board: '#3b1f1f', curtain: '#ffd23f', props: (W, area, a, L, R, B) => {
+    // 소방관 옷걸이: 헬멧과 외투
+    W.P(box(4.2, 0.2, 0.3), '#7a4a24', L + 3.2, 3.0, B + 0.3);
+    for (let i = 0; i < 3; i++) { const x = L + 1.8 + i * 1.4; W.P(box(0.9, 1.5, 0.3), i === 1 ? '#ffd23f' : '#e8322d', x, 2.1, B + 0.4, { t: 0.02 }); const hm = W.P(new THREE.SphereGeometry(0.42, 14, 8, 0, Math.PI * 2, 0, Math.PI / 2), '#e8322d', x, 3.3, B + 0.45, { t: 0.02 }); void hm; W.P(cyl(0.55, 0.55, 0.06, 16), '#e8322d', x, 3.3, B + 0.45, { t: 0.01 }); }
+    W.addObstacle(area, { box: [L + 1, B, L + 5.4, B + 0.9] });
+    // 소화기 줄
+    for (let i = 0; i < 3; i++) { const x = R - 4.6 + i * 0.9; W.P(cyl(0.28, 0.28, 1.1, 14), '#e8322d', x, 0.55, B + 0.6); W.P(cyl(0.12, 0.12, 0.25, 8), '#2b2b3a', x, 1.2, B + 0.6); const hz = W.P(cyl(0.05, 0.05, 0.6, 6), '#2b2b3a', x + 0.2, 0.95, B + 0.75, { line: false }); hz.rotation.z = 0.5; }
+    W.addObstacle(area, { box: [R - 5.1, B, R - 2.5, B + 1.0] });
+    // 미끄럼 기둥
+    W.P(cyl(0.12, 0.12, 6, 10), '#d8d8e0', R - 1.8, 3, a.cz + 4.6); W.P(cyl(0.8, 0.8, 0.12, 20), '#ffd23f', R - 1.8, 0.06, a.cz + 4.6, { t: 0.01 }); W.addObstacle(area, { x: R - 1.8, z: a.cz + 4.6, r: 0.5 });
+    // 감은 호스
+    const hs = W.P(new THREE.TorusGeometry(0.6, 0.2, 10, 24), '#ffd23f', R - 3.6, 0.7, a.cz + 5.4, { t: 0.02 }); hs.rotation.y = 0.3; W.addObstacle(area, { x: R - 3.6, z: a.cz + 5.4, r: 0.8 });
+    // 비상구 표시 (초록)
+    W.P(box(1.4, 0.6, 0.1), '#2bab6b', L + 0.25, 3.6, a.cz - 2.6, { t: 0.02 }).rotation.y = Math.PI / 2;
+    poster(W, R - 0.3, 3.2, a.cz + 1.5, '🧯', '#fff8ea'); poster(W, L + 0.3, 3.2, a.cz - 0.4, '🚒', '#fff8ea');
+  } },
+  market: { wall: '#fff8dc', wood: '#d9a066', trim: '#f2a516', floor: '#d9b48a', rug: '#ffe6a8', board: '#2f5d46', curtain: '#ff6b8b', props: (W, area, a, L, R, B) => {
+    // 물건 진열대
+    shelf(W, area, L + 2.4, B + 0.7, 3.2, ['#ff6b6b', '#ffd23f', '#48b4e8', '#5cbf3c', '#ff9f43']); shelf(W, area, L + 6.0, B + 0.7, 3.2, ['#ffffff', '#c56cf0', '#ff9f43', '#48b4e8']);
+    // 과일 상자
+    for (let c = 0; c < 3; c++) { W.P(box(1.0, 0.5, 0.8), '#d9a066', R - 4.6 + c * 1.15, 0.25, B + 0.9); for (let k = 0; k < 4; k++) W.P(sph(0.2, 8, 6), ['#ff5c5c', '#ffa63f', '#ffe14a'][c], R - 4.85 + c * 1.15 + (k % 2) * 0.45, 0.65, B + 0.7 + Math.floor(k / 2) * 0.4, { line: false }); }
+    W.addObstacle(area, { box: [R - 5.3, B, R - 1.6, B + 1.5] });
+    // 계산대와 금전 등록기
+    W.P(box(3.0, 1.2, 1.2), '#c0603d', R - 2.4, 0.6, a.cz + 4.6); W.P(box(0.9, 0.5, 0.6), '#3b3b4f', R - 1.8, 1.45, a.cz + 4.6); W.P(box(0.7, 0.3, 0.05), '#5fd38d', R - 1.8, 1.6, a.cz + 4.29, { line: false });
+    W.addObstacle(area, { box: [R - 4.1, a.cz + 3.8, R - 0.8, a.cz + 5.4] });
+    // 장바구니 수레
+    W.P(box(1.0, 0.7, 1.4), '#48b4e8', L + 2.0, 0.75, a.cz + 6.0); for (const sx of [-0.4, 0.4]) for (const sz of [-0.55, 0.55]) W.P(sph(0.12, 8, 6), '#2b2b3a', L + 2.0 + sx, 0.15, a.cz + 6.0 + sz, { line: false }); W.addObstacle(area, { x: L + 2.0, z: a.cz + 6.0, r: 0.9 });
+    poster(W, R - 0.3, 3.2, a.cz + 1.5, '💰', '#fff8ea'); poster(W, L + 0.3, 3.2, a.cz - 0.4, '🛒', '#fff8ea');
+  } },
+  post: { wall: '#ffeef3', wood: '#e8a0b4', trim: '#5aa9f0', floor: '#e6c38f', rug: '#ffd6e0', board: '#2f5d46', curtain: '#5aa9f0', props: (W, area, a, L, R, B) => {
+    // 편지 칸칸이 벽
+    W.P(box(4.6, 3.0, 0.7), '#c98a52', L + 3.4, 1.5, B + 0.45);
+    for (let r = 0; r < 4; r++) for (let c = 0; c < 6; c++) { W.P(box(0.62, 0.58, 0.1), '#7a4a24', L + 1.6 + c * 0.72, 0.5 + r * 0.7, B + 0.82, { line: false }); if ((r + c) % 3 !== 1) W.P(box(0.46, 0.3, 0.05), ['#ffffff', '#ffd6e0', '#d6ecff', '#fff3b0'][(r * 6 + c) % 4], L + 1.6 + c * 0.72, 0.5 + r * 0.7, B + 0.88, { line: false }); }
+    W.addObstacle(area, { box: [L + 1, B, L + 5.8, B + 1.0] });
+    // 창구와 저울
+    W.P(box(3.0, 1.2, 1.2), '#5aa9f0', R - 2.4, 0.6, a.cz + 4.6); W.P(box(0.8, 0.12, 0.7), '#d8d8e0', R - 3.2, 1.3, a.cz + 4.6); W.P(box(0.5, 0.4, 0.5), '#c98a52', R - 3.2, 1.55, a.cz + 4.6);
+    W.addObstacle(area, { box: [R - 4.1, a.cz + 3.8, R - 0.8, a.cz + 5.4] });
+    // 빨간 우체통
+    W.P(cyl(0.5, 0.5, 1.4, 18), '#e8322d', R - 2.0, 0.7, B + 1.0); W.P(new THREE.SphereGeometry(0.5, 18, 8, 0, Math.PI * 2, 0, Math.PI / 2), '#e8322d', R - 2.0, 1.4, B + 1.0); W.addObstacle(area, { x: R - 2.0, z: B + 1.0, r: 0.7 });
+    // 소포 더미
+    [[0, 0, 0.9, '#c98a52'], [0.1, 0.72, 0.6, '#e0a868']].forEach(([dx, y, s2, c]) => W.P(box(s2, s2 * 0.8, s2), c, L + 2.0 + dx, 0.4 * s2 + y, a.cz + 6.0)); W.addObstacle(area, { x: L + 2.0, z: a.cz + 6.0, r: 0.7 });
+    poster(W, R - 0.3, 3.2, a.cz + 1.5, '💌', '#fff8ea'); poster(W, L + 0.3, 3.2, a.cz - 0.4, '😊', '#fff8ea');
   } },
 };
 
@@ -785,16 +833,18 @@ export class World {
         const bb = new THREE.Box3().setFromObject(b);
         this.addObstacle(area, { box: [bb.min.x + 0.3, bb.min.z + 0.3, bb.max.x - 0.3, Math.min(bb.max.z - 0.2, z + b.userData.door[1] - 1.3)] });
       }
+      for (const [x0, z0, x1, z1] of b.userData.obs) this.addObstacle(area, { box: [x + x0, z + z0, x + x1, z + z1] });
       const [dx, dz] = b.userData.door;
       const sign = makeSprite([`${s.emoji} ${s.name}`], 1.0, { size: 56 });
-      sign.position.set(x + dx + 3.4, 0.9, z + dz + 0.4); this.add(sign);
+      const so = b.userData.sign || [dx + 3.4, dz + 0.4];
+      sign.position.set(x + so[0], 0.9, z + so[1]); this.add(sign);
       this.gateSigns[s.id] = sign;
       this.addInteract({ id: `door:${s.id}`, kind: 'door', area, x: x + dx, z: z + dz, r: 2.0, label: `${s.emoji} ${s.name} 들어가기`, data: { subj: s.id }, mesh: b });
       // 문 앞 반짝 고리
       const ring = new THREE.Mesh(new THREE.RingGeometry(0.9, 1.2, 32), new THREE.MeshBasicMaterial({ color: s.color, transparent: true, opacity: 0.6, depthWrite: false }));
       ring.rotation.x = -Math.PI / 2; ring.position.set(x + dx, 0.04, z + dz); ring.userData = { flat: true, keep: true }; this.add(ring); this.pulsers.push(ring);
       // 집 둘레 꾸밈
-      if (s.id !== 'pe' && s.id !== 'soc') { this.vBush(x - b.userData.w / 2 - 0.9, z + 2.2, 0.85, rand); this.vLamp(x + dx - 2.2, z + dz + 0.6); }
+      if (!['pe', 'soc', 'fire'].includes(s.id)) { this.vBush(x - b.userData.w / 2 - 0.9, z + 2.2, 0.85, rand); this.vLamp(x + dx - 2.2, z + dz + 0.6); }
     }
 
     // 분수 광장
@@ -850,7 +900,7 @@ export class World {
     // 나무 숲: 길·건물·광장을 피해 무리 지어
     const free = (x, z, pad = 2.6) => {
       if (Math.hypot(x / 9.5, z / 8.5) < 1) return false;
-      for (const [id, [bx, bz]] of Object.entries(BLD)) { const b = blds[id]; const w2 = b.userData.w / 2 + 1.8; if (Math.abs(x - bx) < w2 && z - bz > -b.userData.d / 2 - 2 && z - bz < b.userData.door[1] + 2.5) return false; }
+      for (const [id, [bx, bz]] of Object.entries(BLD)) { const b = blds[id]; const w2 = b.userData.w / 2 + 1.8; if (Math.abs(x - bx) < w2 && z - bz > -b.userData.d / 2 - 2 && z - bz < Math.max(b.userData.door[1] + 2.5, b.userData.front + 1.5)) return false; }
       if (Math.hypot(x - BALLOON_HILL.x, z - BALLOON_HILL.z) < 9) return false;
       if (Math.hypot((x - POND.x) / (POND.rx + 1.5), (z - POND.z) / (POND.rz + 1.5)) < 1) return false;
       if ((x > -34 && x < -24 && z > 11 && z < 19) || (x > 26 && x < 35 && z > -26 && z < -19) || Math.hypot(x + 9, z - 9) < 4.5 || Math.hypot(x - 12, z + 7) < 4 || Math.hypot(x + 12, z + 9) < 3.5 || Math.hypot(x - 30, z + 16) < 2.5) return false;
@@ -861,7 +911,7 @@ export class World {
     for (const [gx, gz, gr] of groves) for (let t = 0; t < gr * 4; t++) { const a = rand() * 7; const rr = Math.sqrt(rand()) * gr; const x = gx + Math.cos(a) * rr; const z = gz + Math.sin(a) * rr; if (free(x, z)) this.vTree(x, z, 0.7 + rand() * 0.7, rand() < 0.3 ? 2 : rand() < 0.12 ? 1 : 0); }
     for (let tries = 0; tries < 420; tries++) { const x = (rand() - 0.5) * 110; const z = (rand() - 0.5) * 110; if (!free(x, z, 3)) continue; if (rand() < 0.35) this.vTree(x, z, 0.7 + rand() * 0.6, rand() < 0.25 ? 2 : rand() < 0.1 ? 1 : 0); else this.vBush(x, z, 0.5 + rand() * 0.5, rand); }
     // 마을 가장자리: 둘레를 빙 둘러 나무
-    for (let i = 0; i < 90; i++) { const a = (i / 90) * Math.PI * 2; const x = Math.cos(a) * (52 + rand() * 6); const z = Math.sin(a) * (47 + rand() * 6); this.vTree(x, z, 0.9 + rand() * 0.6, rand() < 0.4 ? 2 : 0); }
+    for (let i = 0; i < 90; i++) { const a = (i / 90) * Math.PI * 2; const x = Math.cos(a) * (52 + rand() * 6); const z = Math.sin(a) * (47 + rand() * 6); const s3 = 0.9 + rand() * 0.6; const k = rand() < 0.4 ? 2 : 0; if (free(x, z, 1.6)) this.vTree(x, z, s3, k); }
     this.butterflies(area, 10);
     // 하늘의 구름
     for (let i = 0; i < 6; i++) { const cl = new THREE.Group(); for (let k = 0; k < 4; k++) { const s2 = at(part(sph(1.2 + rand() * 0.7, 12, 9), '#ffffff', { t: 0.06 }), k * 1.4 - 2, rand() * 0.5, 0); s2.scale.y = 0.7; cl.add(s2); } cl.position.set(-40 + i * 16, 16 + rand() * 4, -55); cl.userData.keep = true; cl.traverse((m) => { m.userData.flat = true; }); this.add(cl); this.clouds.push({ g: cl, x0: cl.position.x, sp: 0.3 + rand() * 0.4, area }); }

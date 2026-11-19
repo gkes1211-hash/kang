@@ -1,4 +1,4 @@
-// 꼬마 탐험대 공원의 건물들: 놀이 구역마다 생김새가 다른 집
+// 꼬마 탐험대 공원의 건물들: 건물마다 생김새가 다른 집
 // 모두 정면(문)이 +z 쪽을 본다. 크기 단위는 공원과 같다 (캐릭터 키 ≈ 2).
 import { THREE, toon, part, at, sph, cyl, box, OUTLINE } from './toon.js';
 
@@ -134,7 +134,7 @@ export function buildBuilding(id) {
   const g = new THREE.Group();
   const B = BUILDERS[id] || BUILDERS.kor;
   const info = B(g);
-  g.userData = { door: info.door, w: info.w, d: info.d, spinners: info.spinners || [] };
+  g.userData = { door: info.door, w: info.w, d: info.d, spinners: info.spinners || [], obs: info.obs || [], front: info.front || 0, sign: info.sign || null };
   g.traverse((o) => { if (o.isMesh && !o.userData.outline) { o.castShadow = true; o.receiveShadow = true; } });
   return g;
 }
@@ -362,3 +362,162 @@ const BUILDERS = {
     return { w: 14, d: 14, door: [0, 4.8] };
   },
 };
+// ============================================================
+// 늘어난 건물: 소방서 · 시장 · 마음 우체국 (앞으로도 건물은 여기에 더한다)
+// ============================================================
+const heartGeo = (s = 1, depth = 0.3) => {
+  const h = new THREE.Shape();
+  h.moveTo(0, -0.9 * s);
+  h.bezierCurveTo(-0.15 * s, -0.7 * s, -1.0 * s, -0.2 * s, -1.0 * s, 0.25 * s);
+  h.bezierCurveTo(-1.0 * s, 0.75 * s, -0.4 * s, 0.95 * s, 0, 0.55 * s);
+  h.bezierCurveTo(0.4 * s, 0.95 * s, 1.0 * s, 0.75 * s, 1.0 * s, 0.25 * s);
+  h.bezierCurveTo(1.0 * s, -0.2 * s, 0.15 * s, -0.7 * s, 0, -0.9 * s);
+  const geo = new THREE.ExtrudeGeometry(h, { depth, bevelEnabled: true, bevelThickness: 0.06, bevelSize: 0.06, bevelSegments: 2, curveSegments: 16 });
+  geo.translate(0, 0, -depth / 2); return geo;
+};
+const wheel = (g, x, y, z, r = 0.5) => { const wh = P(g, cyl(r, r, 0.35, 16), '#2b2b3a', x, y, z, { t: 0.02 }); wh.rotation.z = Math.PI / 2; const hub = P(g, cyl(r * 0.45, r * 0.45, 0.38, 12), '#d8d8e0', x, y, z, { line: false }); hub.rotation.z = Math.PI / 2; };
+
+Object.assign(BUILDERS, {
+  // 🚒 삐뽀 소방서: 빨간 벽돌 + 큰 차고 + 호스 말리는 탑 + 소방차 + 소화전
+  fire(g) {
+    const w = 9; const d = 6; const h = 5;
+    walls(g, { w, d, h, wall: '#d9574f', frame: '#7d2a24', kind: 'brick' });
+    // 평평한 지붕 + 흰 난간 + 경광등
+    P(g, box(w + 0.6, 0.55, d + 0.6), '#f6f1e7', 0, 0.6 + h + 0.27, 0, { t: 0.03 });
+    // 지붕 앞 119 간판 + 노란 띠
+    P(g, box(w + 0.62, 0.22, 0.1), '#ffd23f', 0, 0.6 + h + 0.12, d / 2 + 0.31, { line: false });
+    P(g, box(3.2, 1.3, 0.3), '#ffffff', 1.6, 0.6 + h + 1.1, d / 2 + 0.05, { t: 0.03 });
+    ['1', '1', '9'].forEach((n, i) => { const c = document.createElement('canvas'); c.width = c.height = 128; const x = c.getContext('2d'); x.font = 'bold 120px sans-serif'; x.fillStyle = '#e8322d'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText(n, 64, 70); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; const pl = new THREE.Mesh(new THREE.PlaneGeometry(1.0, 1.0), new THREE.MeshBasicMaterial({ map: t, transparent: true })); pl.position.set(0.85 + i * 0.75, 0.6 + h + 1.1, d / 2 + 0.21); g.add(pl); });
+    P(g, box(0.9, 0.4, 0.9), '#3b3b4f', 0, 0.6 + h + 0.75, 0.6, { t: 0.02 });
+    const siren = P(g, sph(0.45, 14, 10), '#ff3b3b', 0, 0.6 + h + 1.05, 0.6); siren.scale.y = 0.8;
+    // 큰 차고 문 (말아 올리는 문)
+    P(g, box(3.8, 3.7, 0.22), '#ffffff', -1.8, 0.6 + 1.85, d / 2 + 0.02, { t: 0.02 });
+    P(g, box(3.4, 3.4, 0.26), '#eef1f5', -1.8, 0.6 + 1.7, d / 2 + 0.04, { t: 0.02 });
+    for (let i = 0; i < 6; i++) g.add(at(new THREE.Mesh(box(3.3, 0.06, 0.3), toon('#b9c2cf')), -1.8, 0.95 + i * 0.55, d / 2 + 0.06));
+    // 차고 위 동그란 간판
+    const disk = P(g, cyl(0.95, 0.95, 0.2, 28), '#ffffff', -1.8, 4.85, d / 2 + 0.12, { t: 0.03 }); disk.rotation.x = Math.PI / 2;
+    emblem(g, -1.8, 4.85, d / 2 + 0.24, '🚒', 1.45);
+    // 사람 드나드는 문 + 위 창문
+    doorAt(g, 2.7, d / 2, { w: 1.3, h: 2.2, color: '#7d2a24', awning: '#ff3b3b' });
+    windowAt(g, 2.7, 4.5, d / 2, { w: 1.4, h: 1.1, shutter: null, flowers: false });
+    // 호스 말리는 탑 (옆)
+    const tw = new THREE.Group(); tw.position.set(w / 2 + 1.0, 0, -1.2); g.add(tw);
+    M(tw, box(2.2, 9, 2.2), texMat('brick', '#d9574f', 1, 3), 0, 4.5, 0, { t: 0.03 });
+    P(tw, box(2.6, 0.3, 2.6), '#f6f1e7', 0, 9.1, 0, { t: 0.02 });
+    for (const sx of [-0.9, 0.9]) P(tw, box(0.18, 1.6, 0.18), '#f6f1e7', sx, 10.0, 0.9);
+    const tr = P(tw, new THREE.ConeGeometry(1.9, 1.3, 4), '#7d2a24', 0, 11.4, 0, { t: 0.04 }); tr.rotation.y = Math.PI / 4;
+    const bell = P(tw, new THREE.CylinderGeometry(0.2, 0.42, 0.6, 14), '#ffd23f', 0, 10.15, 0); void bell;
+    windowAt(tw, 0, 6.5, 1.1, { w: 0.8, h: 1.0, shutter: null, flowers: false });
+    // 소방차 (차고에서 막 나온 모습)
+    const tk = new THREE.Group(); tk.position.set(-1.8, 0, d / 2 + 3.1); g.add(tk);
+    P(tk, box(2.4, 1.35, 3.6), '#e8322d', 0, 1.15, -0.5, { t: 0.04 });
+    P(tk, box(2.4, 1.9, 1.5), '#e8322d', 0, 1.45, 1.95, { t: 0.04 });
+    g.add(at(new THREE.Mesh(box(2.0, 0.8, 0.1), toon('#8fd3ff')), -1.8, 1.95, d / 2 + 3.1 + 2.72));
+    P(tk, box(2.45, 0.22, 5.1), '#ffffff', 0, 0.95, 0.25, { line: false });
+    for (const [x, z] of [[-1.15, -1.6], [1.15, -1.6], [-1.15, 1.9], [1.15, 1.9]]) wheel(tk, x, 0.5, z, 0.5);
+    for (const sx of [-0.6, 0.6]) P(tk, sph(0.22, 10, 8), sx < 0 ? '#ff3b3b' : '#3c8dde', sx, 2.55, 1.95);
+    // 사다리
+    for (const sx of [-0.55, 0.55]) P(tk, box(0.14, 0.14, 4.2), '#f0f0f5', sx, 2.0, -0.4, { t: 0.015 });
+    for (let i = 0; i < 8; i++) g.add(at(new THREE.Mesh(box(1.1, 0.08, 0.08), toon('#f0f0f5')), -1.8, 2.0, d / 2 + 3.1 - 2.3 + i * 0.55));
+    // 감은 호스
+    const hose = P(tk, new THREE.TorusGeometry(0.45, 0.16, 8, 20), '#ffd23f', 1.3, 1.25, -1.0, { t: 0.015 }); hose.rotation.y = Math.PI / 2;
+    // 소화전
+    P(g, cyl(0.3, 0.36, 0.95, 12), '#ff3b3b', -4.6, 0.48, d / 2 + 1.5); P(g, sph(0.32, 12, 8), '#ffd23f', -4.6, 1.0, d / 2 + 1.5);
+    for (const sx of [-1, 1]) { const n = P(g, cyl(0.12, 0.12, 0.3, 8), '#ffd23f', -4.6 + sx * 0.38, 0.6, d / 2 + 1.5); n.rotation.z = Math.PI / 2; }
+    // 꼬깔콘
+    for (const [x, z] of [[0.6, d / 2 + 5.6], [-4.3, d / 2 + 5.4]]) { P(g, new THREE.ConeGeometry(0.3, 0.8, 12), '#ff9f43', x, 0.45, z, { t: 0.015 }); g.add(at(new THREE.Mesh(cyl(0.21, 0.24, 0.12, 12), toon('#ffffff')), x, 0.45, z)); }
+    // obs: 문 앞에 놓인 물건도 부딪히게 (건물 기준 [x0, z0, x1, z1]), front: 앞으로 가장 멀리 나온 곳
+    return { w: w + 3, d: d + 6, door: [2.7, d / 2 + 1.6], front: d / 2 + 8.8, obs: [[-3.1, d / 2 + 0.2, -0.5, d / 2 + 8.8], [-5.0, d / 2 + 1.1, -4.2, d / 2 + 1.9]] };
+  },
+
+  // 🏪 알뜰 꼬마 시장: 줄무늬 차양 가게 + 과일 노점 + 돼지 저금통
+  market(g) {
+    const w = 7.5; const d = 5; const h = 3.8;
+    walls(g, { w, d, h, wall: '#fff1c2', frame: '#c0603d', kind: 'plank' });
+    gableRoof(g, { w, d, rise: 2.2, y: 0.6 + h, color: '#e8574d', wall: '#fff1c2' });
+    for (const sx of [-1, 1]) windowAt(g, sx * 2.4, 2.4, d / 2, { w: 1.9, h: 1.6, shutter: null, flowers: false });
+    // 진열창 속 물건
+    for (const sx of [-1, 1]) for (let i = 0; i < 3; i++) P(g, sph(0.22, 10, 8), ['#ff6b6b', '#ffd23f', '#5cbf3c'][i], sx * 2.4 - 0.55 + i * 0.55, 1.95, d / 2 + 0.25, { line: false });
+    doorAt(g, 0, d / 2, { w: 1.3, color: '#c0603d' });
+    // 앞 전체 줄무늬 차양
+    const aw = M(g, box(w + 0.8, 0.18, 1.8), texMat('stripe', '#ff6b8b', 4, 1), 0, 0.6 + h - 0.1, d / 2 + 0.85, { t: 0.02 }); aw.rotation.x = 0.32;
+    for (let i = 0; i < 9; i++) { const sc = P(g, new THREE.CylinderGeometry(0.24, 0.24, 0.12, 12, 1, false, 0, Math.PI), i % 2 ? '#ffffff' : '#ff6b8b', -w / 2 - 0.1 + i * (w + 0.2) / 8, 0.6 + h - 0.42, d / 2 + 1.72, { t: 0.01 }); sc.rotation.x = Math.PI / 2; sc.rotation.y = Math.PI; }
+    // 지붕 위 큰 간판
+    P(g, box(3.6, 1.2, 0.25), '#ffd23f', 0, 0.6 + h + 1.25, d / 2 + 0.55, { t: 0.03 });
+    emblem(g, -1.1, 0.6 + h + 1.25, d / 2 + 0.7, '🛒', 1.0); emblem(g, 0, 0.6 + h + 1.25, d / 2 + 0.7, '💰', 1.0); emblem(g, 1.1, 0.6 + h + 1.25, d / 2 + 0.7, '🍎', 1.0);
+    // 노점 (양옆)
+    const stall = (x, z, color, fruit) => {
+      const s = new THREE.Group(); s.position.set(x, 0, z); g.add(s);
+      P(s, box(2.6, 0.9, 1.4), '#a8743e', 0, 0.45, 0, { t: 0.03 });
+      for (const [px, pz] of [[-1.2, -0.6], [1.2, -0.6], [-1.2, 0.6], [1.2, 0.6]]) P(s, box(0.14, 2.6, 0.14), '#8d5a34', px, 1.3, pz, { t: 0.015 });
+      const roof = P(s, new THREE.ConeGeometry(2.1, 1.0, 4), color, 0, 3.05, 0, { t: 0.03 }); roof.rotation.y = Math.PI / 4; roof.scale.z = 0.75;
+      for (let i = 0; i < 4; i++) { const sc = P(s, new THREE.CylinderGeometry(0.2, 0.2, 0.1, 10, 1, false, 0, Math.PI), i % 2 ? '#ffffff' : color, -1.05 + i * 0.7, 2.5, 0.78, { t: 0.01 }); sc.rotation.x = Math.PI / 2; sc.rotation.y = Math.PI; }
+      // 과일 상자
+      for (let c = 0; c < 3; c++) {
+        P(s, box(0.75, 0.3, 0.6), '#d9a066', -0.85 + c * 0.85, 1.05, 0.15, { t: 0.015 });
+        for (let k = 0; k < 4; k++) P(s, sph(0.15, 8, 6), fruit[c], -1.0 + c * 0.85 + (k % 2) * 0.28, 1.28, 0.02 + Math.floor(k / 2) * 0.28, { line: false });
+      }
+      // 가격표
+      P(s, box(0.6, 0.4, 0.06), '#ffffff', 0.9, 1.55, 0.72, { t: 0.01 }); emblem(s, 0.9, 1.55, 0.76, '💲', 0.35);
+    };
+    stall(-w / 2 - 2.1, d / 2 + 2.0, '#48b4e8', ['#ff5c5c', '#ffa63f', '#ffe14a']);
+    stall(w / 2 + 2.1, d / 2 + 2.0, '#5cbf3c', ['#7a3fb0', '#5cbf3c', '#ff5c5c']);
+    // 돼지 저금통
+    const pig = new THREE.Group(); pig.position.set(-2.6, 0, d / 2 + 5.4); pig.rotation.y = 0.5; g.add(pig);
+    const body = P(pig, sph(0.85, 18, 14), '#ffb3c7', 0, 0.95, 0); body.scale.set(1, 0.9, 1.15);
+    const snout = P(pig, cyl(0.3, 0.3, 0.25, 16), '#ff8fab', 0, 1.0, 0.98, { t: 0.015 }); snout.rotation.x = Math.PI / 2;
+    for (const sx of [-0.1, 0.1]) P(pig, sph(0.05, 6, 5), '#c2506d', sx, 1.0, 1.12, { line: false });
+    for (const sx of [-0.35, 0.35]) { P(pig, sph(0.08, 8, 6), '#2b1a10', sx, 1.35, 0.78, { line: false }); const ear = P(pig, new THREE.ConeGeometry(0.2, 0.32, 4), '#ff8fab', sx * 1.1, 1.75, 0.3, { t: 0.015 }); ear.rotation.z = -sx; }
+    for (const [x, z] of [[-0.45, 0.45], [0.45, 0.45], [-0.45, -0.45], [0.45, -0.45]]) P(pig, cyl(0.15, 0.15, 0.4, 10), '#ff8fab', x, 0.2, z, { t: 0.015 });
+    P(pig, box(0.5, 0.06, 0.12), '#7a3346', 0, 1.72, -0.1, { line: false });
+    const coin = P(pig, cyl(0.28, 0.28, 0.08, 18), '#ffd23f', 0, 2.25, -0.1, { t: 0.015 }); coin.rotation.x = Math.PI / 2;
+    // 손수레
+    P(g, box(1.4, 0.7, 1.0), '#5aa9f0', -5.6, 0.75, d / 2 + 4.6, { t: 0.02 }); wheel(g, -5.6, 0.32, d / 2 + 4.6, 0.32);
+    for (let i = 0; i < 3; i++) P(g, box(0.38, 0.38, 0.38), ['#ffd23f', '#ff6b6b', '#ffffff'][i], -6.0 + i * 0.4, 1.3, d / 2 + 4.6, { t: 0.015 });
+    const sx = w / 2 + 2.1;
+    return { w: w + 8, d: d + 6, door: [0, d / 2 + 1.6], front: d / 2 + 6.6, sign: [2.6, d / 2 + 4.0], obs: [[-sx - 1.4, d / 2 + 1.2, -sx + 1.4, d / 2 + 2.8], [sx - 1.4, d / 2 + 1.2, sx + 1.4, d / 2 + 2.8], [-3.5, d / 2 + 4.5, -1.7, d / 2 + 6.4], [-6.4, d / 2 + 4.0, -4.8, d / 2 + 5.2]] };
+  },
+
+  // 💌 마음 우체국: 분홍 벽 + 하늘 지붕 + 큰 하트 + 빨간 우체통 + 편지 빨랫줄 + 비둘기
+  post(g) {
+    const w = 7.6; const d = 5.6; const h = 4.4;
+    walls(g, { w, d, h, wall: '#ffe1ea', frame: '#e8577a' });
+    gableRoof(g, { w, d, rise: 2.6, y: 0.6 + h, color: '#5aa9f0', wall: '#ffe1ea' });
+    for (const sx of [-1, 1]) windowAt(g, sx * 2.5, 2.3, d / 2, { shutter: '#5aa9f0' });
+    windowAt(g, 0, 4.25, d / 2, { w: 1.1, h: 0.9, shutter: null, flowers: false });
+    doorAt(g, 0, d / 2, { color: '#e8577a', awning: '#5aa9f0' });
+    // 박공의 큰 하트
+    P(g, heartGeo(0.7, 0.3), '#ff4d6d', 0, 0.6 + h + 1.05, d / 2 + 0.22, { t: 0.03 });
+    // 처마 아래 편지 간판
+    const env = new THREE.Group(); env.position.set(0, 0.6 + h - 0.05, d / 2 + 0.5); g.add(env);
+    P(env, box(2.6, 1.0, 0.16), '#ffffff', 0, 0, 0, { t: 0.02 });
+    for (const s of [-1, 1]) { const fl = P(env, box(1.45, 0.07, 0.05), '#e8577a', s * 0.62, 0.16, 0.1, { line: false }); fl.rotation.z = s * 0.4; }
+    P(env, heartGeo(0.16, 0.08), '#ff4d6d', 0, -0.05, 0.12, { line: false });
+    // 빨간 우체통
+    const mb = new THREE.Group(); mb.position.set(3.7, 0, d / 2 + 1.8); g.add(mb);
+    P(mb, cyl(0.12, 0.12, 0.6, 8), '#3b3b4f', 0, 0.3, 0);
+    P(mb, cyl(0.55, 0.55, 1.4, 20), '#e8322d', 0, 1.3, 0, { t: 0.03 });
+    P(mb, new THREE.SphereGeometry(0.55, 20, 10, 0, Math.PI * 2, 0, Math.PI / 2), '#e8322d', 0, 2.0, 0, { t: 0.03 });
+    g.add(at(new THREE.Mesh(box(0.6, 0.08, 0.1), toon('#3b1414')), 3.7, 1.75 + 0, d / 2 + 1.8 + 0.53));
+    P(mb, heartGeo(0.14, 0.06), '#ffffff', 0, 1.3, 0.56, { line: false });
+    // 소포 더미
+    [[0, 0, 1.0, '#c98a52'], [0.15, 0.62, 0.75, '#e0a868'], [-0.05, 1.1, 0.5, '#ffd23f']].forEach(([dx, y, s, c]) => { const b = P(g, box(s, s * 0.8, s), c, -3.8 + dx, 0.4 * s + y, d / 2 + 1.8, { t: 0.02 }); b.rotation.y = dx * 2; g.add(at(new THREE.Mesh(box(s + 0.02, 0.08, s * 0.2), toon('#ff6b8b')), -3.8 + dx, s * 0.8 + y + 0.01, d / 2 + 1.8)); });
+    // 편지 빨랫줄 (두 기둥 사이)
+    for (const sx of [-1, 1]) P(g, cyl(0.1, 0.12, 2.6, 8), '#8d5a34', sx * 2.8, 1.3, d / 2 + 4.4);
+    const line = P(g, cyl(0.025, 0.025, 5.6, 4), '#5b3a1e', 0, 2.4, d / 2 + 4.4, { line: false }); line.rotation.z = Math.PI / 2;
+    ['#ffffff', '#ffd6e0', '#d6ecff', '#fff3b0', '#ffffff', '#e2ffd6'].forEach((c, i) => { const x = -2.2 + i * 0.88; const e2 = P(g, box(0.62, 0.44, 0.04), c, x, 2.1 - Math.sin((i / 5) * Math.PI) * 0.12, d / 2 + 4.4, { t: 0.012 }); e2.rotation.z = (i % 2 ? 0.12 : -0.1); P(g, heartGeo(0.07, 0.03), '#ff4d6d', x, 2.08 - Math.sin((i / 5) * Math.PI) * 0.12, d / 2 + 4.44, { line: false }); });
+    // 지붕 위 비둘기 두 마리
+    for (const [x, ry] of [[-1.2, 0.4], [1.0, -0.5]]) {
+      const b = new THREE.Group(); b.position.set(x, 0.6 + h + 2.6 + 0.32, 0); b.rotation.y = ry; g.add(b);
+      const bd = P(b, sph(0.3, 12, 10), '#ffffff', 0, 0, 0, { t: 0.015 }); bd.scale.set(0.85, 0.8, 1.15);
+      P(b, sph(0.18, 10, 8), '#ffffff', 0, 0.26, 0.26, { t: 0.015 });
+      const bk = P(b, new THREE.ConeGeometry(0.06, 0.16, 6), '#ff9f43', 0, 0.24, 0.48, { line: false }); bk.rotation.x = Math.PI / 2;
+      for (const s of [-0.07, 0.07]) P(b, sph(0.03, 6, 5), '#2b1a10', s, 0.31, 0.4, { line: false });
+      const lt = P(b, box(0.26, 0.18, 0.02), '#ffd6e0', 0, 0.12, 0.62, { t: 0.008 }); void lt;
+    }
+    chimney(g, -2.4, 0.6 + h + 0.9, -1.2, 1.5);
+    // 꽃 화분
+    for (const sx of [-1, 1]) { P(g, cyl(0.42, 0.34, 0.6, 12), '#c0603d', sx * 1.55, 0.3, d / 2 + 1.0); for (let i = 0; i < 4; i++) P(g, sph(0.16, 6, 5), ['#ff6b8b', '#ffd23f', '#ffffff', '#c56cf0'][i], sx * 1.55 + (i - 1.5) * 0.17, 0.75, d / 2 + 1.0, { line: false }); }
+    return { w: w + 2, d: d + 6, door: [0, d / 2 + 1.6], front: d / 2 + 4.6, sign: [3.6, d / 2 + 3.4], obs: [[3.1, d / 2 + 1.2, 4.3, d / 2 + 2.4], [-4.5, d / 2 + 1.2, -3.1, d / 2 + 2.4], [-3.1, d / 2 + 4.1, -2.5, d / 2 + 4.7], [2.5, d / 2 + 4.1, 3.1, d / 2 + 4.7], [-2.0, d / 2 + 0.6, -1.1, d / 2 + 1.4], [1.1, d / 2 + 0.6, 2.0, d / 2 + 1.4]] };
+  },
+});
