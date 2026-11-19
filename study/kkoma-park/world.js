@@ -53,6 +53,8 @@ function smoothPath(pts) {
 // 늘 같은 마을이 나오도록 정해진 순서의 "랜덤"
 function seeded(seed) { let x = seed; return () => ((x = (x * 16807) % 2147483647) / 2147483647); }
 
+// 건물 이름표 높이 (마을에서 / 마을 전체 보기에서)
+const SIGN_H = 1.5; const SIGN_FAR_H = 3.4;
 const FONT = '"Jua", "Pretendard", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif';
 const BROWN = '#5b3a1e';
 const CREAM = '#fff8ea';
@@ -353,6 +355,7 @@ export class World {
     this.clock = new THREE.Clock();
     this.time = 0;
     this.zoom = 1;
+    this.overview = false; this.onOverview = () => {};
     this.onZoom = () => {};
 
     this.buildVillage();
@@ -835,9 +838,12 @@ export class World {
       }
       for (const [x0, z0, x1, z1] of b.userData.obs) this.addObstacle(area, { box: [x + x0, z + z0, x + x1, z + z1] });
       const [dx, dz] = b.userData.door;
-      const sign = makeSprite([`${s.emoji} ${s.name}`], 1.0, { size: 56 });
-      const so = b.userData.sign || [dx + 3.4, dz + 0.4];
-      sign.position.set(x + so[0], 0.9, z + so[1]); this.add(sign);
+      const sign = makeSprite([`${s.emoji} ${s.name}`], SIGN_H, { size: 56 });
+      const so = b.userData.sign || [dx + 1.7 + sign.scale.x / 2, dz + 0.4];
+      sign.position.set(x + so[0], 1.0 + SIGN_H / 2, z + so[1]); this.add(sign);
+      // 마을 전체 보기에서는 건물 위로 크게 띄운다
+      const top = new THREE.Box3().setFromObject(b).max.y;
+      sign.userData.near = sign.position.clone(); sign.userData.far = new THREE.Vector3(x, top + 2.6, z);
       this.gateSigns[s.id] = sign;
       this.addInteract({ id: `door:${s.id}`, kind: 'door', area, x: x + dx, z: z + dz, r: 2.0, label: `${s.emoji} ${s.name} 들어가기`, data: { subj: s.id }, mesh: b });
       // 문 앞 반짝 고리
@@ -1067,6 +1073,7 @@ export class World {
   goTo(area, spawn) {
     const a = AREAS[area];
     if (!a) return;
+    if (this.overview) this.setOverview(false);
     this.area = area;
     const p = spawn || (area === 'plaza' ? PLAZA_SPAWN : { x: a.cx - a.hw + 4.5, z: a.cz + (area === 'balloon' ? 5 : 3.5) });
     this.pos.set(p.x + (Math.random() - 0.5) * 2.4, 0, p.z + (Math.random() - 0.5) * 2);
@@ -1202,7 +1209,30 @@ export class World {
       if (fh) this.walkTo(fh.point.x, fh.point.z, null);
     });
   }
+  // 마을 전체 보기: 하늘 높이에서 마을 전체를 내려다본다 (마을에서만)
+  setOverview(on) {
+    on = !!on && this.area === 'plaza' && !this.spectating;
+    if (on === this.overview) return;
+    this.overview = on;
+    const D = this.overviewDist();
+    // 멀리서 볼수록 이름표를 크게, 안개는 걷어 낸다
+    const big = SIGN_FAR_H * (D / 90) ** 0.6;
+    for (const sp of Object.values(this.gateSigns)) {
+      sp.userData.height = on ? big : SIGN_H; paint(sp);
+      sp.position.copy(on ? sp.userData.far : sp.userData.near);
+      if (on) sp.position.y += big / 2;
+    }
+    const fog = this.scene.fog;
+    if (fog) { this.fogBase ||= [fog.near, fog.far]; [fog.near, fog.far] = on ? [D + 40, D + 220] : this.fogBase; }
+    this.onOverview(on);
+  }
+  // 화면 비율에 맞춰 마을 전체(가로 약 110m)가 들어오는 거리
+  overviewDist() {
+    const t = Math.tan(THREE.MathUtils.degToRad(this.camera.fov / 2));
+    return Math.min(250, Math.max(96, 76 / (t * this.camera.aspect)));
+  }
   setZoom(z) {
+    if (this.overview) this.setOverview(false);
     this.zoom = Math.max(0.55, Math.min(1.8, z));
     this.onZoom(this.zoom);
   }
@@ -1430,13 +1460,14 @@ export class World {
     const a = AREAS[area];
     let look; let off;
     if (this.spectating) { look = new THREE.Vector3(a.cx, 0, a.cz - 1); off = a.spec; }
+    else if (this.overview && !this.flying) { look = new THREE.Vector3(0, 0, -7); const D = this.overviewDist(); const n = Math.hypot(...a.spec); off = a.spec.map((v) => (v * D) / n); }
     else if (this.flying) { look = this.player.position.clone(); off = [0, 4, 14]; }
     else {
       const f = a.follow ?? 1;
       look = new THREE.Vector3(a.cx + (this.pos.x - a.cx) * f, 0.8, a.cz + (this.pos.z - a.cz) * f - (a.ahead ?? (f === 1 ? 4 : 1)));
       off = a.cam;
     }
-    const k = (this.camera.aspect < 1 ? 1.45 : 1) * (this.flying ? 1 : this.zoom);
+    const k = this.overview && !this.flying ? 1 : (this.camera.aspect < 1 ? 1.45 : 1) * (this.flying ? 1 : this.zoom);
     const want = new THREE.Vector3(look.x + off[0] * k, look.y + off[1] * k, look.z + off[2] * k);
     if (this.snapCamera) { this.camera.position.copy(want); this.snapCamera = false; }
     else this.camera.position.lerp(want, Math.min(1, dt * 6));

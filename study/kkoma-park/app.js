@@ -170,6 +170,12 @@ let final = null; // 열기구: {puzzles, solved[], digits[], code, done}
 function ensureWorld() {
   if (!world) world = new World($('world'), { onInteract: interact, onPrompt: prompt, onArea: areaChanged });
   world.onZoom = (z) => store.set('zoom', z.toFixed(2));
+  world.onOverview = (on) => {
+    const b = $('overview'); b.classList.toggle('on', on); b.setAttribute('aria-pressed', String(on));
+    $('stamps').hidden = on;
+    b.querySelector('small').textContent = on ? '돌아가기' : '전체'; b.title = on ? '내 캐릭터 쪽으로 돌아가기' : '마을 전체 보기';
+    if (on) toast('🗺️ 마을 전체예요! 가고 싶은 곳을 누르면 걸어가요. 🗺️ 를 다시 누르면 돌아와요.', 3500);
+  };
   if (!world.minimap) {
     const mm = $('minimap'); world.minimap = mm;
     mm.addEventListener('pointerdown', (e) => { e.stopPropagation(); const r = mm.getBoundingClientRect(); world.mapTap((e.clientX - r.left) / r.width, (e.clientY - r.top) / r.height); });
@@ -182,7 +188,7 @@ function areaName(a) {
   const s = SUBJECT[AREAS[a]?.subj];
   return s ? `${s.emoji} ${s.name}` : a;
 }
-function areaChanged(a) { $('where').textContent = `${areaName(a)} · ${me.grade}학년`; $('minimap').hidden = a !== 'plaza'; sendState(true); }
+function areaChanged(a) { $('where').textContent = `${areaName(a)} · ${me.grade}학년`; $('minimap').hidden = a !== 'plaza'; $('overview').hidden = a !== 'plaza'; sendState(true); }
 function prompt(it) {
   const b = $('act');
   if (!it || world.paused) { b.hidden = true; return; }
@@ -306,6 +312,8 @@ document.querySelectorAll('#settings [data-sound]').forEach((b) => b.addEventLis
 }));
 $('set-btn').addEventListener('click', () => { $('settings').hidden = !$('settings').hidden; $('emotes').hidden = true; paintSettings(); });
 const zoomBy = (f) => { if (!world) return; world.setZoom(world.zoom * f); sfx.pop(); };
+// 🗺️ 마을 전체 보기 (한 번 더 누르면 내 캐릭터 쪽으로 돌아와요)
+$('overview').addEventListener('click', () => { if (!world) return; world.setOverview(!world.overview); sfx.pop(); });
 $('zoom-in').addEventListener('click', () => zoomBy(1 / 1.2));
 $('zoom-out').addEventListener('click', () => zoomBy(1.2));
 document.querySelectorAll('[data-zoom]').forEach((b) => b.addEventListener('click', () => zoomBy(b.dataset.zoom === 'in' ? 1 / 1.2 : 1.2)));
