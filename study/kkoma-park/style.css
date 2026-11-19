@@ -94,7 +94,7 @@ button.pill { pointer-events: auto; }
 .pill.gold { background: var(--gold); }
 .pill.warn { background: #ffe08a; }
 .pill.bad { background: #ffb3a7; }
-.stamps { position: absolute; top: calc(72px + env(safe-area-inset-top)); left: 12px; display: grid; grid-template-columns: repeat(7, 36px); gap: 4px; pointer-events: none; }
+.stamps { position: absolute; top: calc(72px + env(safe-area-inset-top)); left: 12px; display: grid; grid-template-columns: repeat(8, 36px); gap: 4px; pointer-events: none; }
 .stamps[hidden] { display: none; }
 .stamps span { width: 36px; height: 36px; display: grid; place-items: center; font-size: 19px; border-radius: 12px; background: rgba(255, 248, 234, 0.6); border: 3px dashed rgba(91, 58, 30, 0.4); filter: grayscale(1); opacity: 0.7; }
 .stamps span.got { background: var(--gold); border: 3px solid var(--brown); filter: none; opacity: 1; }
@@ -254,7 +254,7 @@ button.pill { pointer-events: auto; }
 .blockbtn.end { background: #e2cfb0; }
 
 /* 알림 창·탐험 수첩 */
-.m-card { max-width: 500px; text-align: center; }
+.m-card { max-width: 500px; text-align: center; max-height: calc(100dvh - 24px); overflow-y: auto; }
 .m-emoji { font-size: 66px; }
 .m-card h2 { margin: 6px 0; font-size: 32px; font-weight: 400; }
 .m-card p { font-size: 20px; line-height: 1.5; }
@@ -390,3 +390,16 @@ button.pill { pointer-events: auto; }
 .blockbtn.tt-f { background: #b7ecc8; }
 .blockbtn.tt-t { background: #ffe08a; }
 .pz-q .pill { display: inline-block; margin: 0 2px; padding: 0 10px; border-radius: 999px; background: #ef6c57; color: #fff; font-weight: 400; }
+
+/* ---------- 직업 체험관: 직업 카드 고르기 · 직업 도감 ---------- */
+.job-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin: 10px 0 4px; }
+.job-card { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 8px 4px 10px; border-radius: 18px; border: 4px solid var(--c); background: #fff; box-shadow: 0 5px 0 var(--c); font: inherit; font-size: 17px; color: var(--brown); cursor: pointer; }
+.job-card i { font-style: normal; font-size: 40px; line-height: 1.1; }
+.job-card small { font-size: 13px; color: #2f8f5a; }
+.job-card.done { background: #fff8d6; }
+.job-card:active { transform: translateY(3px); box-shadow: 0 2px 0 var(--c); }
+@media (max-width: 560px) { .job-grid { grid-template-columns: repeat(3, 1fr); } }
+.book-h { margin: 12px 0 6px; font-size: 20px; }
+.job-book { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; }
+.job-book span { width: 42px; height: 42px; display: grid; place-items: center; font-size: 24px; border-radius: 12px; background: #f3efe6; border: 3px dashed #c9b49a; filter: grayscale(1); opacity: 0.6; }
+.job-book span.got { filter: none; opacity: 1; background: var(--gold); border: 3px solid var(--brown); }

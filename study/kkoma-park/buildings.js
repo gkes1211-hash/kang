@@ -574,3 +574,51 @@ Object.assign(BUILDERS, {
     return { w: w + 2, d: d + 3, door: [0, d / 2 + 1.6], obs: [[3.0, d / 2 + 1.0, 4.6, d / 2 + 3.0]] };
   },
 });
+
+// 생활 섬: 두근두근 직업 체험관
+Object.assign(BUILDERS, {
+  job(g) {
+    const w = 11; const d = 6.4; const h = 4.6;
+    walls(g, { w, d, h, wall: '#fff6e0', frame: '#6a5ae0' });
+    // 지붕 난간 (알록달록 줄무늬)
+    const cols = ['#ff6b8b', '#ffd23f', '#48b4e8', '#5cbf3c', '#c56cf0', '#ff9f43'];
+    for (let i = 0; i < 11; i++) P(g, box(1.0, 0.7, 0.4), cols[i % 6], -w / 2 + 0.5 + i * 1.0, 0.6 + h + 0.35, d / 2 - 0.1, { t: 0.02 });
+    P(g, box(w + 0.3, 0.3, d + 0.3), '#e8dcc0', 0, 0.6 + h + 0.05, 0, { t: 0.03 });
+    // 가운데 탑 + 별
+    P(g, cyl(1.8, 2.0, 2.2, 20), '#6a5ae0', 0, 0.6 + h + 1.2, -0.6, { t: 0.04 });
+    P(g, new THREE.SphereGeometry(1.9, 22, 12, 0, Math.PI * 2, 0, Math.PI / 2), '#ffd23f', 0, 0.6 + h + 2.3, -0.6, { t: 0.04 });
+    const star = new THREE.Shape(); for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + (i * Math.PI) / 5; const r = i % 2 ? 0.32 : 0.75; const x = Math.cos(a) * r; const y = -Math.sin(a) * r; if (i) star.lineTo(x, y); else star.moveTo(x, y); }
+    P(g, new THREE.ExtrudeGeometry(star, { depth: 0.25, bevelEnabled: false }), '#ff6b8b', 0, 0.6 + h + 4.9, -0.7, { t: 0.03 });
+    P(g, cyl(0.08, 0.08, 1.2, 8), '#7a4a24', 0, 0.6 + h + 4.0, -0.6);
+    // 이름 간판 (탑 앞)
+    const c = document.createElement('canvas'); c.width = 512; c.height = 128; const x = c.getContext('2d');
+    const paintSign = () => { x.clearRect(0, 0, 512, 128); x.fillStyle = '#ffffff'; x.beginPath(); x.roundRect(4, 4, 504, 120, 40); x.fill(); x.lineWidth = 8; x.strokeStyle = '#6a5ae0'; x.stroke(); x.fillStyle = '#5b3a1e'; x.font = '68px Jua, sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText('직업 체험관', 256, 70); };
+    paintSign();
+    const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
+    document.fonts?.load('68px Jua', '직업 체험관').then(() => { paintSign(); t.needsUpdate = true; }).catch(() => {});
+    const pl = new THREE.Mesh(new THREE.PlaneGeometry(3.6, 0.9), new THREE.MeshBasicMaterial({ map: t, transparent: true })); pl.position.set(0, 0.6 + h + 1.25, 1.75); g.add(pl);
+    // 앞면 동그란 창 4개: 직업 그림
+    [['🩺', -4.1, '#ff8a7a'], ['🧑‍🍳', -2.2, '#ffd23f'], ['🚓', 2.2, '#48b4e8'], ['✈️', 4.1, '#5cbf3c']].forEach(([e, xx, cc]) => {
+      const fr = P(g, cyl(0.85, 0.85, 0.2, 24), cc, xx, 3.0, d / 2 + 0.05, { t: 0.02 }); fr.rotation.x = Math.PI / 2;
+      const gl = at(new THREE.Mesh(cyl(0.68, 0.68, 0.22, 24), toon('#ffffff')), xx, 3.0, d / 2 + 0.08); gl.rotation.x = Math.PI / 2; g.add(gl);
+      emblem(g, xx, 3.0, d / 2 + 0.22, e, 1.05);
+    });
+    windowAt(g, -3.2, 1.5, d / 2, { w: 1.6, h: 0.9, shutter: null }); windowAt(g, 3.2, 1.5, d / 2, { w: 1.6, h: 0.9, shutter: null });
+    doorAt(g, 0, d / 2, { w: 1.6, h: 2.5, color: '#6a5ae0', awning: '#ff6b8b' });
+    // 문 앞 마네킹: 의사 · 요리사 · 경찰 · 소방관 모자
+    const doll = (xx, zz, shirt, hat) => {
+      const m = new THREE.Group(); m.position.set(xx, 0, zz); g.add(m);
+      m.add(at(part(cyl(0.35, 0.45, 0.9, 14), shirt), 0, 0.45, 0)); m.add(at(part(sph(0.34, 14, 10), '#f6c9a0'), 0, 1.2, 0));
+      for (const s of [-0.12, 0.12]) m.add(at(new THREE.Mesh(sph(0.05, 6, 5), toon('#2b1a10')), s, 1.25, 0.3));
+      hat(m);
+      m.add(at(part(cyl(0.5, 0.55, 0.12, 16), '#d8d2c4'), 0, 0.03, 0));
+    };
+    doll(-4.6, d / 2 + 1.6, '#ffffff', (m) => { m.add(at(part(cyl(0.36, 0.36, 0.12, 14), '#ffffff'), 0, 1.52, 0)); m.add(at(new THREE.Mesh(box(0.16, 0.04, 0.02), toon('#e53935')), 0, 1.52, 0.37)); m.add(at(new THREE.Mesh(box(0.04, 0.16, 0.02), toon('#e53935')), 0, 1.52, 0.38)); });
+    doll(-3.3, d / 2 + 2.4, '#fff3c4', (m) => { m.add(at(part(cyl(0.3, 0.26, 0.35, 14), '#ffffff'), 0, 1.6, 0)); m.add(at(part(sph(0.38, 14, 10), '#ffffff'), 0, 1.85, 0)); });
+    doll(3.3, d / 2 + 2.4, '#2b4f8f', (m) => { m.add(at(part(cyl(0.38, 0.36, 0.22, 16), '#1f3b73'), 0, 1.55, 0)); m.add(at(part(box(0.5, 0.04, 0.3), '#1f3b73'), 0, 1.45, 0.3)); m.add(at(new THREE.Mesh(sph(0.07, 8, 6), toon('#ffd23f')), 0, 1.6, 0.37)); });
+    doll(4.6, d / 2 + 1.6, '#e8322d', (m) => { m.add(at(part(new THREE.SphereGeometry(0.42, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2), '#ffd23f'), 0, 1.45, 0)); m.add(at(part(cyl(0.55, 0.55, 0.05, 16), '#ffd23f'), 0, 1.45, 0)); });
+    // 깃발들
+    for (const s of [-1, 1]) { P(g, cyl(0.07, 0.07, 3, 8), '#7a4a24', s * (w / 2 + 0.6), 1.5, d / 2 - 0.4); const f = P(g, box(0.9, 0.55, 0.04), s < 0 ? '#ff6b8b' : '#48b4e8', s * (w / 2 + 0.6) + s * 0.45, 2.7, d / 2 - 0.4, { t: 0.01 }); void f; }
+    return { w: w + 2, d: d + 3, door: [0, d / 2 + 1.6], front: d / 2 + 3, obs: [[-5.2, d / 2 + 1.0, -2.7, d / 2 + 3.0], [2.7, d / 2 + 1.0, 5.2, d / 2 + 3.0]] };
+  },
+});

@@ -22,7 +22,16 @@ export const BACKS = [['none', '없음', 0], ['bag', '🎒 가방', 0], ['balloo
 export const PATTERNS = [['plain', '민무늬', 0], ['stripes', '줄무늬', 0], ['dots', '물방울', 0], ['heart', '❤️ 하트', 0], ['star', '⭐ 별', 2], ['flash', '⚡ 번개', 10]];
 export const PETS = [['none', '없음', 0], ['chick', '🐥 병아리', 1], ['puppy', '🐶 강아지', 4], ['kitty', '🐱 고양이', 7], ['turtle', '🐢 거북이', 12], ['dragon', '🐉 아기 용', 18]];
 
-export const CATS = { hat: HATS, face: FACES, back: BACKS, pattern: PATTERNS, pet: PETS };
+// 직업 옷: 두근두근 직업 체험관에서 그 직업을 체험하면 열린다 (세 번째 값이 'job:직업')
+export const JOB_OUTFITS = [
+  ['none', '없음', 0], ['doctor', '👩‍⚕️ 의사 가운', 'job:doctor'], ['chef', '🧑‍🍳 요리사 옷', 'job:chef'], ['vet', '🐶 수의사 옷', 'job:vet'],
+  ['police', '👮 경찰 제복', 'job:police'], ['reporter', '📰 기자 옷', 'job:reporter'], ['architect', '🏗️ 건축가 안전모', 'job:architect'],
+  ['weather', '🌦️ 기상캐스터 옷', 'job:weather'], ['crew', '✈️ 승무원 제복', 'job:crew'], ['designer', '🎨 디자이너 베레모', 'job:designer'],
+  ['composer', '🎼 작곡가 연미복', 'job:composer'], ['ai', '🤖 AI 개발자 VR', 'job:ai'], ['drone', '🚁 드론 조종사 옷', 'job:drone'],
+];
+// 직업 옷을 입으면 바뀌는 옷 색
+const JOB_SHIRT = { doctor: '#ffffff', chef: '#ffffff', vet: '#8fdcc0', police: '#2b4f8f', reporter: '#c9a77c', architect: '#ff9f43', weather: '#48b4e8', crew: '#1f3b73', designer: '#2b2b3a', composer: '#2b2b3a', ai: '#7f6cf0', drone: '#5c8f3c' };
+export const CATS = { hat: HATS, face: FACES, back: BACKS, pattern: PATTERNS, pet: PETS, job: JOB_OUTFITS };
 // 열쇠로 열리는 특별한 꾸미기 (열쇠 수 순서)
 export const SPECIALS = Object.entries(CATS).flatMap(([cat, list]) => list.filter((x) => x[2] > 0).map(([id, label, need]) => ({ cat, id, label, need }))).sort((a, b) => a.need - b.need);
 export const isOpen = (cat, id, keys) => { const it = CATS[cat]?.find((x) => x[0] === id); return !!it && keys >= it[2]; };
@@ -34,16 +43,18 @@ export function randomLook(keys = 0) {
   return {
     skin: pick(SKINS), hair: pick(HAIRS)[0], hairColor: pick(HAIR_COLORS), shirt: pick(SHIRTS),
     hat: Math.random() < 0.5 ? 'none' : pick(open(HATS)), face: Math.random() < 0.6 ? 'none' : pick(open(FACES)),
-    back: Math.random() < 0.6 ? 'none' : pick(open(BACKS)), pattern: pick(open(PATTERNS)), pet: Math.random() < 0.5 ? 'none' : pick(open(PETS)),
+    back: Math.random() < 0.6 ? 'none' : pick(open(BACKS)), pattern: pick(open(PATTERNS)), pet: Math.random() < 0.5 ? 'none' : pick(open(PETS)), job: 'none',
   };
 }
 // 받은 look 을 믿을 수 있는 값으로만 (모르는 값은 기본값)
-export function cleanLook(l = {}, keys = 99) {
+// jobs: 체험한 직업 목록 (null 이면 친구 모습처럼 모두 믿는다)
+export function cleanLook(l = {}, keys = 99, jobs = null) {
   const ok = (list, v, d) => (list.some((x) => (Array.isArray(x) ? x[0] : x) === v) ? v : d);
-  const okLock = (cat, v) => (CATS[cat].some((x) => x[0] === v && x[2] <= keys) ? v : CATS[cat][0][0]);
+  const open = (need) => (typeof need === 'string' ? (jobs === null || jobs.includes(need.slice(4))) : need <= keys);
+  const okLock = (cat, v) => (CATS[cat].some((x) => x[0] === v && open(x[2])) ? v : CATS[cat][0][0]);
   return {
     skin: ok(SKINS, l.skin, SKINS[1]), hair: ok(HAIRS, l.hair, 'short'), hairColor: ok(HAIR_COLORS, l.hairColor, HAIR_COLORS[0]), shirt: ok(SHIRTS, l.shirt, SHIRTS[4]),
-    hat: okLock('hat', l.hat), face: okLock('face', l.face), back: okLock('back', l.back), pattern: okLock('pattern', l.pattern), pet: okLock('pet', l.pet),
+    hat: okLock('hat', l.hat), face: okLock('face', l.face), back: okLock('back', l.back), pattern: okLock('pattern', l.pattern), pet: okLock('pet', l.pet), job: okLock('job', l.job),
   };
 }
 
@@ -155,7 +166,20 @@ function buildHair(head, style, color) {
 
 function buildHat(head, id, hairColor) {
   const P = (geo, c, x, y, z, o) => { const p = at(part(geo, c, o), x, y, z); head.add(p); return p; };
+  const dome = (c) => { const d = P(new THREE.SphereGeometry(0.63, 24, 12, 0, Math.PI * 2, 0, Math.PI * 0.38), c, 0, 0.04, -0.02); d.rotation.x = -0.15; return d; };
   switch (id) {
+    case 'job_doctor': { P(cyl(0.42, 0.46, 0.22, 20), '#ffffff', 0, 0.6, -0.02); head.add(at(new THREE.Mesh(box(0.2, 0.06, 0.02), toon('#e53935')), 0, 0.62, 0.45)); head.add(at(new THREE.Mesh(box(0.06, 0.2, 0.02), toon('#e53935')), 0, 0.62, 0.46)); break; }
+    case 'job_chef': { P(cyl(0.4, 0.36, 0.34, 20), '#ffffff', 0, 0.62, -0.02); const t = P(sph(0.46, 16, 12), '#ffffff', 0, 0.94, -0.02); t.scale.y = 0.8; break; }
+    case 'job_vet': { dome('#8fdcc0'); for (const [x, y] of [[0, 0.62], [-0.12, 0.72], [0.12, 0.72]]) head.add(at(new THREE.Mesh(sph(0.06, 8, 6), toon('#ffffff')), x, y, 0.36)); break; }
+    case 'job_police': { P(cyl(0.44, 0.4, 0.24, 20), '#1f3b73', 0, 0.6, -0.02); P(box(0.56, 0.05, 0.3), '#111a2e', 0, 0.5, 0.42); P(sph(0.08, 10, 8), '#ffd23f', 0, 0.64, 0.43, { line: false }); break; }
+    case 'job_reporter': { const c = P(sph(0.52, 18, 10), '#8d6e63', 0, 0.48, -0.02); c.scale.set(1.05, 0.42, 1.05); P(box(0.5, 0.05, 0.28), '#6d4c41', 0, 0.42, 0.46); break; }
+    case 'job_architect': { dome('#ffd23f'); P(cyl(0.72, 0.72, 0.05, 28), '#ffd23f', 0, 0.3, 0.04); P(box(0.08, 0.06, 0.62), '#f2b705', 0, 0.62, 0, { line: false }); break; }
+    case 'job_weather': { for (const [x, y, r] of [[-0.3, 0.55, 0.2], [0, 0.66, 0.26], [0.3, 0.55, 0.2], [0.15, 0.7, 0.18]]) P(sph(r, 12, 10), '#ffffff', x, y, -0.05, { t: 0.015 }); P(new THREE.TorusGeometry(0.58, 0.035, 8, 24, Math.PI), '#ffd23f', 0, 0, -0.02); break; }
+    case 'job_crew': { const c = P(cyl(0.3, 0.3, 0.2, 18), '#1f3b73', 0.08, 0.62, 0.02); c.rotation.z = -0.15; const b = P(cyl(0.31, 0.31, 0.05, 18), '#ffd23f', 0.08, 0.58, 0.02, { line: false }); b.rotation.z = -0.15; break; }
+    case 'job_designer': { const b = P(sph(0.52, 18, 10), '#e53935', 0.08, 0.6, -0.02); b.scale.set(1.05, 0.32, 1.05); b.rotation.z = -0.25; P(cyl(0.03, 0.03, 0.12, 6), '#e53935', 0.12, 0.76, -0.02); break; }
+    case 'job_composer': return buildHat(head, 'headphones', hairColor);
+    case 'job_ai': { P(new THREE.TorusGeometry(0.6, 0.05, 8, 24, Math.PI), '#3b3b4f', 0, 0, -0.02); break; }
+    case 'job_drone': { dome('#5c8f3c'); for (const s of [-1, 1]) { const g2 = P(cyl(0.13, 0.13, 0.1, 14), '#2b2b3a', s * 0.18, 0.48, 0.42); g2.rotation.x = Math.PI / 2 - 0.4; head.add(at(new THREE.Mesh(cyl(0.09, 0.09, 0.11, 14), toon('#8fd3ff')), s * 0.18, 0.48, 0.43).rotateX(Math.PI / 2 - 0.4)); } break; }
     case 'cap': { const d = P(new THREE.SphereGeometry(0.63, 24, 12, 0, Math.PI * 2, 0, Math.PI * 0.38), '#ff5c5c', 0, 0.04, -0.02); d.rotation.x = -0.15; const b = P(new THREE.CylinderGeometry(0.36, 0.36, 0.05, 20, 1, false, -Math.PI / 2, Math.PI), '#ff5c5c', 0, 0.3, 0.42); b.rotation.x = 0.2; P(sph(0.06, 8, 6), '#ffffff', 0, 0.66, 0); break; }
     case 'straw': P(cyl(0.38, 0.44, 0.3), '#f2cf7a', 0, 0.6, -0.03); P(cyl(0.88, 0.88, 0.04, 28), '#f2cf7a', 0, 0.46, -0.03); P(cyl(0.445, 0.445, 0.09), '#ef5b5b', 0, 0.5, -0.03, { line: false }); break;
     case 'ribbon': for (const s of [-1, 1]) { const c = P(new THREE.ConeGeometry(0.12, 0.24, 12), '#ff6b8b', 0.33 + s * 0.13, 0.48, 0.1); c.rotation.z = s * Math.PI / 2; } P(sph(0.07, 10, 8), '#ff3b7a', 0.33, 0.48, 0.1); break;
@@ -239,6 +263,7 @@ export function buildPet(id) {
 // ---------- 캐릭터 만들기 ----------
 export function buildAvatar(look) {
   const L = cleanLook(look);
+  if (L.job !== 'none') { L.shirt = JOB_SHIRT[L.job] || L.shirt; L.pattern = 'plain'; }
   const g = new THREE.Group();
   const parts = {};
   // 다리 (엉덩이에서 흔들리게)
@@ -265,11 +290,18 @@ export function buildAvatar(look) {
   head.add(part(sph(R, 28, 20), L.skin));
   parts.eyes = buildFace(head);
   // 머리를 덮는 모자를 쓰면 위로 솟는 머리는 짧은 머리로 바꿔 모자를 뚫고 나오지 않게 한다
-  const covering = ['cap', 'straw', 'magic', 'dino', 'explorer'].includes(L.hat);
+  const hatId = L.job !== 'none' ? `job_${L.job}` : L.hat;
+  const covering = ['cap', 'straw', 'magic', 'dino', 'explorer', 'job_doctor', 'job_chef', 'job_vet', 'job_police', 'job_reporter', 'job_architect', 'job_crew', 'job_designer', 'job_drone'].includes(hatId);
   const tall = ['spiky', 'messy', 'tuft', 'bun', 'buns', 'curly', 'twoblock'];
   buildHair(head, covering && tall.includes(L.hair) ? 'short' : L.hair, L.hairColor);
-  buildHat(head, L.hat, L.hairColor);
-  buildFaceItem(head, L.face);
+  buildHat(head, hatId, L.hairColor);
+  // 직업 소품: 청진기·넥타이·VR 고글·나비넥타이
+  if (L.job === 'doctor' || L.job === 'vet') { const st = at(part(new THREE.TorusGeometry(0.2, 0.03, 8, 20, Math.PI), '#3c8dde', { t: 0.01 }), 0, 1.0, 0.24); st.rotation.z = Math.PI; g.add(st); g.add(at(part(sph(0.06, 8, 6), '#9e9e9e', { t: 0.01 }), 0.0, 0.8, 0.3)); }
+  if (L.job === 'police' || L.job === 'crew') g.add(at(part(box(0.08, 0.3, 0.04), L.job === 'police' ? '#e8322d' : '#ffd23f', { t: 0.01 }), 0, 0.82, 0.3));
+  if (L.job === 'composer') for (const s2 of [-1, 1]) { const bt = at(part(new THREE.ConeGeometry(0.07, 0.14, 8), '#e53935', { t: 0.01 }), s2 * 0.07, 0.98, 0.28); bt.rotation.z = s2 * Math.PI / 2; g.add(bt); }
+  if (L.job === 'ai') { head.add(at(part(box(0.78, 0.26, 0.24), '#3b3b4f', { t: 0.02 }), 0, 0.06, 0.48)); head.add(at(new THREE.Mesh(box(0.66, 0.08, 0.02), new THREE.MeshBasicMaterial({ color: '#5fd38d' })), 0, 0.06, 0.61)); }
+  if (L.job === 'chef') g.add(at(part(box(0.32, 0.12, 0.05), '#e53935', { t: 0.01 }), 0, 1.0, 0.27));
+  if (L.job !== 'ai') buildFaceItem(head, L.face);
   buildBack(g, L.back, parts);
   parts.head = head;
   g.userData.parts = parts;

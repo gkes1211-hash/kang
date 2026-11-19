@@ -12,9 +12,10 @@ import MARKET from './content/market.js';
 import POST from './content/post.js';
 import TURTLE from './content/turtle.js';
 import BUGS from './content/bug.js';
+import { JOBS, JOB, JOB_SPECIAL, MISSIONS } from './content/job.js';
 import { pickOne, shuffle } from './content/h.js';
 
-export { shuffle, PAINTS, MIXES };
+export { shuffle, PAINTS, MIXES, JOBS, JOB };
 
 // 놀이 구역. host = 구역을 지키는 동물 친구, hello = 들어갈 때 하는 말
 export const SUBJECTS = [
@@ -32,6 +33,7 @@ export const SUBJECTS = [
   { id: 'fire', name: '삐뽀 소방서', short: '안전', emoji: '🚒', color: '#e8322d', host: '🐶', hostName: '강아지 소방관', hello: '삐뽀삐뽀! 출동 준비! 안전 퀴즈 3개를 풀면 꼬마 소방관이 될 수 있어!', island: 'life' },
   { id: 'market', name: '알뜰 꼬마 시장', short: '경제', emoji: '🛒', color: '#f2a516', host: '🐿️', hostName: '다람쥐 사장님', hello: '어서 오세요! 돈을 똑똑하게 쓰는 꼬마 손님을 찾고 있어요. 도전해 볼래요?', island: 'life' },
   { id: 'post', name: '마음 우체국', short: '마음', emoji: '💌', color: '#ff6b8b', host: '🐰', hostName: '토끼 우체부', hello: '마음 편지가 뒤죽박죽 섞였어! 친구 마음을 알아맞히고 편지를 배달해 줄래?', island: 'life' },
+  { id: 'job', name: '두근두근 직업 체험관', short: '직업', emoji: '🏢', color: '#6a5ae0', host: '🐨', hostName: '코알라 진로 선생님', hello: '어서 와! 직업 카드 벽에서 해 보고 싶은 직업을 골라 봐. 미션 3개를 해내면 그 직업 옷을 줄게!', island: 'life' },
 ];
 export const SUBJECT = Object.fromEntries(SUBJECTS.map((s) => [s.id, s]));
 // 열기구는 도장 10개면 탈 수 있다. 건물은 앞으로도 계속 늘어나지만 "보너스 건물"을 따로 두지 않는다:
@@ -76,6 +78,20 @@ function englishPuzzle(kind, g) {
 }
 
 // 구역에 들어갈 때마다 새 퍼즐 3개
+// 직업 체험관: 고른 직업의 미션 3개 (학년 묶음 1·2 / 3·4 / 5·6)
+const jobBand = (g) => (g <= 2 ? 1 : g <= 4 ? 2 : 3);
+export function jobPuzzles(jobId, grade) {
+  const g = g6(grade); const band = jobBand(g);
+  const list = MISSIONS[jobId]?.[band] || [];
+  const sp = JOB_SPECIAL[jobId];
+  let special = null;
+  if (sp === 'color') { const [mix] = draw(`mix:${g}`, MIXES.filter((m) => m.grades.includes(g))); special = { type: 'color', mix, q: `🎨 디자이너 미션! 물감을 섞어 "${mix.name}"을(를) 만들어요.`, hint: `${mix.parts.length}가지 물감을 섞어요.`, ex: `${mix.parts.join(' + ')} = ${mix.name}` }; }
+  if (sp === 'melody') { const [notes] = draw(`mel:${g}`, MELODIES[g]); special = { type: 'melody', notes, q: '🎼 작곡가 미션! 계이름대로 건반을 눌러 가락을 완성해요.', hint: '🔊 들어 보기를 누르고 따라 해 봐요.' }; }
+  if (sp === 'code') { const [l] = draw(`code:${g}`, LEVELS[g]); special = { type: 'code', ...l, q: '🚁 드론 조종사 미션! 블록 명령으로 드론을 열쇠까지 보내요.' }; }
+  const picked = draw(`job:${jobId}:${band}`, list, special ? 2 : 3);
+  return special ? [picked[0], special, picked[1]] : picked;
+}
+
 // 코딩 섬 건물은 stage(몇 번째로 깼는지)에 따라 다음 단계 문제가 차례로 나온다
 const nth = (list, i) => list[((i % list.length) + list.length) % list.length];
 export function puzzlesFor(subj, grade, stage = 0) {
@@ -108,6 +124,7 @@ export function puzzlesFor(subj, grade, stage = 0) {
     }
     case 'turtle': return [0, 1, 2].map((k) => ({ type: 'turtle', ...nth(TURTLE[g], stage * 3 + k) }));
     case 'bug': return [0, 1, 2].map((k) => nth(BUGS[g], stage * 3 + k));
+    case 'job': return jobPuzzles(JOBS[Math.floor(Math.random() * JOBS.length)].id, g);
     case 'fire': return draw(`fire:${g}`, FIRE[g], 3);
     case 'market': return draw(`market:${g}`, MARKET[g], 3).map((p) => (typeof p === 'function' ? p() : p));
     case 'post': return draw(`post:${g}`, POST[g], 3);
@@ -123,11 +140,12 @@ export function finalPuzzles(grade) {
     ['soc', () => draw(`soc:${g}`, SOC[g])[0]], ['eng', () => englishPuzzle('listen', g)], ['music', () => draw(`music:${g}`, MUSIC[g])[0]],
     ['art', () => draw(`art:${g}`, ART[g])[0]], ['pe', () => draw(`pe:${g}`, PE[g])[0]], ['code', () => draw(`codeq:${g}`, CODE_Q[g])[0]],
     ['bug', () => draw(`bugq:${g}`, BUGS[g].filter((p) => p.type !== 'bug'))[0]],
+    ['job', () => { const j = JOBS[Math.floor(Math.random() * JOBS.length)].id; return draw(`job:${j}:${jobBand(g)}`, MISSIONS[j][jobBand(g)])[0]; }],
     ['fire', () => draw(`fire:${g}`, FIRE[g])[0]], ['market', () => { const p = draw(`market:${g}`, MARKET[g])[0]; return typeof p === 'function' ? p() : p; }], ['post', () => draw(`post:${g}`, POST[g])[0]],
   ];
   return shuffle(pools).slice(0, 4).map(([subj, f]) => ({ ...f(), subj }));
 }
 
 // 시험용
-export const BANK = { KOR, SOC, SCI, MATH, WORDS, SENT, MELODIES, MUSIC, ART, PE, PE_MOVES, LEVELS, CODE_Q, FIRE, MARKET, POST, TURTLE, BUGS };
+export const BANK = { KOR, SOC, SCI, MATH, WORDS, SENT, MELODIES, MUSIC, ART, PE, PE_MOVES, LEVELS, CODE_Q, FIRE, MARKET, POST, TURTLE, BUGS, MISSIONS };
 export { pickOne };

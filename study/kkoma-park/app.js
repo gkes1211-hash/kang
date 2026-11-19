@@ -1,6 +1,6 @@
 // 꼬마 탐험대 공원: 첫 화면 → 캐릭터 꾸미기 → 3D 공원(혼자 / 친구들과) 또는 선생님 화면
 import { World, AREAS } from './world.js';
-import { SUBJECTS, SUBJECT, STAMPS_TO_FLY, puzzlesFor, finalPuzzles } from './content.js';
+import { SUBJECTS, SUBJECT, STAMPS_TO_FLY, puzzlesFor, finalPuzzles, JOBS, JOB, jobPuzzles } from './content.js';
 import { openPuzzle } from './puzzles.js';
 import { Host, Client, EMOTES, cleanName } from './net.js';
 import { THREE } from './toon.js';
@@ -46,16 +46,17 @@ function homeError(text) { $('home-msg').textContent = text; $('home-msg').hidde
 // ---------------- 기록 (이름+학년마다) ----------------
 // keys: 모은 열쇠 수, stamps: {구역: 깬 횟수}, stars: {구역: 가장 많이 받은 별}, flights: 열기구 탄 횟수
 const progKey = () => `prog2.${me.grade}.${me.name}`;
-let prog = { keys: 0, stamps: {}, stars: {}, flights: 0, right: 0, stage: {} };
+let prog = { keys: 0, stamps: {}, stars: {}, flights: 0, right: 0, stage: {}, jobs: {} };
 function loadProg() {
   try {
     const p = JSON.parse(store.get(progKey(), '{}'));
-    return { keys: Math.max(0, p.keys | 0), stamps: p.stamps && typeof p.stamps === 'object' ? p.stamps : {}, stars: p.stars || {}, flights: p.flights | 0, right: p.right | 0, stage: p.stage && typeof p.stage === 'object' ? p.stage : {} };
-  } catch { return { keys: 0, stamps: {}, stars: {}, flights: 0, right: 0, stage: {} }; }
+    return { keys: Math.max(0, p.keys | 0), stamps: p.stamps && typeof p.stamps === 'object' ? p.stamps : {}, stars: p.stars || {}, flights: p.flights | 0, right: p.right | 0, stage: p.stage && typeof p.stage === 'object' ? p.stage : {}, jobs: p.jobs && typeof p.jobs === 'object' ? p.jobs : {} };
+  } catch { return { keys: 0, stamps: {}, stars: {}, flights: 0, right: 0, stage: {}, jobs: {} }; }
 }
 const saveProg = () => store.set(progKey(), JSON.stringify(prog));
 const stampList = () => SUBJECTS.filter((s) => prog.stamps[s.id] > 0).map((s) => s.id);
-function loadLook() { try { const l = JSON.parse(store.get(`look.${me.name}`, 'null')); return l ? cleanLook(l, prog.keys) : randomLook(0); } catch { return randomLook(0); } }
+const jobList = () => Object.keys(prog.jobs || {}).filter((k) => prog.jobs[k]);
+function loadLook() { try { const l = JSON.parse(store.get(`look.${me.name}`, 'null')); return l ? cleanLook(l, prog.keys, jobList()) : randomLook(0); } catch { return randomLook(0); } }
 const saveLook = () => store.set(`look.${me.name}`, JSON.stringify(me.look));
 
 // ============================================================
@@ -105,7 +106,7 @@ const TABS = {
   face: () => [['피부', 'swatch', 'skin', SKINS], ['얼굴 꾸미기', 'chips', 'face', CATS.face]],
   hair: () => [['머리 모양', 'chips', 'hair', HAIRS.map(([id, l]) => [id, l, 0])], ['머리 색', 'swatch', 'hairColor', HAIR_COLORS]],
   clothes: () => [['옷 색', 'swatch', 'shirt', SHIRTS], ['옷 무늬', 'chips', 'pattern', CATS.pattern]],
-  items: () => [['머리에 쓰기', 'chips', 'hat', CATS.hat], ['등·손', 'chips', 'back', CATS.back]],
+  items: () => [['머리에 쓰기', 'chips', 'hat', CATS.hat], ['등·손', 'chips', 'back', CATS.back], ['직업 옷 (🏢 직업 체험관에서 체험하면 열려요)', 'chips', 'job', CATS.job]],
   pet: () => [['같이 다니는 친구', 'chips', 'pet', CATS.pet]],
 };
 function renderDresser() {
@@ -125,12 +126,13 @@ function renderDresser() {
     } else {
       list.forEach(([id, label, need]) => {
         const b = document.createElement('button'); b.type = 'button'; b.textContent = label;
-        const locked = need > prog.keys;
-        if (need > 0) b.classList.add('special');
-        if (locked) { b.classList.add('locked'); b.dataset.need = `🔒🗝️${need}`; b.title = `열쇠 ${need}개를 모으면 열려요`; }
+        const jobNeed = typeof need === 'string' ? JOB[need.slice(4)] : null;
+        const locked = jobNeed ? !prog.jobs?.[jobNeed.id] : need > prog.keys;
+        if (jobNeed || need > 0) b.classList.add('special');
+        if (locked) { b.classList.add('locked'); b.dataset.need = jobNeed ? '🔒🏢' : `🔒🗝️${need}`; b.title = jobNeed ? `직업 체험관에서 ${jobNeed.name} 체험을 하면 열려요` : `열쇠 ${need}개를 모으면 열려요`; }
         b.setAttribute('aria-pressed', String(me.look[key] === id));
         b.addEventListener('click', () => {
-          if (locked) { sfx.fail(); flashKeys(`🔒 열쇠 ${need}개를 모으면 "${label}"이(가) 열려요! (지금 ${prog.keys}개)`); return; }
+          if (locked) { sfx.fail(); flashKeys(jobNeed ? `🔒 생활 섬 🏢 직업 체험관에서 ${jobNeed.emoji} ${jobNeed.name} 미션을 해내면 "${label}"이(가) 열려요!` : `🔒 열쇠 ${need}개를 모으면 "${label}"이(가) 열려요! (지금 ${prog.keys}개)`); return; }
           me.look[key] = id; sfx.pop(); renderDresser(); refreshPreview();
         });
         row.append(b);
@@ -145,7 +147,7 @@ function flashKeys(text) { const k = $('av-keys'); const old = k.innerHTML; k.in
 document.querySelectorAll('#av-tabs button').forEach((b) => b.addEventListener('click', () => { dresser.tab = b.dataset.tab; sfx.pop(); renderDresser(); }));
 $('av-random').addEventListener('click', () => { me.look = randomLook(prog.keys); sfx.good(3); renderDresser(); refreshPreview(); });
 $('av-back').addEventListener('click', () => { if (dresser.mode === 'edit') { show('screen-game'); world?.resize(); } else show('screen-home'); });
-$('av-go').addEventListener('click', () => { unlockAudio(); me.look = cleanLook(me.look, prog.keys); saveLook(); const f = dresser.onDone; dresser.onDone = null; f?.(); });
+$('av-go').addEventListener('click', () => { unlockAudio(); me.look = cleanLook(me.look, prog.keys, jobList()); saveLook(); const f = dresser.onDone; dresser.onDone = null; f?.(); });
 function openDresser(mode, onDone) {
   dresser.mode = mode; dresser.onDone = onDone;
   $('av-go').textContent = mode === 'edit' ? '이대로 할래요! ✨' : '공원으로 출발! 🌳';
@@ -342,17 +344,36 @@ function interact(it) {
   }
 }
 
-function enterZone(subj) {
+// 🏢 직업 체험관: 문 앞에서 직업 카드를 고른다
+function pickJob(onPick) {
+  sfx.pop?.();
+  modal(`
+    <div class="m-emoji">🃏</div>
+    <h2>오늘은 어떤 직업을 해 볼까?</h2>
+    <p>카드를 고르면 그 직업 미션 3개가 나와요. 해내면 직업 옷이 열려요!</p>
+    <div class="job-grid">${JOBS.map((j) => `<button type="button" class="job-card${prog.jobs?.[j.id] ? ' done' : ''}" data-job="${j.id}" style="--c:${j.color}"><i>${j.emoji}</i>${esc(j.name)}${prog.jobs?.[j.id] ? '<small>✅ 옷 열림</small>' : ''}</button>`).join('')}</div>
+  `, [['나중에 할래요', null, 'ghost']]);
+  $('modal').querySelectorAll('.job-card').forEach((b) => b.addEventListener('click', () => { $('modal').hidden = true; $('modal').innerHTML = ''; if (world) world.paused = false; onPick(b.dataset.job); }));
+}
+function enterZone(subj, jobId = null) {
   const area = `zone:${subj}`;
   let z = zones[subj];
+  if (subj === 'job' && (!z || z.taken) && !jobId) { pickJob((j) => enterZone('job', j)); return; }
   // 다 풀고 열쇠까지 받은 구역은 다시 들어오면 새 문제
   if (!z || z.taken) {
-    z = zones[subj] = { puzzles: puzzlesFor(subj, me.grade, prog.stage[subj] | 0), solved: [false, false, false], wrong: 0, hints: 0, taken: false, stage: prog.stage[subj] | 0 };
+    const puzzles = subj === 'job' ? jobPuzzles(jobId, me.grade) : puzzlesFor(subj, me.grade, prog.stage[subj] | 0);
+    z = zones[subj] = { puzzles, solved: [false, false, false], wrong: 0, hints: 0, taken: false, stage: prog.stage[subj] | 0, job: jobId };
     resetZoneView(subj);
   }
   world.goTo(area);
   const s = SUBJECT[subj];
   const times = prog.stamps[subj] | 0;
+  if (subj === 'job') {
+    const j = JOB[z.job];
+    world.setBoardText(area, `오늘의 직업: ${j.emoji} ${j.name} · 미션 3개를 해내면 직업 옷! · ${me.grade}학년`);
+    toast(`${s.host} ${s.hostName}: "${j.say} 미션 상자 3개를 열어 봐!"`, 5200); speak(`${j.say}`);
+    return;
+  }
   if (s.stages) world.setBoardText(area, `스테이지 ${(z.stage | 0) + 1} · 상자 3개를 열면 다음 스테이지! · ${me.grade}학년`);
   else world.setBoardText(area, times ? `도장 ✅ · 또 깨면 열쇠 하나 더! · ${me.grade}학년` : `보물 상자 3개를 열면 열쇠! · ${me.grade}학년`);
   toast(`${s.host} ${s.hostName}: "${s.hello}"`, 5200);
@@ -408,6 +429,8 @@ function takeKey(subj) {
   prog.stamps[subj] = (prog.stamps[subj] | 0) + 1;
   prog.stars[subj] = Math.max(prog.stars[subj] || 0, stars);
   if (SUBJECT[subj].stages) prog.stage[subj] = (z.stage | 0) + 1;
+  const newJob = subj === 'job' && z.job && !prog.jobs[z.job] ? JOB[z.job] : null;
+  if (subj === 'job' && z.job) prog.jobs[z.job] = true;
   saveProg();
   refreshHud();
   sendEv({ kind: 'key', subj, keys: prog.keys, stamps: stampList() });
@@ -418,7 +441,7 @@ function takeKey(subj) {
   const unlocked = SPECIALS.filter((x) => x.need > before && x.need <= prog.keys);
   const next = n >= STAMPS_TO_FLY ? `🎈 도장 ${STAMPS_TO_FLY}개를 모았어요! 분수 광장 옆 열기구 언덕으로 가 봐요!` : `열기구까지 도장 ${STAMPS_TO_FLY - n}개 더!`;
   speak(first ? `${s.name} 도장 쾅! 열쇠를 얻었어요!` : '열쇠를 하나 더 얻었어요!');
-  const after = () => { if (unlocked.length) showUnlock(unlocked); };
+  const after = () => { if (newJob) showJobUnlock(newJob, () => { if (unlocked.length) showUnlock(unlocked); }); else if (unlocked.length) showUnlock(unlocked); };
   modal(`
     <div class="m-emoji">🗝️</div>
     <h2>${first ? `${esc(s.name)} 도장 쾅! 📒` : '열쇠를 하나 더 얻었어요!'}</h2>
@@ -437,6 +460,15 @@ function showUnlock(list) {
     <div>${list.map((x) => `<span class="unlock-item">${esc(x.label)}</span>`).join(' ')}</div>
     <p>열쇠를 더 모으면 더 멋진 꾸미기가 열려요.</p>
   `, [['👕 지금 꾸며 보기', () => openDresser('edit', afterDress), 'ok'], ['계속 탐험하기', null, 'ghost']]);
+}
+function showJobUnlock(j, then) {
+  sfx.win();
+  speak(`${j.name} 옷이 열렸어요!`);
+  modal(`
+    <div class="m-emoji">${j.emoji}</div>
+    <h2>${esc(j.name)} 옷이 열렸어요!</h2>
+    <p>꾸미기 → 🎒 소품 → <b>직업 옷</b>에서 언제든 입을 수 있어요.<br>📒 직업 도감: <b>${jobList().length}</b> / ${JOBS.length}</p>
+  `, [['👕 지금 입어 보기', () => { me.look.job = j.id; saveLook(); openDresser('edit', afterDress); }, 'ok'], ['계속 탐험하기', then, 'ghost']]);
 }
 function afterDress() {
   world.setPlayer(me.name, me.look, prog.keys);
@@ -518,6 +550,8 @@ function openBook() {
     <div class="book-grid">${SUBJECTS.map((s) => `<div class="${prog.stamps[s.id] ? 'got' : ''}"><b>${s.emoji}</b>${esc(s.name)}<br>${prog.stamps[s.id] ? `✅ ${prog.stamps[s.id]}번 · ${'⭐'.repeat(prog.stars[s.id] || 0)}` : '아직이에요'}</div>`).join('')}</div>
     <p class="book-next">${n >= STAMPS_TO_FLY ? '🎈 열기구를 탈 수 있어요!' : `🎈 열기구까지 도장 ${STAMPS_TO_FLY - n}개`}<br>${nx ? `🎁 열쇠 ${nx.need - prog.keys}개 더 모으면 <b>${esc(nx.label)}</b>!` : '🎉 특별 꾸미기를 모두 열었어요!'}</p>
     ${opened.length ? `<p>열린 특별 꾸미기: ${opened.map((x) => esc(x.label)).join(' · ')}</p>` : ''}
+    <h3 class="book-h">🏢 직업 도감 ${jobList().length} / ${JOBS.length}</h3>
+    <div class="job-book">${JOBS.map((j) => `<span class="${prog.jobs?.[j.id] ? 'got' : ''}" title="${esc(j.name)}">${j.emoji}</span>`).join('')}</div>
   `, [['👕 꾸미기', () => openDresser('edit', afterDress), 'ok'], ['닫기', null, 'ghost']]);
 }
 $('book-btn').addEventListener('click', openBook);
