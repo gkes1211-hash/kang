@@ -1165,6 +1165,12 @@ export class World {
     this.snapCamera = true;
     this.onArea(area);
   }
+  // 땅 위 한 점이 화면(캔버스)의 어디에 보이는지
+  project(x, y, z) {
+    const v = new THREE.Vector3(x, y, z).project(this.camera);
+    const r = this.canvas.getBoundingClientRect();
+    return { x: ((v.x + 1) / 2) * r.width, y: ((1 - v.y) / 2) * r.height, w: r.width, h: r.height, ok: v.z < 1 };
+  }
   // 멀리서 고른 건물 앞으로 바로 가기
   quickTravel(subj) {
     this.setView('normal');
@@ -1340,7 +1346,7 @@ export class World {
       sp.position.copy(far ? sp.userData.far : sp.userData.near); if (far) sp.position.y += big * 0.4;
     }
     for (const [id, lb] of Object.entries(this.islandLabels || {})) {
-      lb.visible = v === 'all';
+      lb.visible = false; // 섬 전체 보기에서는 화면 위 섬 카드(app.js)가 대신 보인다
       const s2 = (D / 200) ** 0.8; lb.scale.set(lb.userData.w0 ||= lb.scale.x, lb.userData.h0 ||= lb.scale.y, 1);
       lb.scale.set(lb.userData.w0 * s2, lb.userData.h0 * s2, 1); void id;
     }
