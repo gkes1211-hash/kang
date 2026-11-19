@@ -1,0 +1,21 @@
+/* 학습 앱 모음 · 주제 목록 화면이 같이 쓰는 모양 */
+:root { font-family: "Pretendard", "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", system-ui, sans-serif; color: #2a2438; color-scheme: light; --bg: #fff7ea; --ink: #5a3d22; --soft: #7a6a5a; --card: #ffffff; --line: #f0dcc0; }
+* { box-sizing: border-box; }
+html, body { -webkit-tap-highlight-color: transparent; overscroll-behavior: none; }
+body { margin: 0; min-height: 100vh; min-height: 100dvh; display: flex; justify-content: center; padding: calc(22px + env(safe-area-inset-top)) 16px calc(28px + env(safe-area-inset-bottom)); background: var(--bg); word-break: keep-all; }
+main { width: 100%; max-width: 620px; text-align: center; }
+.back { display: table; margin: 0 auto 8px; color: var(--ink); font-weight: 800; font-size: 16px; text-decoration: none; padding: 8px 14px; border-radius: 999px; background: #fff; border: 2px solid var(--line); }
+.back:hover, .back:focus-visible { border-color: var(--ink); outline: none; }
+.badge { font-size: 64px; line-height: 1; margin-top: 6px; }
+h1 { font-size: clamp(30px, 8vw, 42px); margin: 8px 0 6px; color: var(--ink); }
+p.sub { margin: 0 0 22px; color: var(--soft); font-size: 18px; }
+a.card { display: flex; align-items: center; gap: 16px; text-align: left; text-decoration: none; color: inherit; background: var(--card); border-radius: 24px; padding: 16px 18px; margin-bottom: 14px; box-shadow: 0 6px 20px rgba(120, 80, 30, 0.1); border: 3px solid transparent; touch-action: manipulation; }
+a.card:hover, a.card:focus-visible { border-color: var(--accent, var(--ink)); outline: none; }
+a.card:active { transform: scale(0.98); }
+a.card .ic { width: 76px; height: 76px; border-radius: 20px; flex: none; display: grid; place-items: center; font-size: 42px; background: var(--tint, #fff1d6); }
+a.card img.ic { background: none; }
+a.card b { display: block; font-size: 22px; margin-bottom: 4px; color: var(--accent, var(--ink)); }
+a.card span.d { color: var(--soft); font-size: 16px; }
+a.card small { display: block; margin-top: 6px; color: var(--soft); font-size: 14px; }
+a.card .go { margin-left: auto; font-size: 30px; color: var(--accent, var(--ink)); flex: none; }
+.note { color: var(--soft); font-size: 13px; margin-top: 18px; line-height: 1.6; }

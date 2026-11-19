@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <!-- 바깥 연결은 "친구들과 함께하기"에 쓰는 PeerJS 연결 서버(0.peerjs.com)뿐이다.
+       카메라 영상은 튼튼 운동장에서 기기 안에서만 쓰고 어디로도 보내지 않는다.
+       'wasm-unsafe-eval' 은 몸 인식 엔진(WebAssembly)을 기기 안에서 돌리는 데 필요하다.
+       localhost·127.0.0.1 은 시험용 연결 서버를 쓸 때만 쓰인다. -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' blob: mediastream:; connect-src 'self' https://0.peerjs.com wss://0.peerjs.com http://localhost:* ws://localhost:* http://127.0.0.1:* ws://127.0.0.1:*; manifest-src 'self'; worker-src 'self' blob:; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'">
+  <meta name="theme-color" content="#8fd46f">
+  <meta name="description" content="공원 곳곳의 보물 상자 문제를 풀고 열쇠를 모아 열기구를 타고 떠나는 3D 공부 탐험">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="꼬마 탐험대 공원">
+  <title>꼬마 탐험대 공원</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon-192.png" type="image/png">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="stylesheet" href="vendor/jua/jua.css">
+  <link rel="stylesheet" href="style.css">
+  <script type="module" src="app.js"></script>
+</head>
+<body>
+  <main id="app">
+    <!-- 첫 화면 -->
+    <section id="screen-home" class="screen card-screen active" aria-labelledby="title">
+      <div class="card home">
+        <div class="emojis" aria-hidden="true">🗝️🎡🌳</div>
+        <h1 id="title">꼬마 탐험대 공원</h1>
+        <p class="sub">공원 곳곳의 보물 상자를 열고, 열쇠를 모아 열기구를 타요!</p>
+
+        <label class="label" for="name">✏️ 내 별명</label>
+        <input id="name" class="text-in" maxlength="8" autocomplete="off" placeholder="예: 별빛토끼">
+
+        <div class="label">🎒 몇 학년이에요?</div>
+        <div class="grades" role="radiogroup" aria-label="학년">
+          <button type="button" role="radio" data-grade="1">1<small>학년</small></button>
+          <button type="button" role="radio" data-grade="2">2<small>학년</small></button>
+          <button type="button" role="radio" data-grade="3">3<small>학년</small></button>
+          <button type="button" role="radio" data-grade="4">4<small>학년</small></button>
+          <button type="button" role="radio" data-grade="5">5<small>학년</small></button>
+          <button type="button" role="radio" data-grade="6">6<small>학년</small></button>
+        </div>
+
+        <div class="opt green" id="join-card">
+          <button type="button" id="join" class="opt-main"><i>🎒</i><span><b>친구들과 들어가기</b><small>선생님이 알려 준 숫자 4개로 들어가요</small></span></button>
+          <div class="code-row"><input id="code" class="text-in code" inputmode="numeric" maxlength="4" autocomplete="off" placeholder="숫자 4개" aria-label="수업 코드"></div>
+        </div>
+        <button type="button" id="solo" class="opt"><i>😊</i><span><b>혼자 놀기</b><small>연결 없이 혼자 공원을 돌아다녀요</small></span></button>
+        <button type="button" id="host" class="opt blue"><i>🧑‍🏫</i><span><b>선생님: 공원 열기</b><small>이 기기가 방장이 되어 아이들을 받아요</small></span></button>
+
+        <p id="home-msg" class="error" role="alert" hidden></p>
+        <div class="install">
+          <button type="button" id="install" hidden>📲 꼬마 탐험대 공원 앱 설치하기</button>
+          <p id="ios-hint" hidden>📲 아이콘 만들기: 공유 버튼 → "홈 화면에 추가"</p>
+          <a id="win-shortcut" href="desktop-shortcut/kkoma-park-desktop-shortcut.zip" download hidden>💻 윈도우 바탕화면 아이콘 받기</a>
+        </div>
+        <p class="privacy">🔒 친구들과 함께할 때는 별명·학년·캐릭터 모습·위치·푼 문제 수만 주고받아요. 운동장 카메라 영상은 이 기기 안에서만 써요.</p>
+      </div>
+    </section>
+
+    <!-- 캐릭터 꾸미기 -->
+    <section id="screen-avatar" class="screen card-screen" aria-labelledby="av-title">
+      <div class="card avatar">
+        <h1 id="av-title">✨ 내 캐릭터 꾸미기</h1>
+        <div class="av-wrap">
+          <div class="av-left">
+            <div class="av-stage"><canvas id="av-canvas" aria-label="내 캐릭터 미리보기"></canvas><span>👆 밀어서 빙글</span></div>
+            <div class="av-name" id="av-name">별빛토끼</div>
+            <button type="button" id="av-random" class="btn-soft">🎲 아무거나</button>
+            <div class="av-keys" id="av-keys"></div>
+          </div>
+          <div class="av-right">
+            <div class="tabs" role="tablist" id="av-tabs">
+              <button type="button" role="tab" data-tab="face">😀 얼굴</button>
+              <button type="button" role="tab" data-tab="hair">💇 머리</button>
+              <button type="button" role="tab" data-tab="clothes">👕 옷</button>
+              <button type="button" role="tab" data-tab="items">🎩 소품</button>
+              <button type="button" role="tab" data-tab="pet">🐾 친구</button>
+            </div>
+            <div class="tab-body" id="av-body"></div>
+          </div>
+        </div>
+        <div class="av-btns">
+          <button type="button" id="av-back" class="btn-soft">◀ 뒤로</button>
+          <button type="button" id="av-go" class="btn-go">공원으로 출발! 🌳</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 게임 화면 -->
+    <section id="screen-game" class="screen play">
+      <div id="world-wrap" class="world-wrap"><canvas id="world" aria-label="꼬마 탐험대 공원 3D 화면"></canvas></div>
+      <div class="hud top">
+        <div class="pill" id="where">🗺️ 광장</div>
+        <button type="button" class="pill gold" id="keys">🗝️ 0</button>
+        <div class="pill" id="net" hidden></div>
+        <div class="spacer"></div>
+        <button type="button" class="pill icon" id="book-btn" aria-label="탐험 수첩">📒</button>
+        <button type="button" class="pill icon" id="dress-btn" aria-label="캐릭터 꾸미기">👕</button>
+        <button type="button" class="pill icon" id="emote-btn" aria-label="기분 표현하기">😀</button>
+        <button type="button" class="pill icon" id="set-btn" aria-label="소리·화면 설정">⚙️</button>
+        <button type="button" class="pill icon" id="quit" aria-label="나가기">✕</button>
+      </div>
+      <div id="settings" class="settings" hidden>
+        <b>⚙️ 설정</b>
+        <button type="button" data-sound="music"><span>🎵</span>배경음악<i></i></button>
+        <button type="button" data-sound="sfx"><span>🔔</span>효과음<i></i></button>
+        <button type="button" data-sound="voice"><span>🗣️</span>목소리 안내<i></i></button>
+        <div class="zoom-row"><span>🔍 화면 크기</span><button type="button" data-zoom="out" aria-label="화면 작게 (멀리 보기)">➖</button><button type="button" data-zoom="in" aria-label="화면 크게 (가까이 보기)">➕</button></div>
+        <button type="button" id="guide-again"><span>🧭</span>토리 대장 설명 다시 듣기</button>
+      </div>
+      <div class="zoom" aria-label="화면 크기 조절">
+        <button type="button" id="zoom-in" aria-label="화면 크게 (가까이 보기)">➕</button>
+        <button type="button" id="zoom-out" aria-label="화면 작게 (멀리 보기)">➖</button>
+      </div>
+      <div id="guide" class="guide" hidden>
+        <div class="g-face" aria-hidden="true"><span>🧭</span><small>토리 대장</small></div>
+        <div class="g-body">
+          <p id="g-text" aria-live="polite"></p>
+          <div class="g-btns">
+            <button type="button" id="g-voice" aria-label="다시 듣기">🔊</button>
+            <span id="g-step"></span>
+            <button type="button" id="g-skip" class="ghost">건너뛰기</button>
+            <button type="button" id="g-next" class="ok">다음 ▶</button>
+          </div>
+        </div>
+      </div>
+      <div id="stamps" class="stamps" aria-label="모은 도장"></div>
+      <canvas id="minimap" class="minimap" width="272" height="272" aria-label="마을 지도: 누르면 그곳으로 걸어가요" hidden></canvas>
+      <div id="emotes" class="emotes" hidden></div>
+      <div id="toast" class="toast" aria-live="polite"></div>
+      <button type="button" id="act" class="act" hidden></button>
+      <div id="stick" class="stick" aria-hidden="true"><i></i></div>
+      <p class="help" id="help">🖱️ 가고 싶은 곳을 누르거나 ⬆️⬇️⬅️➡️ 키로 움직여요. 문이나 상자를 누르면 걸어가서 열어요.</p>
+    </section>
+
+    <!-- 선생님 화면 -->
+    <section id="screen-teacher" class="screen teacher">
+      <header class="t-head">
+        <div class="t-code"><small>수업 코드</small><b id="t-code">----</b></div>
+        <div class="t-how">아이들은 <b>꼬마 탐험대 공원</b>에서 별명과 학년을 고르고<br><b>숫자 4개</b>를 넣은 뒤 <b>"🎒 친구들과 들어가기"</b>를 눌러요.<br><span id="t-url"></span></div>
+        <div class="t-count"><b id="t-num">0</b><small>명 들어옴</small></div>
+      </header>
+      <div class="t-tools">
+        <button type="button" id="t-notice">📢 알림 보내기</button>
+        <button type="button" id="t-freeze">⏸️ 모두 멈춰!</button>
+        <button type="button" id="t-call">🏠 모두 광장으로</button>
+        <button type="button" id="t-rank">🏆 순위 발표</button>
+        <span class="spacer"></span>
+        <span id="t-status" class="t-status">🟢 연결됨</span>
+        <button type="button" id="t-end" class="danger">수업 끝내기</button>
+      </div>
+      <div class="t-main">
+        <div class="t-view">
+          <div class="t-areas" id="t-areas"></div>
+          <div id="t-world-slot" class="t-world-slot"></div>
+        </div>
+        <div class="t-table-wrap">
+          <table class="t-table">
+            <thead><tr><th>이름</th><th>학년</th><th>지금 있는 곳</th><th>도장</th><th>🗝️</th><th>맞힘</th><th>틀림</th><th>힌트</th><th></th></tr></thead>
+            <tbody id="t-rows"><tr><td colspan="9" class="empty">아직 아무도 안 들어왔어요. 수업 코드를 알려 주세요!</td></tr></tbody>
+          </table>
+          <ol class="t-log" id="t-log"></ol>
+        </div>
+      </div>
+    </section>
+
+    <div id="puzzle" class="overlay" hidden></div>
+    <div id="modal" class="overlay" hidden></div>
+    <div id="frozen" class="frozen" hidden><div>⏸️<b>잠깐 멈춰요!</b><span>선생님 말씀을 들어요</span></div></div>
+    <div id="banner" class="notice" hidden></div>
+  </main>
+</body>
+</html>

@@ -1,0 +1,878 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#2e7a57">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="공부 플래너">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+</head>
+<body>
+<title>우리 아이 공부 플래너</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+/* Layout: one narrow column like a phone planner; sticky tab bar; cards by role. */
+:root{
+  --bg:#eef1f6; --surface:#ffffff; --surface-2:#f1f3f7; --tabs-bg:#e2e6ee;
+  --line:#e2e6ed; --line-strong:#c9cfda;
+  --ink:#1b2333; --ink-2:#5b6475; --ink-3:#98a0ae;
+  --accent:#2e7a57; --accent-soft:#dfefe6; --accent-ink:#1f5e41;
+  --strong-bg:#1e2738; --strong-fg:#ffffff;
+  --danger:#c0392b; --star:#e2a300; --warn-soft:#fdf1dc; --warn-ink:#9a5b00;
+  --heat0:#e9ecf2; --heat1:#cfe6d9; --heat2:#8fc5a6; --heat3:#2e7a57; --heat-ink3:#ffffff;
+  --shadow:0 1px 2px rgba(25,35,60,.05),0 4px 14px rgba(25,35,60,.05);
+  --font:"Pretendard","Apple SD Gothic Neo","Noto Sans KR","Malgun Gothic",system-ui,sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#11151c; --surface:#1a2029; --surface-2:#232a35; --tabs-bg:#1a2029;
+  --line:#2c3441; --line-strong:#3c4554;
+  --ink:#e8ecf2; --ink-2:#a9b1bf; --ink-3:#6f7888;
+  --accent:#5cc08f; --accent-soft:#1d3529; --accent-ink:#93e0b8;
+  --strong-bg:#e8ecf2; --strong-fg:#151a22;
+  --danger:#ff8a7a; --star:#ffc93d; --warn-soft:#3a2d17; --warn-ink:#f3c27a;
+  --heat0:#232a35; --heat1:#21402f; --heat2:#2f7351; --heat3:#5cc08f; --heat-ink3:#0f1a14;
+  --shadow:none; color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --bg:#11151c; --surface:#1a2029; --surface-2:#232a35; --tabs-bg:#1a2029;
+  --line:#2c3441; --line-strong:#3c4554;
+  --ink:#e8ecf2; --ink-2:#a9b1bf; --ink-3:#6f7888;
+  --accent:#5cc08f; --accent-soft:#1d3529; --accent-ink:#93e0b8;
+  --strong-bg:#e8ecf2; --strong-fg:#151a22;
+  --danger:#ff8a7a; --star:#ffc93d; --warn-soft:#3a2d17; --warn-ink:#f3c27a;
+  --heat0:#232a35; --heat1:#21402f; --heat2:#2f7351; --heat3:#5cc08f; --heat-ink3:#0f1a14;
+  --shadow:none; color-scheme:dark;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{background:var(--bg)}
+body{margin:0;font-family:var(--font);color:var(--ink);font-size:15px;line-height:1.5;-webkit-tap-highlight-color:transparent;word-break:keep-all;overflow-wrap:anywhere}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+button{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.wrap{max-width:540px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:22px 56px}
+
+/* header */
+.eyebrow{font-size:12px;letter-spacing:.24em;font-weight:800;color:var(--accent);text-transform:uppercase}
+h1{font-size:clamp(25px,7vw,30px);font-weight:800;letter-spacing:-.03em;margin:2px 0 4px;line-height:1.25;text-wrap:balance}
+.sub{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;color:var(--ink-2);font-size:14px}
+.badge{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:3px 11px;font-size:13px;font-weight:800;border:1px solid transparent;cursor:pointer;background:var(--accent-soft);color:var(--accent-ink);border-color:color-mix(in srgb,var(--accent) 30%,transparent)}
+.badge::before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor}
+.badge.parent{background:var(--warn-soft);color:var(--warn-ink);border-color:color-mix(in srgb,var(--warn-ink) 30%,transparent)}
+.badge.kid{background:var(--surface-2);color:var(--ink-2);border-color:var(--line)}
+
+/* tabs */
+.tabs{position:sticky;top:env(safe-area-inset-top,0px);z-index:6;display:grid;grid-template-columns:repeat(5,1fr);gap:4px;padding:6px;background:var(--tabs-bg);border-radius:20px;margin:16px 0 14px;box-shadow:0 0 0 6px var(--bg)}
+.tab{border:0;background:transparent;border-radius:15px;padding:8px 0 6px;display:flex;flex-direction:column;align-items:center;gap:2px;font-size:13px;font-weight:700;color:var(--ink-2);cursor:pointer}
+.tab svg{width:20px;height:20px}
+.tab[aria-selected="true"]{background:var(--surface);color:var(--ink);box-shadow:0 1px 3px rgba(20,30,50,.12)}
+
+#view{display:flex;flex-direction:column;gap:14px}
+.card{background:var(--surface);border-radius:22px;padding:18px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:12px;min-width:0}
+.card-h{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+.card-h h2{font-size:18px;font-weight:800;margin:0;letter-spacing:-.02em}
+.card-h .meta{font-size:13px;color:var(--ink-2);text-align:right}
+.muted{color:var(--ink-2)} .small{font-size:13px}
+.empty{color:var(--ink-2);font-size:14px;text-align:center;padding:14px 8px;background:var(--surface-2);border-radius:14px}
+
+/* buttons */
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:12px;padding:10px 14px;font-weight:700;font-size:14px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:6px;white-space:nowrap}
+.btn:active{transform:scale(.98)}
+.btn.primary{background:var(--strong-bg);color:var(--strong-fg);border-color:transparent}
+.btn.accent{background:var(--accent);color:#fff;border-color:transparent}
+.btn.danger{color:var(--danger)}
+.btn.dashed{border-style:dashed;width:100%;color:var(--ink-2);background:transparent;padding:12px}
+.btn.sm{padding:5px 10px;font-size:13px;border-radius:10px}
+.btn.icon{padding:6px 9px;font-size:14px;border-radius:10px;min-width:34px}
+.row{display:flex;gap:8px;align-items:center}
+.row.wrap-ok{flex-wrap:wrap}
+.grow{flex:1;min-width:0}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+
+/* date nav */
+.datenav{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.navbtn{width:44px;height:44px;border-radius:14px;border:1px solid var(--line);background:var(--surface);cursor:pointer;font-size:20px;color:var(--ink-2)}
+.datelabel{font-size:20px;font-weight:800;letter-spacing:-.02em;text-align:center;border:0;background:none;cursor:pointer;padding:4px}
+.datelabel .tag{color:var(--accent);font-size:16px;font-weight:700}
+
+/* summary */
+.summary{display:flex;gap:16px;align-items:center}
+.ring{position:relative;width:88px;height:88px;flex:none}
+.ring svg{width:100%;height:100%;transform:rotate(-90deg)}
+.ring .num{position:absolute;inset:0;display:grid;place-items:center;font-size:19px;font-weight:800;font-variant-numeric:tabular-nums}
+.ring.pop{animation:pop .6s ease}
+@keyframes pop{40%{transform:scale(1.1)}}
+.summary h3{margin:0;font-size:18px;font-weight:800}
+.summary p{margin:2px 0 0;color:var(--ink-2);font-size:14px}
+.stamped{display:inline-flex;gap:4px;align-items:center;margin-top:6px;font-size:13px;font-weight:800;color:var(--warn-ink);background:var(--warn-soft);border-radius:999px;padding:2px 10px}
+
+.kidmsg{display:flex;flex-direction:column;gap:2px;background:var(--surface-2);border-radius:14px;padding:11px 14px}
+.kidmsg.all{background:var(--accent-soft)}
+.kidmsg b{font-size:15.5px}
+.kidmsg span{font-size:13px;color:var(--ink-2)}
+.dot-warn{color:var(--warn-ink);font-weight:800}
+.note{display:flex;gap:10px;align-items:flex-start;background:var(--warn-soft);color:var(--warn-ink);border-radius:16px;padding:12px 14px;font-size:14px}
+.note .grow{color:var(--ink)}
+
+/* chips */
+.chip{display:inline-flex;align-items:center;padding:1px 9px;border-radius:8px;font-size:12.5px;font-weight:800;background:var(--cbg);color:var(--cfg);border:1px solid var(--cbd);white-space:nowrap;line-height:1.6}
+.filters{display:flex;gap:6px;overflow-x:auto;padding:2px;scrollbar-width:none;margin:0 -2px}
+.filters::-webkit-scrollbar{display:none}
+.fchip{border-radius:999px;padding:7px 15px;font-weight:800;font-size:14px;cursor:pointer;background:var(--cbg,var(--surface));color:var(--cfg,var(--ink));border:1px solid var(--cbd,var(--line));white-space:nowrap}
+.fchip[aria-pressed="true"]{background:var(--cfg,var(--strong-bg));color:var(--surface);border-color:transparent}
+.fchip.all[aria-pressed="true"]{background:var(--strong-bg);color:var(--strong-fg)}
+
+.search{display:flex;gap:8px}
+input,textarea,select{font:inherit;font-size:16px;padding:11px 13px;border-radius:13px;border:1px solid var(--line);background:var(--surface);color:var(--ink);width:100%;min-width:0}
+textarea{resize:vertical;min-height:84px}
+input::placeholder,textarea::placeholder{color:var(--ink-3)}
+
+/* items */
+.list{display:flex;flex-direction:column;gap:8px}
+.item{display:flex;align-items:center;gap:10px;background:var(--surface-2);border-radius:14px;padding:12px 12px 12px 14px;border-left:4px solid var(--cbd);min-width:0}
+.item-main{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}
+.item-title{font-weight:800;font-size:16px;line-height:1.35}
+.item-meta{display:flex;flex-wrap:wrap;gap:4px 8px;align-items:center;font-size:13px;color:var(--ink-2)}
+.memo{font-size:13px;color:var(--ink-2);background:var(--surface);border-radius:8px;padding:4px 8px}
+.item.is-done .item-title{color:var(--ink-3);text-decoration:line-through;text-decoration-thickness:1px}
+.check{width:42px;height:42px;border-radius:13px;border:2px solid var(--line-strong);background:var(--surface);flex:none;display:grid;place-items:center;cursor:pointer;color:transparent;transition:background .15s,border-color .15s}
+.check svg{width:22px;height:22px}
+.check[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:#fff}
+.toggle-done{border:1px dashed var(--line-strong);background:transparent;border-radius:14px;padding:11px;font-weight:700;color:var(--ink-2);cursor:pointer;width:100%}
+
+.hw{display:flex;align-items:center;gap:10px;background:var(--surface-2);border-radius:14px;padding:12px 12px 12px 14px;border-left:4px solid var(--cbd)}
+.hw .due{font-size:13px;color:var(--ink-2)}
+.dday{font-weight:800;color:var(--accent-ink)}
+.dday.late{color:var(--danger)}
+.dday.soon{color:var(--warn-ink)}
+.pbar{height:8px;background:var(--heat0);border-radius:99px;overflow:hidden}
+.pbar>i{display:block;height:100%;background:var(--accent);border-radius:99px;transition:width .3s}
+
+/* stats */
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.stat{background:var(--surface);border-radius:18px;padding:14px 6px 12px;text-align:center;box-shadow:var(--shadow)}
+.stat b{display:block;font-size:22px;font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.stat span{font-size:12.5px;color:var(--ink-2)}
+
+/* week */
+.day.today{outline:2.5px solid var(--heat2);outline-offset:-2.5px}
+.day-h{display:flex;align-items:baseline;gap:8px;border:0;background:none;padding:0;cursor:pointer;text-align:left;width:100%}
+.day-h b{font-size:18px;font-weight:800}
+.day-h .d{font-size:13px;color:var(--ink-2)}
+.day-h .r{margin-left:auto;font-weight:800;color:var(--accent);font-variant-numeric:tabular-nums}
+.wrow{display:flex;align-items:center;gap:8px;border:0;background:none;padding:5px 0;cursor:pointer;text-align:left;width:100%;min-width:0}
+.wrow .wt{flex:1;min-width:0;font-size:14.5px}
+.wrow .ck{width:18px;height:18px;flex:none;border-radius:50%;border:1.5px solid var(--line-strong);display:grid;place-items:center;color:transparent}
+.wrow .ck svg{width:12px;height:12px}
+.wrow.done .ck{background:var(--accent);border-color:var(--accent);color:#fff}
+.wrow.done .wt{color:var(--ink-3)}
+.wrow .dw{font-size:12px;color:var(--ink-3);flex:none}
+
+/* segmented */
+.seg{display:flex;gap:4px;background:var(--surface-2);border-radius:14px;padding:4px}
+.seg button{flex:1;border:0;background:transparent;border-radius:11px;padding:8px 0;font-weight:800;font-size:14px;cursor:pointer;color:var(--ink-2)}
+.seg button[aria-pressed="true"]{background:var(--surface);color:var(--ink);box-shadow:0 1px 3px rgba(20,30,50,.12)}
+.seg .today-dot{display:block;width:5px;height:5px;border-radius:50%;background:var(--accent);margin:2px auto 0}
+
+.ritem{display:flex;align-items:center;gap:8px;background:var(--surface-2);border-radius:14px;padding:10px 10px 10px 14px;border-left:4px solid var(--cbd)}
+.ritem .t{font-weight:800}
+.tools{display:flex;gap:4px;flex:none}
+
+/* record */
+.cal{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+.cal .dh{text-align:center;font-size:12px;color:var(--ink-2);font-weight:700}
+.cell{aspect-ratio:1;max-width:100%;border-radius:11px;display:grid;place-items:center;font-size:13px;font-weight:700;background:var(--heat0);border:0;color:var(--ink-2);position:relative;cursor:pointer;font-variant-numeric:tabular-nums;padding:0}
+.cell.l1{background:var(--heat1);color:var(--ink)}
+.cell.l2{background:var(--heat2);color:var(--ink)}
+.cell.l3{background:var(--heat3);color:var(--heat-ink3)}
+.cell.rest{background:transparent;border:1px solid var(--line)}
+.cell.future{background:transparent;border:1.5px dashed var(--line-strong);color:var(--ink-3)}
+.cell.now{box-shadow:0 0 0 2.5px var(--ink) inset}
+.cell .st{position:absolute;top:-5px;right:-3px;font-size:13px;color:var(--star);text-shadow:0 0 2px var(--surface)}
+.legend{display:flex;flex-wrap:wrap;gap:6px 12px;font-size:12px;color:var(--ink-2)}
+.legend i{display:inline-block;width:11px;height:11px;border-radius:3px;vertical-align:-1px;margin-right:4px}
+.sbar{display:grid;grid-template-columns:64px 1fr 44px;gap:10px;align-items:center}
+.sbar .chip{justify-content:center}
+.sbar .pbar>i{background:var(--cfg)}
+.sbar b{text-align:right;font-variant-numeric:tabular-nums;font-size:14px}
+.srow{display:flex;gap:12px;align-items:center;padding:13px 0;border-top:1px solid var(--line)}
+.srow:first-of-type{border-top:0;padding-top:0}
+.srow .grow b{display:block;font-size:15.5px}
+.srow .grow span{font-size:13px;color:var(--ink-2)}
+
+/* modal */
+.modal{position:fixed;inset:0;z-index:50;display:flex;align-items:flex-end;justify-content:center}
+.backdrop{position:absolute;inset:0;background:rgba(8,12,20,.5)}
+.sheet{position:relative;width:100%;max-width:540px;max-height:90%;overflow:auto;background:var(--surface);border-radius:24px 24px 0 0;padding:20px max(18px,env(safe-area-inset-right,0px)) calc(20px + env(safe-area-inset-bottom,0px)) max(18px,env(safe-area-inset-left,0px));display:flex;flex-direction:column;gap:14px;animation:up .2s ease}
+@keyframes up{from{transform:translateY(30px);opacity:.4}}
+@media (min-width:620px){.modal{align-items:center}.sheet{border-radius:24px}}
+.sheet h3{margin:0;font-size:19px;font-weight:800}
+.field{display:flex;flex-direction:column;gap:6px}
+.field>label,.field>.lbl{font-size:13px;font-weight:700;color:var(--ink-2)}
+.pick{display:flex;flex-wrap:wrap;gap:6px}
+.pick label{cursor:pointer}
+.pick input{position:absolute;opacity:0;width:1px;height:1px}
+.pick .chip{font-size:14px;padding:5px 12px;border-radius:10px}
+.pick label:has(input:checked) .chip{background:var(--cfg);color:var(--surface);border-color:var(--cfg)}
+.pick label:has(input:focus-visible) .chip{outline:2px solid var(--accent);outline-offset:2px}
+.pick .day{display:inline-block;padding:6px 11px;border-radius:10px;border:1px solid var(--line);font-weight:800;font-size:14px}
+.pick label:has(input:checked) .day{background:var(--strong-bg);color:var(--strong-fg);border-color:transparent}
+.actions{display:flex;gap:8px;flex-wrap:wrap}
+.actions .btn{flex:1}
+.step{display:flex;gap:8px;align-items:center}
+.step .check{width:36px;height:36px;border-radius:11px}
+.step .check svg{width:18px;height:18px}
+.err{color:var(--danger);font-size:13px;font-weight:700;min-height:1em}
+.pin{letter-spacing:.6em;text-align:center;font-size:24px;font-weight:800}
+.report{white-space:pre-wrap;background:var(--surface-2);border-radius:14px;padding:12px;font-size:14px;max-height:40vh;overflow:auto}
+.color-pick{display:flex;gap:6px;flex-wrap:wrap}
+.color-pick label{cursor:pointer}
+.color-pick input{position:absolute;opacity:0;width:1px;height:1px}
+.color-pick span{display:block;width:26px;height:26px;border-radius:8px;background:var(--cbg);border:2px solid var(--cbd)}
+.color-pick label:has(input:checked) span{border-color:var(--cfg);box-shadow:0 0 0 2px var(--surface),0 0 0 4px var(--cfg)}
+.subrow{display:flex;gap:8px;align-items:center;padding:8px 0;border-top:1px solid var(--line)}
+
+/* toast */
+#toast{position:fixed;left:50%;bottom:calc(28px + env(safe-area-inset-bottom,0px));transform:translate(-50%,20px);background:var(--strong-bg);color:var(--strong-fg);padding:11px 18px;border-radius:14px;font-weight:800;font-size:14px;opacity:0;pointer-events:none;transition:.25s;z-index:60;max-width:calc(100% - 32px);text-align:center}
+#toast.show{opacity:1;transform:translate(-50%,0)}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div class="eyebrow">Learning Homebase</div>
+    <h1 id="title">이번 한 주, 한눈에.</h1>
+    <div class="sub"><span id="subjLine">수학 · 영어 · 한자 · 책 읽기, 차근차근 꾸준히</span><button class="badge" id="modeBadge" data-act="badge" type="button">함께 쓰기</button></div>
+  </header>
+  <nav class="tabs" role="tablist" aria-label="화면">
+    <button class="tab" role="tab" data-act="tab" data-tab="today"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3.2" fill="currentColor"/></svg>오늘</button>
+    <button class="tab" role="tab" data-act="tab" data-tab="week"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M9 5v15M15 5v15M8 3v3M16 3v3"/></svg>주간</button>
+    <button class="tab" role="tab" data-act="tab" data-tab="routine"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 12a8 8 0 0 1 13.7-5.6L20 8.7M20 4v4.7h-4.7M20 12a8 8 0 0 1-13.7 5.6L4 15.3M4 20v-4.7h4.7"/></svg>루틴</button>
+    <button class="tab" role="tab" data-act="tab" data-tab="hw"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V3h6v1M9 12.5l2 2 4-4"/></svg>숙제</button>
+    <button class="tab" role="tab" data-act="tab" data-tab="record"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 20V12M10 20V6M15 20v-9M20 20V4"/></svg>기록</button>
+  </nav>
+  <main id="view" aria-live="polite"></main>
+</div>
+<div class="modal" id="modal" hidden><div class="backdrop" data-act="closeModal"></div><div class="sheet" role="dialog" aria-modal="true" id="sheet"></div></div>
+<div id="toast" role="status"></div>
+
+<script src="core.js"></script>
+<script>
+(() => {
+'use strict';
+const H = window.HB;
+const {DOW, DOW_ORDER, COLORS, parse, today, addDays, dowOf, mondayOf, md, mdw, diffDays, uid, esc, hash, CHECK} = H;
+const KEY = 'homebase.planner.v1';
+let state = H.load(KEY) || H.defaultState();
+function save() { H.save(KEY, state); }
+save();
+
+let unlocked = false;
+const ui = { tab:'today', date:today(), week:mondayOf(today()), filter:'all', q:'', showDone:false, rdow:dowOf(today()), hwTab:'todo' };
+try { const t = sessionStorage.getItem('hb.tab'); if (t) ui.tab = t; } catch (e) {}
+
+const subj = id => H.subj(state, id);
+const chip = id => H.chip(state, id);
+const routineItems = k => H.routineItems(state, k);
+const rawItems = k => H.rawItems(state, k);
+const itemsFor = k => H.itemsFor(state, k);
+const materialize = k => H.materialize(state, k);
+const isDone = (k,id) => H.isDone(state, k, id);
+const dayStats = k => H.dayStats(state, k);
+const syncRoutine = () => H.syncRoutine(state);
+const hwSteps = H.hwSteps, ddayHtml = H.ddayHtml;
+
+/* ---------- render ---------- */
+const $ = s => document.querySelector(s);
+function render() {
+  $('#title').textContent = state.name ? `${state.name}의 한 주, 한눈에.` : '이번 한 주, 한눈에.';
+  const names = state.subjects.filter(s => s.id !== 'etc').slice(0,4).map(s => s.name);
+  $('#subjLine').textContent = `${names.join(' · ')}, 차근차근 꾸준히`;
+  const b = $('#modeBadge');
+  if (!state.lock.enabled) { b.textContent = '함께 쓰기'; b.className = 'badge'; }
+  else if (unlocked) { b.textContent = '부모님 모드'; b.className = 'badge parent'; }
+  else { b.textContent = '아이 모드'; b.className = 'badge kid'; }
+  b.setAttribute('aria-label', b.textContent + (state.lock.enabled ? (unlocked ? ', 누르면 잠가요' : ', 누르면 부모님 모드로 바꿔요') : ''));
+  document.querySelectorAll('.tab').forEach(t => t.setAttribute('aria-selected', String(t.dataset.tab === ui.tab)));
+  $('#view').innerHTML = VIEWS[ui.tab]();
+}
+
+function itemRow(k, i) {
+  const done = isDone(k, i.id), s = subj(i.subj);
+  const memo = state.days[k]?.memo?.[i.id];
+  return `<div class="item c-${s.color} ${done?'is-done':''}">
+    <div class="item-main">
+      <div class="item-title">${esc(i.title)}</div>
+      <div class="item-meta">${chip(i.subj)}${i.detail?`<span>${esc(i.detail)}</span>`:''}${i.min?`<span>${i.min}분</span>`:''}${i.src==='x'?'<span>· 오늘만</span>':''}</div>
+      ${memo?`<div class="memo">💬 ${esc(memo)}</div>`:''}
+    </div>
+    <button class="btn sm" data-act="itemSheet" data-date="${k}" data-id="${i.id}">${memo?'메모':'+ 메모'}</button>
+    <button class="check" data-act="toggle" data-date="${k}" data-id="${i.id}" aria-pressed="${done}" aria-label="${esc(i.title)} ${done?'완료 취소':'완료'}">${CHECK}</button>
+  </div>`;
+}
+function hwRow(h, base) {
+  const p = hwSteps(h), s = subj(h.subj);
+  return `<div class="hw c-${s.color}">
+    <div class="item-main">
+      <div class="item-title">${esc(h.title)}</div>
+      <div class="item-meta">${chip(h.subj)}<span class="due">${mdw(h.due)} · ${h.done?'<span class="dday">완료</span>':ddayHtml(h.due, base)}${p.total?` · 세부 ${p.done}/${p.total}`:''}</span></div>
+    </div>
+    <button class="btn sm" data-act="hwSheet" data-id="${h.id}">열기 ›</button>
+  </div>`;
+}
+
+function kidCard(k) {
+  const inbox = state.kidInbox || [];
+  const last = inbox[0], forDay = inbox.find(x => x.date === k);
+  const never = !state.kidSentFp, dirty = !never && state.kidSentFp !== H.planPrint(state);
+  let line;
+  if (forDay) { const all = forDay.total && forDay.done === forDay.total;
+    line = `<div class="kidmsg ${all?'all':''}"><b>${all?'🎉 아이가 ‘다 했어요’를 보냈어요':'📨 아이가 소식을 보냈어요'}</b><span>${H.hm(forDay.at)} · ${forDay.done}/${forDay.total} 완료${forDay.note?` · “${esc(forDay.note)}”`:''}</span></div>`; }
+  else line = `<div class="muted small">${k===today()?'오늘':'이날'} 아이가 보낸 소식은 아직 없어요.${last?` (마지막 소식 ${mdw(last.date)} ${H.hm(last.at)})`:''}</div>`;
+  return `<section class="card">
+    <div class="card-h"><h2>👧 아이 앱</h2><span class="meta">${never?'아직 연결 전':dirty?'<span class="dot-warn">● 보낼 변경 있음</span>':'아이 기기와 같아요'}</span></div>
+    ${line}
+    ${never?'<div class="note small"><span>📲</span><div class="grow">‘아이 기기로 보내기’로 루틴과 숙제를 아이 앱에 넣어 주세요.</div></div>':dirty?'<div class="note small"><span>🔄</span><div class="grow">바뀐 루틴·숙제가 아직 아이 기기에 없어요. ‘아이 기기로 보내기’를 눌러 주세요.</div></div>':''}
+    <div class="grid2"><button class="btn primary" data-act="kidIn">📥 아이 소식 넣기</button><button class="btn" data-act="kidOut">📲 아이 기기로 보내기</button></div>
+  </section>`;
+}
+
+const VIEWS = {
+today() {
+  const k = ui.date, t = today(), isToday = k === t;
+  const d = state.days[k];
+  const st = dayStats(k);
+  const q = ui.q.trim();
+  const match = (title, sid) => !q || (title + ' ' + subj(sid).name).includes(q);
+  let list = itemsFor(k);
+  const presentSubj = [...new Set([...list.map(i => i.subj), ...state.homework.filter(h => !h.done).map(h => h.subj)])];
+  if (ui.filter !== 'all' && ui.filter !== 'hw') list = list.filter(i => i.subj === ui.filter);
+  list = list.filter(i => match(i.title + ' ' + (i.detail||''), i.subj));
+  const todo = list.filter(i => !isDone(k,i.id)), fin = list.filter(i => isDone(k,i.id));
+  const skipped = d ? d.items.filter(i => d.skip[i.id]) : [];
+  let hws = state.homework.filter(h => !h.done && h.due <= addDays(k,3)).sort((a,b) => a.due.localeCompare(b.due));
+  if (ui.filter !== 'all' && ui.filter !== 'hw') hws = hws.filter(h => h.subj === ui.filter);
+  hws = hws.filter(h => match(h.title, h.subj));
+
+  let msg, emoji;
+  if (!st.total) { msg = '오늘은 쉬어 가는 날'; emoji = '🌿'; }
+  else if (st.pct === 100) { msg = '다 끝냈어요, 최고예요'; emoji = '🎉'; }
+  else if (st.pct >= 50) { msg = '잘하고 있어요'; emoji = '🙂'; }
+  else if (st.pct > 0) { msg = '좋은 출발이에요'; emoji = '💪'; }
+  else { msg = isToday ? '오늘도 시작해 볼까요?' : '아직 시작 전이에요'; emoji = '✏️'; }
+  const sub = st.total ? `${st.total}개 중 ${st.done}개 완료${st.left ? ` · 남은 공부 약 ${st.left}분` : ''}` : '정해진 공부가 없어요. 필요하면 할 일을 추가해요.';
+  const C = 2*Math.PI*36, off = C*(1 - st.pct/100);
+  const stamped = state.stamps[k];
+  const subjFilters = presentSubj.map(id => { const s = subj(id); return `<button class="fchip c-${s.color}" data-act="filter" data-f="${id}" aria-pressed="${ui.filter===id}">${esc(s.name)}</button>`; }).join('');
+
+  return `
+  <div class="datenav">
+    <button class="navbtn" data-act="day" data-n="-1" aria-label="전날">‹</button>
+    <button class="datelabel" data-act="goToday">${mdw(k)} ${isToday?'<span class="tag">· 오늘</span>':'<span class="tag">· 오늘로</span>'}</button>
+    <button class="navbtn" data-act="day" data-n="1" aria-label="다음 날">›</button>
+  </div>
+  <section class="card">
+    <div class="summary">
+      <div class="ring" id="ring"><svg viewBox="0 0 88 88"><circle cx="44" cy="44" r="36" fill="none" stroke="var(--heat0)" stroke-width="11"/><circle cx="44" cy="44" r="36" fill="none" stroke="var(--accent)" stroke-width="11" stroke-linecap="${st.pct?'round':'butt'}" stroke-dasharray="${C}" stroke-dashoffset="${off}"/></svg><div class="num">${st.pct}%</div></div>
+      <div class="grow"><h3>${msg} ${emoji}</h3><p>${sub}</p>${stamped?'<span class="stamped">★ 부모님 확인 완료</span>':''}</div>
+    </div>
+    <div class="grid2">
+      <button class="btn" data-act="stamp">${stamped?'★ 확인 도장 취소':'⭐ 부모님 확인 도장'}</button>
+      <button class="btn" data-act="report">📤 오늘 보고 보내기</button>
+    </div>
+  </section>
+  ${kidCard(k)}
+  ${state.sampleNote?`<div class="note"><span>📌</span><div class="grow small">지금 보이는 시간표는 <b>예시</b>예요. <b>루틴</b> 탭에서 우리 아이 문제집과 요일에 맞게 바꿔 주세요.</div><button class="btn sm" data-act="hideNote">닫기</button></div>`:''}
+  <div class="filters" role="group" aria-label="과목 고르기">
+    <button class="fchip all" data-act="filter" data-f="all" aria-pressed="${ui.filter==='all'}">모두</button>${subjFilters}
+    <button class="fchip c-green" data-act="filter" data-f="hw" aria-pressed="${ui.filter==='hw'}">숙제</button>
+  </div>
+  <div class="search">
+    <input id="q" type="search" placeholder="공부 · 할 일 · 숙제 검색" value="${esc(ui.q)}" autocomplete="off">
+    <button class="btn" data-act="addExtra">＋ 할 일 추가</button>
+  </div>
+  ${ui.filter==='hw'?'':`<section class="card">
+    <div class="card-h"><h2>${isToday?'오늘':md(k)} 할 공부</h2><span class="meta">${DOW[dowOf(k)]}요일 루틴</span></div>
+    <div class="list">${todo.map(i => itemRow(k,i)).join('') || `<div class="empty">${!st.total?'이날은 정해진 공부가 없어요.':(q||ui.filter!=='all')?'찾는 공부가 없어요.':'남은 공부가 없어요. 다 끝냈어요! 🎉'}</div>`}</div>
+    ${fin.length||skipped.length?`<button class="toggle-done" data-act="showDone" aria-expanded="${ui.showDone}">✓ 끝낸 공부 ${fin.length}개${skipped.length?` · 뺀 공부 ${skipped.length}개`:''} ${ui.showDone?'접기 ▲':'보기 ▼'}</button>`:''}
+    ${ui.showDone?`<div class="list">${fin.map(i => itemRow(k,i)).join('')}${skipped.map(i => `<div class="item c-${subj(i.subj).color}"><div class="item-main"><div class="item-title muted">${esc(i.title)}</div><div class="item-meta">${chip(i.subj)}<span>오늘은 뺐어요</span></div></div><button class="btn sm" data-act="unskip" data-date="${k}" data-id="${i.id}">되돌리기</button></div>`).join('')}</div>`:''}
+  </section>`}
+  <section class="card">
+    <div class="card-h"><h2>숙제</h2><span class="meta">마감 3일 안 · 밀린 숙제</span></div>
+    <div class="list">${hws.map(h => hwRow(h, k)).join('') || '<div class="empty">급한 숙제가 없어요.</div>'}</div>
+    <button class="btn dashed" data-act="hwSheet">＋ 숙제 추가</button>
+  </section>`;
+},
+
+week() {
+  const ws = ui.week, t = today();
+  const keys = [...Array(7)].map((_,i) => addDays(ws,i));
+  let tot = 0, dn = 0;
+  keys.forEach(k => { const s = dayStats(k); tot += s.total; dn += s.done; });
+  const hwWeek = state.homework.filter(h => h.due >= keys[0] && h.due <= keys[6]);
+  const hwDone = hwWeek.filter(h => h.done).length;
+  const dayCard = (ks, label) => {
+    let total = 0, done = 0, rows = '';
+    for (const k of ks) {
+      for (const i of itemsFor(k)) {
+        const isD = isDone(k,i.id); total++; if (isD) done++;
+        rows += `<button class="wrow ${isD?'done':''}" data-act="toggle" data-date="${k}" data-id="${i.id}" aria-pressed="${isD}"><span class="ck">${CHECK}</span>${ks.length>1?`<span class="dw">${DOW[dowOf(k)]}</span>`:''}${chip(i.subj)}<span class="wt">${esc(i.title)}</span></button>`;
+      }
+      for (const h of state.homework.filter(h => h.due === k)) {
+        rows += `<button class="wrow ${h.done?'done':''}" data-act="hwSheet" data-id="${h.id}"><span class="ck">${CHECK}</span>${ks.length>1?`<span class="dw">${DOW[dowOf(k)]}</span>`:''}<span class="chip c-green">숙제</span><span class="wt">${esc(h.title)} · 마감</span></button>`;
+      }
+    }
+    const isT = ks.includes(t);
+    const pct = total ? done/total*100 : 0;
+    const dateTxt = ks.length > 1 ? `${md(ks[0])}–${parse(ks[1]).getDate()}일` : md(ks[0]);
+    return `<section class="card day ${isT?'today':''}">
+      <button class="day-h" data-act="gotoDay" data-date="${isT?t:ks[0]}"><b>${label}</b><span class="d">${dateTxt}${isT?' · 오늘':''}</span><span class="r">${done}/${total}</span></button>
+      <div class="pbar"><i style="width:${pct}%"></i></div>
+      <div>${rows || '<div class="muted small">쉬는 날이에요</div>'}</div>
+    </section>`;
+  };
+  return `
+  <div class="datenav">
+    <button class="navbtn" data-act="week" data-n="-7" aria-label="지난주">‹</button>
+    <button class="datelabel" data-act="thisWeek">${md(keys[0])} — ${md(keys[6])}${ws===mondayOf(t)?'':' <span class="tag">· 이번 주로</span>'}</button>
+    <button class="navbtn" data-act="week" data-n="7" aria-label="다음 주">›</button>
+  </div>
+  <div class="stats">
+    <div class="stat"><b>${tot?Math.round(dn/tot*100):0}%</b><span>이번 주 달성</span></div>
+    <div class="stat"><b>${dn}/${tot}</b><span>끝낸 공부</span></div>
+    <div class="stat"><b>${hwDone}/${hwWeek.length}</b><span>숙제 완료</span></div>
+  </div>
+  ${[0,1,2,3,4].map(i => dayCard([keys[i]], DOW[dowOf(keys[i])]+'요일')).join('')}
+  ${dayCard([keys[5],keys[6]], '주말')}`;
+},
+
+routine() {
+  const dw = ui.rdow, items = state.routine[dw] || [], tdw = dowOf(today());
+  const mins = items.reduce((a,i) => a + (+i.min||0), 0);
+  const locked = state.lock.enabled && !unlocked;
+  return `
+  <section class="card">
+    <div class="card-h"><h2>요일별 루틴</h2><span class="meta">매주 반복돼요</span></div>
+    <div class="seg" role="group" aria-label="요일">${DOW_ORDER.map(d => `<button data-act="rdow" data-d="${d}" aria-pressed="${d===dw}">${DOW[d]}${d===tdw?'<span class="today-dot"></span>':''}</button>`).join('')}</div>
+    <div class="row"><b class="grow">${DOW[dw]}요일 · ${items.length}개</b><span class="muted small">약 ${mins}분</span></div>
+    <div class="list">${items.map((i,idx) => `<div class="ritem c-${subj(i.subj).color}">
+        <div class="grow"><div class="t">${esc(i.title)}</div><div class="item-meta">${chip(i.subj)}${i.detail?`<span>${esc(i.detail)}</span>`:''}${i.min?`<span>${i.min}분</span>`:''}</div></div>
+        <div class="tools">
+          <button class="btn icon" data-act="rmove" data-i="${idx}" data-n="-1" aria-label="위로" ${idx===0?'disabled':''}>↑</button>
+          <button class="btn icon" data-act="redit" data-id="${i.id}" aria-label="고치기">✎</button>
+        </div>
+      </div>`).join('') || '<div class="empty">이 요일은 쉬는 날이에요.</div>'}</div>
+    <button class="btn dashed" data-act="redit">＋ 루틴 추가</button>
+    <div class="row wrap-ok"><button class="btn sm" data-act="rcopy">📋 다른 요일로 복사</button><span class="muted small grow">바꾼 루틴은 오늘부터 적용돼요. 다 바꾼 뒤 오늘 탭 › ‘아이 기기로 보내기’를 눌러 주세요.</span></div>
+    ${locked?'<div class="note small"><span>🔒</span><div class="grow">루틴을 바꾸려면 부모님 비밀번호가 필요해요.</div></div>':''}
+  </section>
+  <section class="card">
+    <div class="card-h"><h2>과목</h2><button class="btn sm" data-act="subjects">과목 관리</button></div>
+    <div class="row wrap-ok">${state.subjects.map(s => chip(s.id)).join('')}</div>
+  </section>`;
+},
+
+hw() {
+  const t = today();
+  const todo = state.homework.filter(h => !h.done).sort((a,b) => a.due.localeCompare(b.due));
+  const done = state.homework.filter(h => h.done).sort((a,b) => (b.doneAt||'').localeCompare(a.doneAt||''));
+  const list = ui.hwTab === 'todo' ? todo : done;
+  const late = todo.filter(h => h.due < t).length;
+  return `
+  <div class="stats">
+    <div class="stat"><b>${todo.length}</b><span>남은 숙제</span></div>
+    <div class="stat"><b style="color:${late?'var(--danger)':'inherit'}">${late}</b><span>밀린 숙제</span></div>
+    <div class="stat"><b>${done.length}</b><span>끝낸 숙제</span></div>
+  </div>
+  <section class="card">
+    <div class="seg" role="group"><button data-act="hwTab" data-t="todo" aria-pressed="${ui.hwTab==='todo'}">할 숙제</button><button data-act="hwTab" data-t="done" aria-pressed="${ui.hwTab==='done'}">끝낸 숙제</button></div>
+    <div class="list">${list.map(h => `${hwRow(h)}${h.steps.length&&!h.done?`<div class="pbar" style="margin:-4px 6px 4px"><i style="width:${hwSteps(h).done/hwSteps(h).total*100}%"></i></div>`:''}`).join('') || `<div class="empty">${ui.hwTab==='todo'?'남은 숙제가 없어요 👏':'아직 끝낸 숙제가 없어요.'}</div>`}</div>
+    <button class="btn dashed" data-act="hwSheet">＋ 숙제 추가</button>
+  </section>`;
+},
+
+record() {
+  const t = today();
+  // streak of fully-finished days (today counts only once finished)
+  let streak = 0;
+  for (let i = 0, k = t; i < 400; i++, k = addDays(k,-1)) {
+    const s = dayStats(k);
+    if (!s.total) { if (!state.days[k] && i > 60) break; continue; }
+    if (s.done === s.total) streak++; else if (k === t) continue; else break;
+  }
+  const mPrefix = t.slice(0,7);
+  let mDone = 0, mStamps = 0;
+  for (const [k,d] of Object.entries(state.days)) if (k.startsWith(mPrefix)) mDone += itemsFor(k).filter(i => d.done[i.id]).length;
+  for (const k of Object.keys(state.stamps)) if (k.startsWith(mPrefix) && state.stamps[k]) mStamps++;
+
+  const start = addDays(mondayOf(t), -28);
+  let cells = '';
+  for (let i = 0; i < 35; i++) {
+    const k = addDays(start,i), d = parse(k);
+    let cls = 'cell';
+    if (k > t) cls += ' future';
+    else { const s = dayStats(k); if (!s.total) cls += ' rest'; else { const r = s.done/s.total; cls += r>=1?' l3':r>=.5?' l2':r>0?' l1':''; } }
+    if (k === t) cls += ' now';
+    const lab = d.getDate() === 1 ? `${d.getMonth()+1}/1` : d.getDate();
+    cells += `<button class="${cls}" data-act="gotoDay" data-date="${k}" aria-label="${mdw(k)}">${lab}${state.stamps[k]?'<span class="st">★</span>':''}</button>`;
+  }
+  const per = {};
+  for (let i = 0; i < 28; i++) {
+    const k = addDays(t,-i);
+    for (const it of itemsFor(k)) { (per[it.subj] ||= {d:0,t:0}).t++; if (isDone(k,it.id)) per[it.subj].d++; }
+  }
+  const bars = state.subjects.filter(s => per[s.id]).map(s => { const p = Math.round(per[s.id].d/per[s.id].t*100);
+    return `<div class="sbar c-${s.color}">${chip(s.id)}<div class="pbar"><i style="width:${p}%"></i></div><b>${p}%</b></div>`; }).join('');
+  const L = state.lock;
+  return `
+  <div class="stats">
+    <div class="stat"><b>${streak}일</b><span>연속 다 끝낸 날</span></div>
+    <div class="stat"><b>${mDone}개</b><span>이번 달 끝낸 공부</span></div>
+    <div class="stat"><b>${mStamps}개</b><span>이번 달 ⭐ 도장</span></div>
+  </div>
+  <section class="card">
+    <div class="card-h"><h2>최근 5주 달력</h2><span class="meta">날짜를 누르면 그날로 가요</span></div>
+    <div class="cal">${DOW_ORDER.map(d => `<div class="dh">${DOW[d]}</div>`).join('')}${cells}</div>
+    <div class="legend"><span><i style="background:var(--heat0)"></i>안 함</span><span><i style="background:var(--heat1)"></i>조금</span><span><i style="background:var(--heat2)"></i>절반 넘게</span><span><i style="background:var(--heat3)"></i>다 함</span><span style="color:var(--star)">★ <span class="muted">부모님 확인</span></span></div>
+  </section>
+  <section class="card">
+    <div class="card-h"><h2>과목별 꾸준함</h2><span class="meta">최근 4주</span></div>
+    ${bars || '<div class="empty">아직 기록이 없어요.</div>'}
+  </section>
+  <section class="card">
+    <div class="card-h"><h2>설정</h2><span class="meta">${L.enabled?(unlocked?'🔓 부모님 모드':'🔒 아이 모드'):'잠금 없음'}</span></div>
+    <div>
+    <div class="srow"><div class="grow"><b>아이 이름</b><span>${state.name?esc(state.name)+' · ':''}맨 위 제목에 이름이 나와요</span></div><button class="btn" data-act="setName">바꾸기</button></div>
+    <div class="srow"><div class="grow"><b>부모님 잠금</b><span>루틴 바꾸기 · 숙제 지우기 · 확인 도장 · 설정에 비밀번호가 필요해요</span></div>${L.enabled?(unlocked?'<button class="btn" data-act="lockNow">잠그기</button>':'<button class="btn" data-act="unlock">풀기</button>'):'<button class="btn" data-act="setPin">켜기</button>'}</div>
+    ${L.enabled?'<div class="srow"><div class="grow"><b>비밀번호 바꾸기 / 잠금 끄기</b></div><button class="btn" data-act="pinMenu">바꾸기</button></div>':''}
+    <div class="srow"><div class="grow"><b>아이 앱 연결</b><span>아이 기기에서 ${esc(H.base())}kid/ 를 열고, 여기서 보낸 글을 붙여 넣어요</span></div><button class="btn" data-act="kidOut">보내기</button></div>
+    <div class="srow"><div class="grow"><b>과목 관리</b><span>과목 이름과 색을 바꾸거나 새 과목을 넣어요</span></div><button class="btn" data-act="subjects">관리</button></div>
+    <div class="srow"><div class="grow"><b>백업 · 기기 옮기기</b><span>기록은 이 기기에만 저장돼요. 다른 기기로 옮기거나 보관할 때 써요.</span></div><button class="btn" data-act="backup">백업</button></div>
+    <div class="srow"><div class="grow"><b>백업 불러오기</b><span>다른 기기에서 만든 백업을 넣어요</span></div><button class="btn" data-act="restore">불러오기</button></div>
+    <div class="srow"><div class="grow"><b>처음 상태로</b><span>모든 기록을 지우고 예시 시간표로 돌아가요</span></div><button class="btn danger" data-act="reset">초기화</button></div>
+    </div>
+  </section>`;
+},
+};
+
+/* ---------- toast / modal ---------- */
+let toastTimer;
+function toast(msg) { const t = $('#toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), 2000); }
+let M = {};
+function openModal(html, handlers = {}) {
+  M = handlers; $('#sheet').innerHTML = html; $('#modal').hidden = false;
+  const f = $('#sheet').querySelector('[autofocus]'); if (f) setTimeout(() => f.focus(), 30);
+}
+function closeModal() { $('#modal').hidden = true; $('#sheet').innerHTML = ''; M = {}; }
+const val = id => { const e = document.getElementById(id); return e ? e.value.trim() : ''; };
+const checked = name => { const e = $(`#sheet input[name="${name}"]:checked`); return e ? e.value : ''; };
+function subjPick(sel) {
+  return `<div class="pick" role="radiogroup">${state.subjects.map(s => `<label class="c-${s.color}"><input type="radio" name="subj" value="${s.id}" ${s.id===sel?'checked':''}><span class="chip">${esc(s.name)}</span></label>`).join('')}</div>`;
+}
+function confirmBox(title, text, okLabel, onOk, danger = true) {
+  openModal(`<h3>${title}</h3><p class="muted" style="margin:0">${text}</p><div class="actions"><button class="btn" data-act="closeModal">그만두기</button><button class="btn ${danger?'danger':'primary'}" data-act="m" data-h="ok">${okLabel}</button></div>`, {ok(){ closeModal(); onOk(); }});
+}
+
+/* ---------- parent lock ---------- */
+function guard(fn) {
+  if (!state.lock.enabled || unlocked) return fn();
+  openModal(`<h3>🔒 부모님 확인</h3><p class="muted small" style="margin:0">부모님 비밀번호 4자리를 넣어 주세요.</p>
+    <input id="pinIn" class="pin" type="password" inputmode="numeric" maxlength="4" autocomplete="off" autofocus aria-label="비밀번호">
+    <div class="err" id="pinErr"></div>
+    <div class="actions"><button class="btn" data-act="closeModal">그만두기</button><button class="btn primary" data-act="m" data-h="ok">확인</button></div>`,
+  { ok() {
+      if (hash(val('pinIn')) === state.lock.pin) { unlocked = true; closeModal(); render(); toast('부모님 모드예요'); fn(); }
+      else { $('#pinErr').textContent = '비밀번호가 달라요. 다시 넣어 주세요.'; $('#pinIn').value = ''; $('#pinIn').focus(); }
+  }});
+}
+function setPinModal(after) {
+  openModal(`<h3>부모님 비밀번호 정하기</h3><p class="muted small" style="margin:0">숫자 4자리예요. 잊어버리면 백업을 불러오거나 초기화해야 하니 꼭 기억해 주세요.</p>
+    <div class="field"><label for="p1">새 비밀번호</label><input id="p1" class="pin" type="password" inputmode="numeric" maxlength="4" autocomplete="off" autofocus></div>
+    <div class="field"><label for="p2">한 번 더</label><input id="p2" class="pin" type="password" inputmode="numeric" maxlength="4" autocomplete="off"></div>
+    <div class="err" id="pinErr"></div>
+    <div class="actions"><button class="btn" data-act="closeModal">그만두기</button><button class="btn primary" data-act="m" data-h="ok">정하기</button></div>`,
+  { ok() {
+      const a = val('p1'), b = val('p2');
+      if (!/^\d{4}$/.test(a)) return void ($('#pinErr').textContent = '숫자 4자리로 넣어 주세요.');
+      if (a !== b) return void ($('#pinErr').textContent = '두 번 넣은 숫자가 달라요.');
+      state.lock = {enabled:true, pin:hash(a)}; unlocked = true; save(); closeModal(); render(); toast(after || '잠금을 켰어요. 지금은 부모님 모드예요');
+  }});
+}
+
+/* ---------- report / backup ---------- */
+function reportText(k) {
+  const st = dayStats(k), d = state.days[k];
+  const lines = [`[${state.name?state.name+' ':''}${mdw(k)} 공부 보고]`, `완료 ${st.done}/${st.total} (${st.pct}%)${state.stamps[k]?' ⭐부모님 확인':''}`, ''];
+  for (const i of itemsFor(k)) {
+    lines.push(`${isDone(k,i.id)?'✅':'⬜'} ${subj(i.subj).name} · ${i.title}${i.detail?` (${i.detail})`:''}`);
+    const m = d?.memo?.[i.id]; if (m) lines.push(`   💬 ${m}`);
+  }
+  const hws = state.homework.filter(h => !h.done && h.due <= addDays(k,3));
+  if (hws.length) { lines.push('', '📚 다가오는 숙제'); for (const h of hws) { const p = hwSteps(h); const n = diffDays(k,h.due); lines.push(`- ${h.title} · ${n<0?-n+'일 지남':n===0?'오늘 마감':'D-'+n}${p.total?` (${p.done}/${p.total})`:''}`); } }
+  return lines.join('\n');
+}
+async function copyText(text, okMsg) {
+  try { await navigator.clipboard.writeText(text); toast(okMsg); return true; }
+  catch (e) { const ta = $('#sheet textarea, #sheet .report'); if (ta && ta.select) ta.select(); toast('복사가 안 돼요. 글을 길게 눌러 복사해 주세요'); return false; }
+}
+function download(name, text) {
+  try { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([text],{type:'application/json'})); a.download = name; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500); } catch (e) {}
+}
+
+/* ---------- actions ---------- */
+const A = {
+  tab(el) { ui.tab = el.dataset.tab; try { sessionStorage.setItem('hb.tab', ui.tab); } catch (e) {} render(); window.scrollTo({top:0}); },
+  badge() {
+    if (!state.lock.enabled) { toast('기록 탭 › 설정에서 부모님 잠금을 켤 수 있어요'); return; }
+    if (unlocked) { unlocked = false; render(); toast('잠금을 걸었어요'); } else guard(() => {});
+  },
+  day(el) { ui.date = addDays(ui.date, +el.dataset.n); ui.showDone = false; render(); },
+  goToday() { ui.date = today(); render(); },
+  week(el) { ui.week = addDays(ui.week, +el.dataset.n); render(); },
+  thisWeek() { ui.week = mondayOf(today()); render(); },
+  gotoDay(el) { ui.date = el.dataset.date; ui.tab = 'today'; ui.showDone = false; render(); window.scrollTo({top:0}); },
+  filter(el) { ui.filter = el.dataset.f; render(); },
+  showDone() { ui.showDone = !ui.showDone; render(); },
+  hideNote() { state.sampleNote = false; save(); render(); },
+  toggle(el) {
+    const k = el.dataset.date, id = el.dataset.id;
+    const before = dayStats(k);
+    const d = materialize(k);
+    if (d.done[id]) delete d.done[id]; else d.done[id] = true;
+    save(); render();
+    const after = dayStats(k);
+    if (after.total && after.done === after.total && before.done !== before.total) {
+      toast(k === today() ? '오늘 공부 다 끝냈어요! 🎉' : `${md(k)} 공부 다 끝! 🎉`);
+      const r = $('#ring'); if (r) r.classList.add('pop');
+    }
+  },
+  unskip(el) { const d = materialize(el.dataset.date); delete d.skip[el.dataset.id]; save(); render(); },
+  itemSheet(el) {
+    const k = el.dataset.date, id = el.dataset.id;
+    const it = rawItems(k).find(i => i.id === id); if (!it) return;
+    const memo = state.days[k]?.memo?.[id] || '';
+    openModal(`<h3>${esc(it.title)}</h3><div class="item-meta">${chip(it.subj)}<span>${mdw(k)}</span>${it.min?`<span>${it.min}분</span>`:''}</div>
+      <div class="field"><label for="memoIn">메모</label><textarea id="memoIn" placeholder="예) 3번 문제 어려웠어요 / 엄마랑 같이 풀었어요" autofocus>${esc(memo)}</textarea></div>
+      <div class="actions"><button class="btn primary" data-act="m" data-h="save">메모 저장</button></div>
+      <div class="actions">${it.src==='x'?'<button class="btn danger" data-act="m" data-h="del">이 할 일 지우기</button>':'<button class="btn" data-act="m" data-h="skip">이날만 빼기</button>'}<button class="btn" data-act="closeModal">닫기</button></div>`,
+    { save() { const d = materialize(k); const v = val('memoIn'); if (v) d.memo[id] = v; else delete d.memo[id]; save(); closeModal(); render(); toast('메모를 저장했어요'); },
+      skip() { const d = materialize(k); d.skip[id] = true; delete d.done[id]; save(); closeModal(); render(); toast('이날만 뺐어요. ‘끝낸 공부 보기’에서 되돌릴 수 있어요'); },
+      del() { const d = materialize(k); d.items = d.items.filter(i => i.id !== id); delete d.done[id]; delete d.memo[id]; save(); closeModal(); render(); toast('지웠어요'); } });
+  },
+  addExtra() {
+    const k = ui.date;
+    openModal(`<h3>${mdw(k)} 할 일 추가</h3><p class="muted small" style="margin:0">이날 하루만 들어가요. 매주 하는 공부는 루틴 탭에서 넣어요.</p>
+      <div class="field"><span class="lbl">과목</span>${subjPick(ui.filter!=='all'&&ui.filter!=='hw'?ui.filter:'math')}</div>
+      <div class="field"><label for="tIn">할 일</label><input id="tIn" placeholder="예) 수학 단원평가 오답 정리" autofocus></div>
+      <div class="grid2"><div class="field"><label for="dIn">범위 (선택)</label><input id="dIn" placeholder="예) 32~35쪽"></div><div class="field"><label for="mIn">예상 시간(분)</label><input id="mIn" type="number" inputmode="numeric" min="0" placeholder="20"></div></div>
+      <div class="err" id="err"></div>
+      <div class="actions"><button class="btn" data-act="closeModal">그만두기</button><button class="btn primary" data-act="m" data-h="ok">추가하기</button></div>`,
+    { ok() { const title = val('tIn'); if (!title) return void ($('#err').textContent = '할 일 이름을 적어 주세요.');
+        const d = materialize(k); d.items.push({id:uid(), subj:checked('subj')||'etc', title, detail:val('dIn'), min:+val('mIn')||0, src:'x'});
+        save(); closeModal(); render(); toast('할 일을 추가했어요'); } });
+  },
+  stamp() {
+    guard(() => { const k = ui.date; if (state.stamps[k]) delete state.stamps[k]; else state.stamps[k] = true; save(); render(); toast(state.stamps[k] ? '⭐ 확인 도장을 찍었어요' : '도장을 취소했어요'); });
+  },
+  report() {
+    const text = reportText(ui.date);
+    openModal(`<h3>📤 오늘 보고</h3><p class="muted small" style="margin:0">복사해서 카톡이나 문자로 보내요.</p><div class="report" id="rep">${esc(text)}</div>
+      <div class="actions"><button class="btn" data-act="closeModal">닫기</button>${navigator.share?'<button class="btn" data-act="m" data-h="share">공유하기</button>':''}<button class="btn primary" data-act="m" data-h="copy">복사하기</button></div>`,
+    { copy() { copyText(text, '보고를 복사했어요. 붙여넣어 보내요'); },
+      async share() { try { await navigator.share({text}); } catch (e) { if (e.name !== 'AbortError') copyText(text, '보고를 복사했어요'); } } });
+  },
+
+  /* routine */
+  rdow(el) { ui.rdow = +el.dataset.d; render(); },
+  rmove(el) { guard(() => { const arr = state.routine[ui.rdow], i = +el.dataset.i, j = i + (+el.dataset.n); if (j < 0 || j >= arr.length) return; [arr[i],arr[j]] = [arr[j],arr[i]]; syncRoutine(); save(); render(); }); },
+  redit(el) {
+    const id = el.dataset.id;
+    guard(() => {
+      const dw = ui.rdow, arr = state.routine[dw] ||= [];
+      const it = id ? arr.find(i => i.id === id) : null;
+      openModal(`<h3>${it?'루틴 고치기':'루틴 추가'}</h3>
+        <div class="field"><span class="lbl">과목</span>${subjPick(it?it.subj:'math')}</div>
+        <div class="field"><label for="tIn">할 일</label><input id="tIn" value="${esc(it?.title)}" placeholder="예) 최상위 수학 2쪽 / 한자 5자 쓰기" ${it?'':'autofocus'}></div>
+        <div class="grid2"><div class="field"><label for="dIn">교재 · 범위 (선택)</label><input id="dIn" value="${esc(it?.detail)}" placeholder="예) 디딤돌 4-2"></div><div class="field"><label for="mIn">예상 시간(분)</label><input id="mIn" type="number" inputmode="numeric" min="0" value="${it?.min||''}" placeholder="20"></div></div>
+        ${it?'':`<div class="field"><span class="lbl">어느 요일에 할까요?</span><div class="pick">${DOW_ORDER.map(d => `<label><input type="checkbox" name="dw" value="${d}" ${d===dw?'checked':''}><span class="day">${DOW[d]}</span></label>`).join('')}</div>
+          <div class="row wrap-ok"><button class="btn sm" data-act="m" data-h="wk">평일</button><button class="btn sm" data-act="m" data-h="all">매일</button></div></div>`}
+        <div class="err" id="err"></div>
+        <div class="actions">${it?'<button class="btn danger" data-act="m" data-h="del">지우기</button>':''}<button class="btn" data-act="closeModal">그만두기</button><button class="btn primary" data-act="m" data-h="ok">${it?'저장':'추가하기'}</button></div>`,
+      { wk() { document.querySelectorAll('#sheet input[name="dw"]').forEach(c => c.checked = c.value >= 1 && c.value <= 5); },
+        all() { document.querySelectorAll('#sheet input[name="dw"]').forEach(c => c.checked = true); },
+        del() { state.routine[dw] = arr.filter(i => i.id !== id); syncRoutine(); save(); closeModal(); render(); toast('루틴에서 지웠어요'); },
+        ok() {
+          const title = val('tIn'); if (!title) return void ($('#err').textContent = '할 일 이름을 적어 주세요.');
+          const data = {subj:checked('subj')||'etc', title, detail:val('dIn'), min:+val('mIn')||0};
+          if (it) Object.assign(it, data);
+          else { const days = [...document.querySelectorAll('#sheet input[name="dw"]:checked')].map(c => +c.value);
+            if (!days.length) return void ($('#err').textContent = '요일을 하나 이상 골라 주세요.');
+            for (const d of days) (state.routine[d] ||= []).push({id:uid(), ...data}); }
+          state.sampleNote = false; syncRoutine(); save(); closeModal(); render(); toast(it ? '루틴을 고쳤어요' : '루틴을 추가했어요');
+        } });
+    });
+  },
+  rcopy() {
+    guard(() => {
+      const from = ui.rdow;
+      openModal(`<h3>${DOW[from]}요일 루틴 복사</h3><p class="muted small" style="margin:0">고른 요일의 루틴을 ${DOW[from]}요일 루틴으로 바꿔요.</p>
+        <div class="pick">${DOW_ORDER.filter(d => d!==from).map(d => `<label><input type="checkbox" name="dw" value="${d}"><span class="day">${DOW[d]}</span></label>`).join('')}</div>
+        <div class="actions"><button class="btn" data-act="closeModal">그만두기</button><button class="btn primary" data-act="m" data-h="ok">복사하기</button></div>`,
+      { ok() { const days = [...document.querySelectorAll('#sheet input[name="dw"]:checked')].map(c => +c.value); if (!days.length) return closeModal();
+          for (const d of days) state.routine[d] = state.routine[from].map(i => ({...i, id:uid()}));
+          syncRoutine(); save(); closeModal(); render(); toast(`${days.map(d => DOW[d]).join('·')}요일에 복사했어요`); } });
+    });
+  },
+  subjects() {
+    guard(() => {
+      let draft = state.subjects.map(s => ({...s}));
+      const sync = () => draft.forEach(s => { s.name = val('sn-'+s.id) || s.name; s.color = checked('sc-'+s.id) || s.color; });
+      const draw = () => openModal(`<h3>과목 관리</h3>
+        <div>${draft.map(s => `<div class="subrow c-${s.color}"><input id="sn-${s.id}" value="${esc(s.name)}" style="max-width:110px" aria-label="과목 이름">
+          <div class="color-pick grow">${Object.keys(COLORS).map(c => `<label class="c-${c}"><input type="radio" name="sc-${s.id}" value="${c}" ${c===s.color?'checked':''} aria-label="${c}"><span></span></label>`).join('')}</div>
+          <button class="btn icon danger" data-act="m" data-h="rm" data-id="${s.id}" aria-label="${esc(s.name)} 지우기">✕</button></div>`).join('')}</div>
+        <button class="btn dashed" data-act="m" data-h="add">＋ 과목 추가</button>
+        <div class="actions"><button class="btn" data-act="closeModal">그만두기</button><button class="btn primary" data-act="m" data-h="ok">저장</button></div>`, H);
+      const H = {
+        add() { sync(); const used = new Set(draft.map(s => s.color)); const color = Object.keys(COLORS).find(c => !used.has(c)) || 'gray'; draft.push({id:uid(), name:'새 과목', color}); draw(); },
+        rm(el) { sync(); draft = draft.filter(s => s.id !== el.dataset.id); draw(); },
+        ok() { sync(); if (!draft.length) return; state.subjects = draft; save(); closeModal(); render(); toast('과목을 저장했어요'); },
+      };
+      draw();
+    });
+  },
+
+  /* homework */
+  hwTab(el) { ui.hwTab = el.dataset.t; render(); },
+  hwSheet(el) {
+    const id = el.dataset.id;
+    const src = id ? state.homework.find(h => h.id === id) : null;
+    const dr = src ? JSON.parse(JSON.stringify(src)) : {id:uid(), subj:'eng', title:'', due:addDays(today(),1), memo:'', steps:[], done:false, doneAt:'', created:today()};
+    const sync = () => { dr.title = val('hT'); dr.subj = checked('subj') || dr.subj; dr.due = val('hD') || dr.due; dr.memo = val('hM'); dr.steps.forEach(s => { s.t = val('st-'+s.id) || s.t; }); };
+    const commitSteps = () => { if (src) { src.steps = JSON.parse(JSON.stringify(dr.steps)); save(); render(); } };
+    const draw = () => {
+      const p = hwSteps(dr);
+      openModal(`<h3>${src?'숙제':'새 숙제'}</h3>
+        <div class="field"><label for="hT">숙제 이름</label><input id="hT" value="${esc(dr.title)}" placeholder="예) 영어 학원 숙제 (금·W5)" ${src?'':'autofocus'}></div>
+        <div class="field"><span class="lbl">과목</span>${subjPick(dr.subj)}</div>
+        <div class="field"><label for="hD">마감일</label><input id="hD" type="date" value="${dr.due}"></div>
+        <div class="field"><span class="lbl">세부 할 일 ${p.total?`· ${p.done}/${p.total}`:''}</span>
+          <div class="list">${dr.steps.map((s,i) => `<div class="step"><button class="check" data-act="m" data-h="tg" data-i="${i}" aria-pressed="${s.done}" aria-label="완료">${CHECK}</button><input id="st-${s.id}" value="${esc(s.t)}" aria-label="세부 할 일"><button class="btn icon" data-act="m" data-h="rs" data-i="${i}" aria-label="지우기">✕</button></div>`).join('')}</div>
+          <button class="btn dashed" data-act="m" data-h="as">＋ 세부 할 일</button></div>
+        <div class="field"><label for="hM">메모 (선택)</label><textarea id="hM" placeholder="예) 학원 가방에 넣기">${esc(dr.memo)}</textarea></div>
+        <div class="err" id="err"></div>
+        ${src?`<div class="actions"><button class="btn ${src.done?'':'accent'}" data-act="m" data-h="fin">${src.done?'다시 할 숙제로':'✓ 숙제 완료'}</button></div>`:''}
+        <div class="actions">${src?'<button class="btn danger" data-act="m" data-h="del">지우기</button>':''}<button class="btn" data-act="closeModal">닫기</button><button class="btn primary" data-act="m" data-h="ok">저장</button></div>`, H);
+    };
+    const H = {
+      tg(el) { sync(); const s = dr.steps[+el.dataset.i]; s.done = !s.done; commitSteps(); draw();
+        if (src && !src.done && dr.steps.every(s => s.done)) toast('세부 할 일을 다 했어요! ‘숙제 완료’를 눌러요'); },
+      as() { sync(); dr.steps.push({id:uid(), t:'', done:false}); draw(); const last = dr.steps[dr.steps.length-1]; setTimeout(() => document.getElementById('st-'+last.id)?.focus(), 40); },
+      rs(el) { sync(); dr.steps.splice(+el.dataset.i,1); draw(); },
+      fin() { sync(); src.done = !src.done; src.doneAt = src.done ? today() : ''; save(); closeModal(); render(); toast(src.done ? '숙제 끝! 잘했어요 👏' : '다시 할 숙제로 옮겼어요'); },
+      del() { guard(() => confirmBox('숙제 지우기', `‘${esc(src.title)}’를 지울까요?`, '지우기', () => { state.homework = state.homework.filter(h => h.id !== src.id); save(); render(); toast('숙제를 지웠어요'); })); },
+      ok() { sync(); if (!dr.title) return void ($('#err').textContent = '숙제 이름을 적어 주세요.');
+        dr.steps = dr.steps.filter(s => s.t);
+        if (src) Object.assign(src, dr); else state.homework.push(dr);
+        save(); closeModal(); render(); toast(src ? '숙제를 저장했어요' : '숙제를 추가했어요'); },
+    };
+    draw();
+  },
+
+  /* settings */
+  setName() {
+    openModal(`<h3>아이 이름</h3><div class="field"><label for="nIn">이름 (비워 두면 제목에 이름이 안 나와요)</label><input id="nIn" value="${esc(state.name)}" placeholder="예) 서윤" maxlength="12" autofocus></div>
+      <div class="actions"><button class="btn" data-act="closeModal">그만두기</button><button class="btn primary" data-act="m" data-h="ok">저장</button></div>`,
+    { ok() { state.name = val('nIn'); save(); closeModal(); render(); toast('이름을 저장했어요'); } });
+  },
+  setPin() { setPinModal(); },
+  unlock() { guard(() => {}); },
+  lockNow() { unlocked = false; render(); toast('잠금을 걸었어요'); },
+  pinMenu() {
+    guard(() => openModal(`<h3>부모님 잠금</h3><div class="actions"><button class="btn primary" data-act="m" data-h="chg">비밀번호 바꾸기</button></div><div class="actions"><button class="btn danger" data-act="m" data-h="off">잠금 끄기</button><button class="btn" data-act="closeModal">닫기</button></div>`,
+      { chg() { setPinModal('비밀번호를 바꿨어요'); }, off() { state.lock = {enabled:false, pin:''}; unlocked = false; save(); closeModal(); render(); toast('잠금을 껐어요'); } }));
+  },
+  backup() {
+    const text = JSON.stringify({app:'learning-homebase', savedAt:new Date().toISOString(), data:state});
+    openModal(`<h3>백업</h3><p class="muted small" style="margin:0">아래 글 전체가 백업이에요. 복사해서 카톡 ‘나에게 보내기’나 메모에 보관하고, 다른 기기에서 ‘백업 불러오기’에 붙여 넣어요.</p>
+      <textarea id="bk" readonly rows="5">${esc(text)}</textarea>
+      <div class="actions"><button class="btn" data-act="m" data-h="file">파일로 저장</button><button class="btn primary" data-act="m" data-h="copy">복사하기</button></div>`,
+    { copy() { copyText(text, '백업을 복사했어요'); }, file() { download(`공부플래너-백업-${today()}.json`, text); } });
+  },
+  restore() {
+    guard(() => {
+      openModal(`<h3>백업 불러오기</h3><p class="muted small" style="margin:0">지금 이 기기의 기록은 백업 내용으로 바뀌어요.</p>
+        <textarea id="rs" rows="5" placeholder="복사한 백업 글을 여기에 붙여 넣어요"></textarea>
+        <div class="field"><label for="rf">또는 백업 파일 고르기</label><input id="rf" type="file" accept=".json,application/json,text/plain"></div>
+        <div class="err" id="err"></div>
+        <div class="actions"><button class="btn" data-act="closeModal">그만두기</button><button class="btn primary" data-act="m" data-h="ok">불러오기</button></div>`,
+      { async ok() {
+          let text = val('rs');
+          const f = $('#rf').files[0]; if (!text && f) text = await f.text();
+          try { const o = JSON.parse(text); const d = o.data || o; if (!d || d.v !== 1 || !d.routine || !d.subjects) throw 0;
+            state = d; unlocked = false; save(); closeModal(); render(); toast('백업을 불러왔어요');
+          } catch (e) { $('#err').textContent = '백업 글이 아니에요. 처음부터 끝까지 다 붙여 넣었는지 확인해 주세요.'; }
+      } });
+    });
+  },
+  reset() {
+    guard(() => confirmBox('처음 상태로', '모든 기록, 루틴, 숙제가 지워지고 예시 시간표로 돌아가요. 되돌릴 수 없어요. 필요하면 먼저 백업해 주세요.', '모두 지우기', () => { state = H.defaultState(); unlocked = false; save(); ui.date = today(); render(); toast('처음 상태로 돌아갔어요'); }));
+  },
+  kidIn() {
+    openModal(`<h3>📥 아이 소식 넣기</h3><p class="muted small" style="margin:0">아이가 카톡이나 문자로 보낸 글을 <b>통째로</b> 복사해서 붙여 넣으면 아이가 한 체크와 메모가 들어와요.</p>
+      <textarea id="kin" rows="5" placeholder="아이에게 받은 글을 여기에 붙여 넣어요"></textarea>
+      <div class="err" id="err"></div>
+      <div class="actions"><button class="btn" data-act="m" data-h="paste">📋 붙여넣기</button><button class="btn primary" data-act="m" data-h="ok">넣기</button></div>`,
+    { async paste() { try { $('#kin').value = await navigator.clipboard.readText(); } catch (e) { $('#kin').focus(); toast('글 칸을 길게 눌러 붙여넣기 해 주세요'); } },
+      async ok() {
+        let p; try { p = await H.decode(val('kin')); } catch (e) { return void ($('#err').textContent = '아이 앱에서 보낸 글을 찾지 못했어요. 글 끝의 HB 로 시작하는 코드까지 다 붙여 넣어 주세요.'); }
+        if (p.k !== 'kid') return void ($('#err').textContent = '이건 엄마 앱에서 만든 글이에요. 아이가 보낸 글을 붙여 넣어 주세요.');
+        H.applyKidPacket(state, p); save(); closeModal(); ui.date = p.date; ui.tab = 'today'; render();
+        toast(`${md(p.date)} 아이 체크를 넣었어요 · ${p.doneN}/${p.total}`);
+      } });
+  },
+  async kidOut() {
+    openModal(`<h3>📲 아이 기기로 보내기</h3><p class="muted small" style="margin:0">지금 루틴·숙제·확인 도장을 아이 앱에 넣는 글이에요. 카톡으로 아이에게 보내고, 아이 앱 › ⚙️ › <b>엄마 코드 넣기</b>에 붙여 넣어요.</p><div class="report" id="kout">만드는 중…</div>`);
+    const code = await H.encode(H.momPacket(state));
+    const text = `📒 ${state.name || '우리 아이'} 공부 플래너 · 엄마가 보낸 업데이트\n아이 앱 › ⚙️ › ‘엄마 코드 넣기’에 이 글을 통째로 붙여 넣어요.\n처음이면 아이 앱 주소: ${H.base()}kid/\n\n${code}`;
+    const fp = H.planPrint(state);
+    const sent = () => { state.kidSentFp = fp; save(); render(); };
+    openModal(`<h3>📲 아이 기기로 보내기</h3><p class="muted small" style="margin:0">카톡으로 아이에게 보내고, 아이 앱 › ⚙️ › <b>엄마 코드 넣기</b>에 붙여 넣어요. 루틴이나 숙제를 바꿀 때마다 한 번씩 보내 주세요.</p>
+      <div class="report">${esc(text)}</div>
+      <div class="actions"><button class="btn" data-act="closeModal">닫기</button>${navigator.share?'<button class="btn" data-act="m" data-h="share">카톡으로 보내기</button>':''}<button class="btn primary" data-act="m" data-h="copy">복사하기</button></div>`,
+    { async copy() { if (await copyText(text, '복사했어요. 아이에게 카톡으로 보내 주세요')) { sent(); closeModal(); } },
+      async share() { try { await navigator.share({text}); sent(); toast('보냈어요'); } catch (e) { if (e.name !== 'AbortError' && await copyText(text, '복사했어요. 카톡에 붙여 넣어 보내 주세요')) sent(); } } });
+  },
+  closeModal() { closeModal(); },
+  m(el) { const f = M[el.dataset.h]; if (f) f(el); },
+};
+
+document.addEventListener('click', e => {
+  const el = e.target.closest('[data-act]'); if (!el || el.disabled) return;
+  const f = A[el.dataset.act]; if (f) { e.preventDefault(); f(el, e); }
+});
+document.addEventListener('input', e => {
+  if (e.target.id === 'q') { ui.q = e.target.value; const pos = e.target.selectionStart; render(); const q = $('#q'); q.focus(); try { q.setSelectionRange(pos,pos); } catch (er) {} }
+});
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && !$('#modal').hidden) closeModal();
+  if (e.key === 'Enter' && e.target.closest('#sheet') && e.target.tagName === 'INPUT' && e.target.type !== 'checkbox' && e.target.type !== 'radio') {
+    e.preventDefault(); const b = $('#sheet .btn.primary'); if (b) b.click();
+  }
+});
+// a new day while the app stays open
+let lastDay = today();
+document.addEventListener('visibilitychange', () => { if (!document.hidden && today() !== lastDay) { if (ui.date === lastDay) ui.date = today(); ui.week = mondayOf(today()); lastDay = today(); render(); } });
+
+render();
+if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol) && !/claude/.test(location.hostname)) {
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+}
+})();
+</script>
+</body>
+</html>

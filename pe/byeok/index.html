@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <!-- 이 페이지는 자기 자신('self') 말고는 어떤 서버에도 연결할 수 없다: 카메라 영상이 밖으로 나갈 길이 없다.
+       'wasm-unsafe-eval' 은 몸 인식 엔진(WebAssembly)을 기기 안에서 돌리는 데 필요하다. -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self'; img-src 'self' data: blob:; media-src 'self' blob: mediastream:; connect-src 'self'; manifest-src 'self'; worker-src 'self'; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'">
+  <meta name="theme-color" content="#5b4bff">
+  <meta name="description" content="벽에 뚫린 구멍 모양대로 몸을 맞춰 통과하는 몸놀이 게임">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="벽 통과">
+  <title>벽 통과하기</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon-192.png" type="image/png">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="stylesheet" href="style.css">
+  <script type="module" src="app.js"></script>
+</head>
+<body>
+  <main id="app">
+    <!-- 첫 화면 -->
+    <section id="screen-home" class="screen active" aria-labelledby="title">
+      <div class="home-card">
+        <a class="back-home" href="../">← 🏃 체육시간</a>
+        <div class="logo" aria-hidden="true"><span>🧱</span><span>🙆</span></div>
+        <h1 id="title">벽 통과하기</h1>
+        <p class="sub">벽이 다가와요! 구멍 모양대로 <b>몸을 맞춰야</b> 통과해요.</p>
+
+        <div class="setting">
+          <h2>누가 해요?</h2>
+          <div class="choices" data-setting="players" role="radiogroup" aria-label="인원">
+            <button type="button" role="radio" data-value="1"><span>🙋</span>혼자</button>
+            <button type="button" role="radio" data-value="2"><span>👫</span>둘이서</button>
+          </div>
+          <p class="hint" id="players-hint"></p>
+        </div>
+
+        <div class="setting">
+          <h2>난이도</h2>
+          <div class="choices three" data-setting="difficulty" role="radiogroup" aria-label="난이도">
+            <button type="button" role="radio" data-value="easy"><span>🐣</span>쉬움</button>
+            <button type="button" role="radio" data-value="normal"><span>🐰</span>보통</button>
+            <button type="button" role="radio" data-value="hard"><span>🦅</span>어려움</button>
+          </div>
+          <p class="hint" id="difficulty-hint"></p>
+        </div>
+
+        <div class="setting two-col">
+          <div>
+            <h2>배경음악</h2>
+            <div class="choices" data-setting="music" role="radiogroup" aria-label="배경음악">
+              <button type="button" role="radio" data-value="on"><span>🎵</span>켜기</button>
+              <button type="button" role="radio" data-value="off"><span>🔇</span>끄기</button>
+            </div>
+          </div>
+          <div>
+            <h2>목소리 (통과·꽝)</h2>
+            <div class="choices" data-setting="voice" role="radiogroup" aria-label="목소리">
+              <button type="button" role="radio" data-value="on"><span>🔊</span>켜기</button>
+              <button type="button" role="radio" data-value="off"><span>🔇</span>끄기</button>
+            </div>
+          </div>
+        </div>
+
+        <button type="button" id="start" class="big">시작!</button>
+        <p class="best" id="best"></p>
+        <p id="error" class="error" role="alert" hidden></p>
+        <p class="privacy">🔒 카메라 영상은 이 기기 안에서만 써요. 저장하지도, 어디로 보내지도 않아요.</p>
+      </div>
+    </section>
+
+    <!-- 게임 화면 -->
+    <section id="screen-game" class="screen">
+      <video id="cam" playsinline muted autoplay></video>
+      <canvas id="stage" aria-hidden="true"></canvas>
+
+      <div class="hud top">
+        <div class="pill" id="lives" aria-label="남은 목숨"></div>
+        <div class="pill" id="score" aria-live="polite">0점</div>
+        <div class="pill" id="level"></div>
+        <button type="button" class="pill btn" id="music-btn" aria-label="배경음악 켜고 끄기">🎵</button>
+        <button type="button" class="pill btn" id="quit" aria-label="그만하기">✕</button>
+      </div>
+
+      <div id="banner" class="banner" aria-live="assertive"></div>
+
+      <div class="hud bottom">
+        <div class="pose-name" id="pose-name" aria-live="polite"></div>
+        <div class="meters" id="meters"></div>
+      </div>
+    </section>
+
+    <!-- 끝 화면 -->
+    <section id="screen-over" class="screen" aria-labelledby="over-title">
+      <div class="home-card">
+        <div class="logo" aria-hidden="true"><span id="over-emoji">🏆</span></div>
+        <h1 id="over-title">끝!</h1>
+        <div class="stats">
+          <div><b id="over-score">0</b><span>점수</span></div>
+          <div><b id="over-walls">0</b><span>통과한 벽</span></div>
+          <div><b id="over-perfect">0</b><span>완벽!</span></div>
+        </div>
+        <p class="best" id="over-best"></p>
+        <button type="button" id="again" class="big">한 번 더!</button>
+        <button type="button" id="home" class="ghost">처음으로</button>
+      </div>
+    </section>
+  </main>
+</body>
+</html>
