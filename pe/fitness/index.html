@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <!-- 이 페이지는 자기 자신('self') 말고는 어떤 서버에도 연결할 수 없다: 카메라 영상이 밖으로 나갈 길이 없다.
+       'wasm-unsafe-eval' 은 몸 인식 엔진(WebAssembly)을 기기 안에서 돌리는 데 필요하다. -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self'; img-src 'self' data: blob:; media-src 'self' blob: mediastream:; connect-src 'self'; manifest-src 'self'; worker-src 'self'; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'">
+  <meta name="theme-color" content="#16a36a">
+  <meta name="description" content="스쿼트·팔 벌려 뛰기·무릎 들기를 카메라가 세어 주는 운동 게임">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="체력왕">
+  <title>체력왕 운동 카운터</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon-192.png" type="image/png">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="stylesheet" href="../common/game.css">
+  <link rel="stylesheet" href="style.css">
+  <script type="module" src="app.js"></script>
+</head>
+<body>
+  <main id="app">
+    <section id="screen-home" class="screen card-screen active" aria-labelledby="title">
+      <div class="home-card">
+        <a class="back-home" href="../">← 🏃 체육시간</a>
+        <div class="logo" aria-hidden="true">💪</div>
+        <h1 id="title">체력왕 운동 카운터</h1>
+        <p class="sub">카메라가 운동 횟수를 세어 줘요. <b>제대로 한 것만</b> 세요!</p>
+
+        <div class="setting">
+          <h2>무슨 운동?</h2>
+          <div class="choices three" data-setting="exercise" role="radiogroup" aria-label="운동">
+            <button type="button" role="radio" data-value="squat"><span>🏋️</span>스쿼트</button>
+            <button type="button" role="radio" data-value="jack"><span>🙆</span>팔 벌려 뛰기</button>
+            <button type="button" role="radio" data-value="knee"><span>🏃</span>무릎 들기</button>
+          </div>
+          <p class="hint" id="exercise-hint"></p>
+        </div>
+
+        <div class="setting two-col">
+          <div>
+            <h2>누가 해요?</h2>
+            <div class="choices" data-setting="players" role="radiogroup" aria-label="인원">
+              <button type="button" role="radio" data-value="1"><span>🙋</span>혼자</button>
+              <button type="button" role="radio" data-value="2"><span>👫</span>둘이서</button>
+            </div>
+          </div>
+          <div>
+            <h2>시간</h2>
+            <div class="choices" data-setting="time" role="radiogroup" aria-label="시간">
+              <button type="button" role="radio" data-value="30"><span>⏱️</span>30초</button>
+              <button type="button" role="radio" data-value="60"><span>⏰</span>60초</button>
+            </div>
+          </div>
+        </div>
+        <p class="hint" id="players-hint"></p>
+
+        <div class="setting two-col">
+          <div>
+            <h2>배경음악</h2>
+            <div class="choices" data-setting="music" role="radiogroup" aria-label="배경음악">
+              <button type="button" role="radio" data-value="on"><span>🎵</span>켜기</button>
+              <button type="button" role="radio" data-value="off"><span>🔇</span>끄기</button>
+            </div>
+          </div>
+          <div>
+            <h2>목소리</h2>
+            <div class="choices" data-setting="voice" role="radiogroup" aria-label="목소리">
+              <button type="button" role="radio" data-value="on"><span>🔊</span>켜기</button>
+              <button type="button" role="radio" data-value="off"><span>🔇</span>끄기</button>
+            </div>
+          </div>
+        </div>
+
+        <button type="button" id="start" class="big">시작!</button>
+        <p class="best" id="best"></p>
+        <p id="error" class="error" role="alert" hidden></p>
+        <p class="privacy">🔒 카메라 영상은 이 기기 안에서만 써요. 저장하지도, 어디로 보내지도 않아요.</p>
+      </div>
+    </section>
+
+    <section id="screen-game" class="screen play">
+      <video id="cam" playsinline muted autoplay></video>
+      <canvas id="stage" aria-hidden="true"></canvas>
+      <div class="hud top">
+        <div class="pill" id="ex-name"></div>
+        <div class="pill timer" id="timer" aria-live="polite"></div>
+        <div class="spacer"></div>
+        <button type="button" class="pill btn" id="music-btn" aria-label="배경음악 켜고 끄기">🎵</button>
+        <button type="button" class="pill btn" id="quit" aria-label="그만하기">✕</button>
+      </div>
+      <div id="banner" class="banner" aria-live="assertive"></div>
+      <div class="hud bottom" id="panels"></div>
+    </section>
+
+    <section id="screen-over" class="screen card-screen" aria-labelledby="over-title">
+      <div class="home-card">
+        <div class="logo" aria-hidden="true" id="over-emoji">🏆</div>
+        <h1 id="over-title">끝!</h1>
+        <div id="over-body"></div>
+        <p class="best" id="over-best"></p>
+        <button type="button" id="again" class="big">한 번 더!</button>
+        <button type="button" id="home" class="ghost">처음으로</button>
+      </div>
+    </section>
+  </main>
+</body>
+</html>

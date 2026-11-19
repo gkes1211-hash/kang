@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <!-- 이 페이지는 자기 자신('self') 말고는 어떤 서버에도 연결하지 않는다. 마이크 소리는 기기 안에서만 쓴다. -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self'; manifest-src 'self'; worker-src 'self'; media-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'none'">
+  <meta name="theme-color" content="#d6336c">
+  <meta name="description" content="노래 연습: 음정 보기, 음 맞추기, 발성 연습, 길게 소리 내기, 음역 찾기, 반주 맞춰 부르기, 녹음해서 듣기">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="노래 연습장">
+  <title>노래 연습장</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon-192.png" type="image/png">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="stylesheet" href="style.css">
+  <script src="pitch.js" defer></script>
+  <script src="roll.js" defer></script>
+  <script src="karaoke.js" defer></script>
+  <script src="guide.js" defer></script>
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <div id="app">
+    <header class="top">
+      <h1>노래 연습장 🎤</h1>
+      <span id="top-streak" class="streak" title="연속 연습한 날"></span>
+      <button type="button" class="help-btn" data-act="help" aria-label="사용법">❓</button>
+    </header>
+
+    <main id="view" tabindex="-1"></main>
+
+    <nav class="tabs" aria-label="메뉴">
+      <button type="button" data-tab="home"><span aria-hidden="true">🎤</span>연습</button>
+      <button type="button" data-tab="karaoke"><span aria-hidden="true">🎶</span>반주</button>
+      <button type="button" data-tab="rec"><span aria-hidden="true">📼</span>녹음</button>
+      <button type="button" data-tab="stats"><span aria-hidden="true">📊</span>기록</button>
+      <button type="button" data-tab="settings"><span aria-hidden="true">⚙️</span>설정</button>
+    </nav>
+  </div>
+
+  <!-- 연습 화면 (전체 화면) -->
+  <section id="play" hidden aria-modal="true" role="dialog" aria-labelledby="play-title">
+    <div class="play-bar">
+      <button type="button" class="icon-btn" id="play-close" aria-label="그만하기">✕</button>
+      <div class="play-head"><b id="play-title"></b><div class="progress" aria-hidden="true"><i id="play-progress"></i></div></div>
+      <div class="mic-meter" id="mic-meter" hidden role="status" aria-live="polite">
+        <span class="mm-bars" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span><span class="mm-txt" id="mm-txt">듣는 중</span>
+      </div>
+      <span id="play-count" class="play-count"></span>
+    </div>
+    <div id="play-body" class="play-body"></div>
+  </section>
+
+  <div id="toast" role="status" aria-live="polite"></div>
+</body>
+</html>
