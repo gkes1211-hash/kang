@@ -5,6 +5,7 @@
 // ─────────────────────────────────────────────────────────────
 import { db } from './db';
 import { newId } from '../lib/id';
+import { calcRunOutDate } from '../lib/calc';
 import type {
   BaseRecord, NewRecord, Customer, Product, Purchase, ContactLog, Template,
 } from '../types';
@@ -68,7 +69,55 @@ export async function addProduct(data: NewRecord<Product>): Promise<Product> {
   return rec;
 }
 
+export async function getProduct(id: string): Promise<Product | undefined> {
+  return db.products.get(id);
+}
+
+export async function updateProduct(id: string, changes: Partial<NewRecord<Product>>): Promise<void> {
+  await db.products.update(id, { ...changes, updatedAt: new Date().toISOString() });
+  notify();
+}
+
+/** 제품 삭제. 이미 이 제품을 산 구매 기록은 남겨 둠 (이력은 지우지 않음) */
+export async function deleteProduct(id: string): Promise<void> {
+  await db.products.delete(id);
+  notify();
+}
+
+export async function countPurchasesOfProduct(productId: string): Promise<number> {
+  return db.purchases.where('productId').equals(productId).count();
+}
+
 // ── 구매 ──
+export type NewPurchase = Omit<NewRecord<Purchase>, 'runOutDate'>;
+
+/**
+ * 구매 기록 저장. 소진 예정일은 제품의 1통 섭취 기간으로 자동 계산.
+ * 잠재 고객이 처음 구매하면 신규 고객으로 바꿔 줌.
+ */
+export async function addPurchase(data: NewPurchase): Promise<Purchase> {
+  const product = await db.products.get(data.productId);
+  if (!product) throw new Error('제품을 찾을 수 없어요.');
+  const rec = stamp<Purchase>({
+    ...data,
+    runOutDate: calcRunOutDate(data.purchaseDate, product.daysPerUnit, data.quantity, data.people),
+  });
+  await db.transaction('rw', db.purchases, db.customers, async () => {
+    await db.purchases.add(rec);
+    const c = await db.customers.get(data.customerId);
+    if (c && c.stage === 'prospect') {
+      await db.customers.update(c.id, { stage: 'new', updatedAt: new Date().toISOString() });
+    }
+  });
+  notify();
+  return rec;
+}
+
+export async function deletePurchase(id: string): Promise<void> {
+  await db.purchases.delete(id);
+  notify();
+}
+
 export async function listPurchasesByCustomer(customerId: string): Promise<Purchase[]> {
   const rows = await db.purchases.where('customerId').equals(customerId).toArray();
   return rows.sort((a, b) => b.purchaseDate.localeCompare(a.purchaseDate));

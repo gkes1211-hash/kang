@@ -5,6 +5,9 @@ import CustomerList from './pages/CustomerList';
 import CustomerDetail from './pages/CustomerDetail';
 import CustomerForm from './pages/CustomerForm';
 import Products from './pages/Products';
+import ProductDetail from './pages/ProductDetail';
+import ProductForm from './pages/ProductForm';
+import PurchaseForm from './pages/PurchaseForm';
 import Settings from './pages/Settings';
 
 export default function App() {
@@ -17,7 +20,11 @@ export default function App() {
           <Route path="/customers/new" element={<CustomerForm />} />
           <Route path="/customers/:id" element={<CustomerDetail />} />
           <Route path="/customers/:id/edit" element={<CustomerForm />} />
+          <Route path="/customers/:id/purchase" element={<PurchaseForm />} />
           <Route path="/products" element={<Products />} />
+          <Route path="/products/new" element={<ProductForm />} />
+          <Route path="/products/:id" element={<ProductDetail />} />
+          <Route path="/products/:id/edit" element={<ProductForm />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

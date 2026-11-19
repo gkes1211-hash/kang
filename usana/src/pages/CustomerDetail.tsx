@@ -2,9 +2,11 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import ConfirmButton from '../components/ConfirmButton';
 import { Header, StageBadge, digits } from '../components/ui';
 import { useQuery } from '../data/useQuery';
-import { deleteCustomerCompletely, getCustomer, listContactsByCustomer, listPurchasesByCustomer } from '../data/repo';
+import { deleteCustomerCompletely, deletePurchase, getCustomer, listContactsByCustomer, listProducts, listPurchasesByCustomer } from '../data/repo';
+import { won } from '../lib/calc';
+import type { Purchase } from '../types';
 import { CONTACT_METHODS } from '../types';
-import { fmtDate, relativeLabel, today } from '../lib/date';
+import { addDays, fmtDate, relativeLabel, today } from '../lib/date';
 
 export default function CustomerDetail() {
   const { id = '' } = useParams();
@@ -12,6 +14,8 @@ export default function CustomerDetail() {
   const c = useQuery(() => getCustomer(id).then((x) => x ?? null), [id]);
   const purchases = useQuery(() => listPurchasesByCustomer(id), [id]);
   const contacts = useQuery(() => listContactsByCustomer(id), [id]);
+  const products = useQuery(listProducts, []);
+  const productName = (pid: string) => products?.find((p) => p.id === pid)?.name ?? '삭제된 제품';
 
   if (c === undefined) return null;
   if (c === null)
@@ -88,11 +92,12 @@ export default function CustomerDetail() {
       </div>
 
       <div className="card">
-        <h3>구매 이력</h3>
-        {purchases?.length === 0 && <p className="muted">구매 기록이 없어요. (구매 추가는 2단계에서 만들어요)</p>}
-        {purchases?.map((p) => (
-          <div key={p.id} className="small">{fmtDate(p.purchaseDate)} · 수량 {p.quantity}</div>
-        ))}
+        <div className="row-between">
+          <h3>구매 이력</h3>
+          <Link className="btn primary small-btn" to={`/customers/${c.id}/purchase`}>+ 구매 추가</Link>
+        </div>
+        {purchases?.length === 0 && <p className="muted">구매 기록이 없어요.</p>}
+        {purchases?.map((p) => <PurchaseRow key={p.id} p={p} name={productName(p.productId)} />)}
       </div>
 
       <div className="card">
@@ -110,5 +115,29 @@ export default function CustomerDetail() {
         onConfirm={onDelete}
       />
     </>
+  );
+}
+
+function PurchaseRow({ p, name }: { p: Purchase; name: string }) {
+  const t = today();
+  const soon = p.runOutDate >= t && p.runOutDate <= addDays(t, 7);
+  const done = p.runOutDate < t;
+  return (
+    <div className="purchase">
+      <div className="row-between">
+        <b>{name}</b>
+        <span className="muted small">{fmtDate(p.purchaseDate)}</span>
+      </div>
+      <div className="muted small">
+        {p.quantity}통{p.people > 1 ? ` · ${p.people}명 섭취` : ''}{p.amount ? ` · ${won(p.amount)}` : ''}
+      </div>
+      <div className={'small ' + (soon ? 'warn' : done ? 'muted' : '')}>
+        소진 예정 {fmtDate(p.runOutDate)} ({done ? '소진됨' : relativeLabel(p.runOutDate)})
+      </div>
+      <details className="more">
+        <summary>이 구매 기록 지우기</summary>
+        <ConfirmButton label="지우기" question="이 구매 기록을 지울까요?" confirmLabel="지우기" onConfirm={() => deletePurchase(p.id)} />
+      </details>
+    </div>
   );
 }
