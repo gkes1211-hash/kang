@@ -4,8 +4,8 @@ import { SUBJECTS, SUBJECT, STAMPS_TO_FLY, puzzlesFor, finalPuzzles, JOBS, JOB, 
 import { ISLANDS } from './islands.js';
 import { openPuzzle } from './puzzles.js';
 import { Host, Client, EMOTES, cleanName } from './net.js';
-import { THREE } from './toon.js';
-import { buildAvatar, buildPet, animateBody, randomLook, cleanLook, SKINS, HAIR_COLORS, SHIRTS, HAIRS, CATS, SPECIALS, nextSpecial } from './avatar.js';
+import { randomLook, cleanLook, HAIR_COLORS, CLOTH_COLORS, CATS, SPECIALS, nextSpecial, loadChars, charsReady, drawChar, partThumb } from './chars.js';
+loadChars().catch(() => {});
 import { makeStore } from '../../pe/common/sound.js';
 import { unlockAudio, sfx, speak, speakNow, hush, sound, setSound, bgm } from './audio.js';
 
@@ -63,51 +63,42 @@ const saveLook = () => store.set(`look.${me.name}`, JSON.stringify(me.look));
 // ============================================================
 // 캐릭터 꾸미기 화면
 // ============================================================
-const dresser = { tab: 'face', onDone: null, mode: 'start', r: null };
+const dresser = { tab: 'face', onDone: null, mode: 'start', r: null, view: 0 };
+const VIEWS = ['front', 'side', 'back', 'sideL'];
+// 미리보기: 2D 캐릭터 그림. 누르거나 밀면 앞 → 옆 → 뒤 → 옆으로 돈다
 function setupPreview() {
   if (dresser.r) return;
-  const canvas = $('av-canvas');
-  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
-  renderer.outputColorSpace = THREE.SRGBColorSpace;
-  const scene = new THREE.Scene();
-  scene.add(new THREE.HemisphereLight('#ffffff', '#a3d98a', 1.7));
-  const sun = new THREE.DirectionalLight('#fff3d6', 1.8); sun.position.set(3, 6, 5); scene.add(sun);
-  const cam = new THREE.PerspectiveCamera(32, 1, 0.1, 50);
-  cam.position.set(0, 1.75, 5.0); cam.lookAt(0, 1.1, 0);
-  const holder = new THREE.Group(); scene.add(holder);
-  let rotY = 0.3; let drag = null; let vel = 0.4;
-  canvas.addEventListener('pointerdown', (e) => { drag = e.clientX; canvas.setPointerCapture(e.pointerId); vel = 0; });
-  canvas.addEventListener('pointermove', (e) => { if (drag == null) return; rotY += (e.clientX - drag) * 0.012; vel = (e.clientX - drag) * 0.6; drag = e.clientX; });
-  canvas.addEventListener('pointerup', () => { drag = null; });
-  const clock = new THREE.Clock(); let t = 0;
-  dresser.r = { renderer, scene, cam, holder, canvas };
-  renderer.setAnimationLoop(() => {
-    if (!$('screen-avatar').classList.contains('active')) return;
-    const dt = Math.min(0.05, clock.getDelta()); t += dt;
-    const w = canvas.clientWidth; const h = canvas.clientHeight;
-    if (canvas.width !== Math.round(w * renderer.getPixelRatio())) { renderer.setSize(w, h, false); cam.aspect = w / h; cam.updateProjectionMatrix(); }
-    if (drag == null) { vel *= 0.95; rotY += (0.25 + vel) * dt; }
-    holder.rotation.y = rotY;
-    const av = holder.userData.av;
-    if (av) animateBody(av, false, dt, t);
-    const pet = holder.userData.pet; if (pet) pet.position.y = Math.abs(Math.sin(t * 3)) * 0.12;
-    renderer.render(scene, cam);
-  });
+  const canvas = $('av-canvas'); const g = canvas.getContext('2d');
+  let drag = null; let moved = 0;
+  canvas.addEventListener('pointerdown', (e) => { drag = e.clientX; moved = 0; canvas.setPointerCapture(e.pointerId); });
+  canvas.addEventListener('pointermove', (e) => { if (drag == null) return; moved += e.clientX - drag; drag = e.clientX; if (Math.abs(moved) > 40) { dresser.view = (dresser.view + (moved > 0 ? 3 : 1)) % 4; moved = 0; sfx.pop(); } });
+  canvas.addEventListener('pointerup', () => { if (drag != null && Math.abs(moved) < 6) { dresser.view = (dresser.view + 1) % 4; sfx.pop(); } drag = null; });
+  let t = 0; let last = performance.now();
+  dresser.r = { canvas, g };
+  const loop = (now) => {
+    requestAnimationFrame(loop);
+    if (!$('screen-avatar').classList.contains('active') || !charsReady()) return;
+    t += (now - last) / 1000; last = now;
+    const w = canvas.clientWidth; const h = canvas.clientHeight; const dpr = Math.min(2, window.devicePixelRatio || 1);
+    if (canvas.width !== Math.round(w * dpr)) { canvas.width = Math.round(w * dpr); canvas.height = Math.round(h * dpr); }
+    g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, canvas.width, canvas.height); g.imageSmoothingEnabled = false;
+    const c = drawChar(me.look, VIEWS[dresser.view]); if (!c) return;
+    const sc = Math.min(canvas.width * 0.9 / c.width, canvas.height * 0.92 / c.height);
+    const dw = c.width * sc; const dh = c.height * sc; const bob = Math.sin(t * 2.4) * 3 * dpr;
+    // 그림자
+    g.fillStyle = 'rgba(60,90,40,0.25)'; g.beginPath(); g.ellipse(canvas.width / 2, canvas.height * 0.94, dw * 0.28, dh * 0.03, 0, 0, 7); g.fill();
+    g.drawImage(c, (canvas.width - dw) / 2 - (me.look.pet && me.look.pet !== 'none' ? dw * 0.12 : 0), canvas.height * 0.955 - dh + bob, dw, dh);
+    if (me.look.pet && me.look.pet !== 'none') { g.font = `${Math.round(dh * 0.17)}px sans-serif`; g.textAlign = 'center'; g.fillText({ chick: '🐥', puppy: '🐶', kitty: '🐱', turtle: '🐢', dragon: '🐉' }[me.look.pet] || '', canvas.width / 2 + dw * 0.42, canvas.height * 0.93 - Math.abs(Math.sin(t * 3)) * 8 * dpr); }
+  };
+  requestAnimationFrame(loop);
 }
-function refreshPreview() {
-  const { holder } = dresser.r;
-  holder.clear();
-  const av = buildAvatar(me.look); holder.add(av); holder.userData.av = av;
-  const pet = buildPet(me.look.pet);
-  if (pet) { pet.position.set(0.95, 0, 0.5); pet.scale.setScalar(1.2); holder.add(pet); }
-  holder.userData.pet = pet;
-}
+function refreshPreview() { /* 그림은 매 화면마다 다시 그린다 */ }
+const n = (k) => Array.from({ length: k }, (_, i) => i);
 const TABS = {
-  face: () => [['피부', 'swatch', 'skin', SKINS], ['얼굴 꾸미기', 'chips', 'face', CATS.face]],
-  hair: () => [['머리 모양', 'chips', 'hair', HAIRS.map(([id, l]) => [id, l, 0])], ['머리 색', 'swatch', 'hairColor', HAIR_COLORS]],
-  clothes: () => [['옷 색', 'swatch', 'shirt', SHIRTS], ['옷 무늬', 'chips', 'pattern', CATS.pattern]],
-  items: () => [['머리에 쓰기', 'chips', 'hat', CATS.hat], ['등·손', 'chips', 'back', CATS.back], ['직업 옷 (🏢 직업 체험관에서 체험하면 열려요)', 'chips', 'job', CATS.job]],
+  face: () => [['피부', 'thumbs', 'skin', n(8)], ['표정', 'thumbs', 'face', n(16)]],
+  hair: () => [['앞머리', 'thumbs', 'front', n(8)], ['뒷머리', 'thumbs', 'back', [-1, ...n(8)]], ['머리 색', 'swatch', 'hairColor', HAIR_COLORS]],
+  clothes: () => [['윗옷', 'thumbs', 'top', n(16)], ['윗옷 색', 'swatch', 'topColor', CLOTH_COLORS], ['아랫옷', 'thumbs', 'bottom', n(8)], ['아랫옷 색', 'swatch', 'bottomColor', CLOTH_COLORS], ['신발', 'thumbs', 'shoe', n(8)], ['신발 색', 'swatch', 'shoeColor', CLOTH_COLORS]],
+  items: () => [['머리에 쓰기', 'chips', 'hat', CATS.hat], ['머리 핀', 'chips', 'deco', CATS.deco], ['안경', 'chips', 'glasses', CATS.glasses], ['등·손', 'chips', 'gear', CATS.gear], ['직업 옷 (🏢 직업 체험관에서 체험하면 열려요)', 'chips', 'job', CATS.job]],
   pet: () => [['같이 다니는 친구', 'chips', 'pet', CATS.pet]],
 };
 function renderDresser() {
@@ -117,7 +108,17 @@ function renderDresser() {
   for (const [title, kind, key, list] of TABS[dresser.tab]()) {
     const h = document.createElement('h3'); h.textContent = title; body.append(h);
     const row = document.createElement('div'); row.className = kind === 'swatch' ? 'swatches' : 'chips';
-    if (kind === 'swatch') {
+    if (kind === 'thumbs') {
+      row.className = 'thumbs';
+      const colorKey = { front: 'hairColor', back: 'hairColor', top: 'topColor', bottom: 'bottomColor', shoe: 'shoeColor' }[key];
+      list.forEach((i) => {
+        const b = document.createElement('button'); b.type = 'button'; b.setAttribute('aria-pressed', String(me.look[key] === i)); b.setAttribute('aria-label', `${title} ${i + 1}`);
+        const th = i < 0 ? null : partThumb(key, i, colorKey ? me.look[colorKey] : null);
+        if (th) { const c = document.createElement('canvas'); c.width = th.width; c.height = th.height; c.getContext('2d').drawImage(th, 0, 0); b.append(c); } else b.textContent = '없음';
+        b.addEventListener('click', () => { me.look[key] = i; sfx.pop(); if (key === 'back' || key === 'front') dresser.view = key === 'back' ? 2 : 0; renderDresser(); });
+        row.append(b);
+      });
+    } else if (kind === 'swatch') {
       list.forEach((c) => {
         const b = document.createElement('button'); b.type = 'button'; b.style.background = c; b.setAttribute('aria-label', `${title} ${c}`);
         b.setAttribute('aria-pressed', String(me.look[key] === c));
@@ -157,6 +158,7 @@ function openDresser(mode, onDone) {
   show('screen-avatar');
   setupPreview();
   renderDresser();
+  if (!charsReady()) loadChars().then(() => { if ($('screen-avatar').classList.contains('active')) renderDresser(); }).catch(() => {});
   refreshPreview();
 }
 
@@ -274,7 +276,7 @@ function startGame(how) {
 }
 
 // ---------------- 안내하는 탐험대장 토리 ----------------
-const GUIDE_LOOK = { skin: '#f6c9a0', hair: 'messy', hairColor: '#7a4a24', shirt: '#6cc96c', hat: 'explorer', face: 'glasses', back: 'magnifier', pattern: 'stripes', pet: 'none' };
+const GUIDE_LOOK = { v: 2, skin: 1, face: 0, front: 4, back: 1, hairColor: '#7a4a35', top: 9, topColor: '#a8e08a', bottom: 0, bottomColor: '#c9a46b', shoe: 4, shoeColor: '#c98a52', hat: 'cap', deco: 'none', glasses: 'glasses', gear: 'backpack', pet: 'none', job: 'none' };
 function guideLines() {
   return [
     ['👋', `안녕, ${me.name}! 나는 꼬마 탐험대의 대장, 토리야. 꼬마 탐험대 공원에 온 걸 환영해!`],
