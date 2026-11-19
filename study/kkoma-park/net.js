@@ -3,7 +3,7 @@
 // 주고받는 것은 별명·학년·캐릭터 모습·위치·푼 문제 수·열쇠와 도장 수뿐이다. 카메라 영상은 절대 보내지 않는다.
 // 선생님 창을 닫으면 수업이 끝나고, 어디에도 기록이 남지 않는다.
 
-import { cleanLook } from './avatar.js';
+import { cleanLook } from './chars.js';
 
 const PREFIX = 'kkoma-park-v1-';
 const MAX_STUDENTS = 30;
@@ -112,7 +112,7 @@ export class Host {
         conn, online: true, name: cleanName(m.name), grade: clampGrade(m.grade), look: cleanLook(m.look),
         keys: Math.max(0, Math.min(999, m.keys | 0)), stamps: cleanStamps(m.stamps), last: Date.now(),
       });
-      s.color = s.look.shirt;
+      s.color = s.look.topColor;
       this.students.set(pid, s);
       conn.send({ t: 'welcome', id: pid, frozen: this.frozen });
       this.sendRoster();
@@ -131,7 +131,7 @@ export class Host {
       if (m.kind === 'hint') s.hints += 1;
       if (m.kind === 'key') { s.keys = Math.max(0, Math.min(999, m.keys | 0)); s.stamps = cleanStamps(m.stamps); }
       if (m.kind === 'escape') s.flights += 1;
-      if (m.kind === 'look') { s.look = cleanLook(m.look); s.color = s.look.shirt; this.sendRoster(); }
+      if (m.kind === 'look') { s.look = cleanLook(m.look); s.color = s.look.topColor; this.sendRoster(); }
       this.onEvent(s, m);
       if (m.kind === 'key' || m.kind === 'escape') { this.sendRoster(); this.sendAll({ t: 'cheer', id: s.pid, name: s.name, kind: m.kind, subj: m.subj }); }
       this.onRoster();

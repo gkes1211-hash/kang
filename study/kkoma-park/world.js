@@ -4,7 +4,8 @@
 // - 열기구 탈출장: 상자 4개에서 비밀번호 숫자를 찾아 열기구를 타고 날아간다
 // 모든 장소를 한 장면 안에 멀리 떨어뜨려 두어서, 같은 구역에 있는 친구만 화면에 보인다.
 import { THREE, toon, part, at, sph, cap, cyl, box, OUTLINE } from './toon.js';
-import { buildAvatar, buildPet, animateBody } from './avatar.js';
+import { buildPet } from './avatar.js';
+import { drawChar, loadChars, charsReady, cleanLook } from './chars.js';
 import { buildBuilding, texMat, windowAt, doorAt, emblem } from './buildings.js';
 import { SUBJECTS, SUBJECT, STAMPS_TO_FLY } from './content.js';
 import { ISLANDS, ISLAND, BRIDGES, SLOTS, LOTS, ROADS, walkable, islandAt, shoreR, shorePoints } from './islands.js';
@@ -307,28 +308,62 @@ function setBadge(av, keys) {
   if (u.badge) { av.remove(u.badge); u.badge.material.map?.dispose(); u.badge = null; }
   if (!keys) return;
   u.badge = makeSprite([`🗝️${keys}`], 0.34, { size: 40, bg: '#ffd36b', pad: 8, radius: 14 });
-  u.badge.position.y = 2.72;
+  u.badge.position.y = CHAR_H + 0.72;
   av.add(u.badge);
 }
 export function emoteOn(av, emoji) {
   const u = av.userData;
   if (u.bubble) av.remove(u.bubble);
   u.bubble = makeSprite([emoji], 0.8, { size: 80, pad: 10, radius: 30 });
-  u.bubble.position.y = 3.1;
+  u.bubble.position.y = CHAR_H + 1.2;
   u.bubbleT = 2.6;
   av.add(u.bubble);
+}
+// 2D 종이 인형 캐릭터: 늘 카메라를 보는 그림(Sprite). 걷는 방향에 따라 앞·옆·뒷모습으로 바뀐다
+const CHAR_H = 3.0; // 세상 속 키
+function buildPaper(look) {
+  const L = cleanLook(look);
+  const mat = new THREE.SpriteMaterial({ transparent: true, alphaTest: 0.5, depthWrite: true });
+  const sp = new THREE.Sprite(mat);
+  sp.center.set(0.5, 14 / 320); sp.scale.set(CHAR_H * 0.75, CHAR_H, 1);
+  const shadow = new THREE.Mesh(new THREE.CircleGeometry(0.42, 20), new THREE.MeshBasicMaterial({ color: '#2b3a1e', transparent: true, opacity: 0.22, depthWrite: false }));
+  shadow.rotation.x = -Math.PI / 2; shadow.position.y = 0.03; shadow.scale.set(1, 0.6, 1); shadow.userData.flat = true;
+  const g = new THREE.Group(); g.add(sp, shadow);
+  g.userData = { look: L, sprite: sp, view: '', tex: {}, walk: 0 };
+  setPaperView(g, 'front');
+  if (!charsReady()) loadChars().then(() => { g.userData.view = ''; setPaperView(g, 'front'); }).catch(() => {});
+  return g;
+}
+function setPaperView(g, view) {
+  const u = g.userData; if (u.view === view && u.tex[view]) return;
+  if (!charsReady()) return;
+  if (!u.tex[view]) { const c = drawChar(u.look, view); if (!c) return; const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.magFilter = THREE.NearestFilter; t.minFilter = THREE.LinearMipmapLinearFilter; u.tex[view] = t; }
+  u.view = view; u.sprite.material.map = u.tex[view]; u.sprite.material.needsUpdate = true;
+}
+// 걷기: 통통 튀고, 카메라에서 본 방향으로 그림을 바꾼다
+function animatePaper(g, root, moving, dt, t, camYaw) {
+  const u = g.userData;
+  u.walk = moving ? u.walk + dt * 11 : u.walk * Math.max(0, 1 - dt * 10);
+  const s = Math.abs(Math.sin(u.walk));
+  u.sprite.position.y = moving ? s * 0.12 : Math.sin(t * 2.2) * 0.02;
+  u.sprite.scale.y = CHAR_H * (moving ? 1 - s * 0.03 : 1 + Math.sin(t * 2.2) * 0.008);
+  // 바라보는 방향(root.rotation.y: 0 = 화면 앞쪽)을 카메라 기준으로
+  let a = root.rotation.y - camYaw; a = Math.atan2(Math.sin(a), Math.cos(a));
+  const view = Math.abs(a) < Math.PI * 0.3 ? 'front' : Math.abs(a) > Math.PI * 0.7 ? 'back' : a > 0 ? 'side' : 'sideL';
+  setPaperView(g, view);
 }
 // 캐릭터 + 이름표 + 같이 다니는 친구
 function makeCharacter(look, name, me) {
   const root = new THREE.Group();
-  const body = buildAvatar(look);
+  const body = buildPaper(look);
   root.add(body);
   const lb = label(name, me);
-  lb.position.y = 2.35;
+  lb.position.y = CHAR_H + 0.3;
   root.add(lb);
   root.userData = { body, label: lb, petId: body.userData.look.pet, bubble: null, bubbleT: 0 };
   return root;
 }
+// 그림은 바라보는 방향과 상관없이 늘 똑바로 (Sprite 는 부모의 돌기를 따르지 않는다)
 
 // ============================================================
 export class World {
@@ -1409,7 +1444,7 @@ export class World {
         moving = true;
       }
     }
-    animateBody(av.userData.body, moving, dt, T);
+    animatePaper(av.userData.body, av, moving, dt, T, this.camYaw || 0);
     g.it.x = av.position.x; g.it.z = av.position.z;
     const u = av.userData;
     if (u.bubble) { u.bubbleT -= dt; if (u.bubbleT <= 0 && !g.talking) { av.remove(u.bubble); u.bubble = null; } }
@@ -1524,7 +1559,7 @@ export class World {
       }
       this.player.position.copy(this.pos);
       this.player.rotation.y = this.rot;
-      animateBody(this.player.userData.body, moving, dt, T);
+      animatePaper(this.player.userData.body, this.player, moving, dt, T, this.camYaw || 0);
       this.followPet(this.player, dt, moving);
       this.moving = moving;
       let best = null; let bd = Infinity;
@@ -1546,7 +1581,7 @@ export class World {
       const up = Math.max(0, f.t - 0.6) ** 1.6 * 1.6;
       this.bigBalloon.position.y = up;
       this.player.position.y = 1.1 + up;
-      animateBody(this.player.userData.body, false, dt, T);
+      animatePaper(this.player.userData.body, this.player, false, dt, T, this.camYaw || 0);
       const pet = this.player.userData.pet; if (pet) pet.position.y = 1.1 + up;
       if (f.t > 1 && Math.random() < dt * 6) this.celebrate(this.bigBalloon.position.x + (Math.random() - 0.5) * 6, this.bigBalloon.position.z + 2, false, up + 3);
       if (f.t > 6 && f.done) { const d = f.done; f.done = null; d(); }
@@ -1562,7 +1597,7 @@ export class World {
       let diff = r.tr - r.av.rotation.y; diff = Math.atan2(Math.sin(diff), Math.cos(diff));
       r.av.rotation.y += diff * k;
       const mv = Math.hypot(dx, dz) > 0.05;
-      animateBody(r.av.userData.body, mv, dt, T);
+      animatePaper(r.av.userData.body, r.av, mv, dt, T, this.camYaw || 0);
       r.av.visible = r.seen;
       this.followPet(r.av, dt, mv);
       const u = r.av.userData;
@@ -1611,6 +1646,7 @@ export class World {
     if (this.snapCamera) { this.camera.position.copy(want); this.snapCamera = false; }
     else this.camera.position.lerp(want, Math.min(1, dt * 6));
     this.camera.lookAt(look);
+    this.camYaw = Math.atan2(this.camera.position.x - look.x, this.camera.position.z - look.z);
     // 해는 보고 있는 곳을 따라다니며 그림자를 만든다
     this.sun.position.set(look.x + 14, 32, look.z + 16);
     this.sun.target.position.set(look.x, 0, look.z);
