@@ -11,7 +11,7 @@ import { ISLANDS, ISLAND, BRIDGES, SLOTS, LOTS, ROADS, walkable, islandAt, shore
 
 // ---------- 장소 ----------
 export const AREAS = {
-  plaza: { cx: 0, cz: 0, hw: 110, hd: 100, cam: [0, 21, 21], spec: [0, 64, 56], follow: 1, ahead: 3 },
+  plaza: { cx: 0, cz: 0, hw: 132, hd: 100, cam: [0, 21, 21], spec: [0, 64, 56], follow: 1, ahead: 3 },
   balloon: { cx: -900, cz: 0, hw: 13, hd: 9, cam: [0, 16, 15], spec: [0, 21, 19], follow: 0.45 },
 };
 SUBJECTS.forEach((s, i) => { AREAS[`zone:${s.id}`] = { cx: 900 + i * 80, cz: 0, hw: 12, hd: 8, cam: [0, 15, 15], spec: [0, 19, 18], follow: 0.35, subj: s.id }; });
@@ -144,6 +144,23 @@ const INTERIOR = {
     W.P(cyl(0.08, 0.1, 2.4, 8), '#5b4636', L + 1.4, 1.2, a.cz + 6); W.P(cyl(0.45, 0.45, 0.12, 14), '#8d6e63', L + 1.4, 2.4, a.cz + 6); W.P(cyl(0.28, 0.32, 0.35, 14), '#8d6e63', L + 1.4, 2.6, a.cz + 6); W.P(box(0.8, 1.2, 0.2), '#a1887f', L + 1.4, 1.6, a.cz + 6.15);
     W.addObstacle(area, { x: L + 1.4, z: a.cz + 6, r: 0.6 });
     poster(W, R - 0.3, 3.2, a.cz + 1.5, '🔍', '#fff8ea'); poster(W, L + 0.3, 3.2, a.cz - 0.4, '🐞', '#fff8ea');
+  } },
+  job: { wall: '#fff1f6', wood: '#c98a52', trim: '#6a5ae0', floor: '#e6c38f', rug: '#ffe08a', board: '#2f2a5a', curtain: '#c56cf0', props: (W, area, a, L, R, B) => {
+    // 직업 카드 벽 (12장)
+    const jobs = [['👩‍⚕️', '#ff8a7a'], ['🧑‍🍳', '#f2a516'], ['🐶', '#5cbf3c'], ['👮', '#3c8dde'], ['📰', '#8e7cc3'], ['🏗️', '#c98a52'], ['🌦️', '#2bb5c8'], ['✈️', '#48b4e8'], ['🎨', '#ff6b8b'], ['🎼', '#f06aa8'], ['🤖', '#7b6cf0'], ['🚁', '#1ea7a0']];
+    jobs.forEach(([e, c], i) => { const x = L + 1.4 + (i % 6) * 1.05; const y = 3.3 - Math.floor(i / 6) * 1.15; W.P(box(0.9, 1.0, 0.08), c, x, y, B + 0.1, { t: 0.015 }); W.P(box(0.74, 0.84, 0.02), '#ffffff', x, y, B + 0.15, { line: false }); const cv = document.createElement('canvas'); cv.width = cv.height = 96; const g2 = cv.getContext('2d'); g2.font = '70px sans-serif'; g2.textAlign = 'center'; g2.textBaseline = 'middle'; g2.fillText(e, 48, 54); const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; const pl = new THREE.Mesh(new THREE.PlaneGeometry(0.66, 0.66), new THREE.MeshBasicMaterial({ map: t, transparent: true })); pl.position.set(x, y, B + 0.17); W.add(pl); });
+    // 변신 탈의실 (줄무늬 커튼)
+    const cx = L + 2.8; const cz = a.cz + 4.6;
+    for (const s of [-1, 1]) W.P(box(0.15, 3.2, 0.15), '#7a4a24', cx + s * 1.3, 1.6, cz + 0.9);
+    W.P(box(2.8, 0.15, 0.15), '#7a4a24', cx, 3.2, cz + 0.9);
+    for (let i = 0; i < 6; i++) W.P(box(0.42, 2.8, 0.1), i % 2 ? '#d98ff5' : '#c56cf0', cx - 1.05 + i * 0.42, 1.75, cz + 0.9, { t: 0.01 });
+    W.addObstacle(area, { box: [cx - 1.5, cz + 0.6, cx + 1.5, cz + 1.2] });
+    // 옷걸이에 걸린 직업 옷
+    W.P(cyl(0.05, 0.05, 2.6, 8), '#8d6e63', R - 1.2, 1.6, a.cz + 5.2).rotation.z = Math.PI / 2;
+    for (const s of [-1, 1]) W.P(box(0.1, 2.0, 0.1), '#8d6e63', R - 1.2 + s * 1.3, 1.0, a.cz + 5.2);
+    ['#ffffff', '#2b4f8f', '#ffd23f', '#e8322d'].forEach((c, i) => W.P(box(0.5, 0.8, 0.12), c, R - 2.1 + i * 0.6, 1.1, a.cz + 5.2, { t: 0.01 }));
+    W.addObstacle(area, { box: [R - 2.7, a.cz + 4.8, R + 0.2, a.cz + 5.6] });
+    poster(W, L + 0.3, 3.2, a.cz + 1.5, '🌟', '#fff8ea'); poster(W, R - 0.3, 3.2, a.cz - 0.4, '🏢', '#fff8ea');
   } },
   fire: { wall: '#fff0ec', wood: '#b5523b', trim: '#e8322d', floor: '#c98a52', rug: '#ffd0c8', board: '#3b1f1f', curtain: '#ffd23f', props: (W, area, a, L, R, B) => {
     // 소방관 옷걸이: 헬멧과 외투
@@ -641,7 +658,7 @@ export class World {
   // ---------- 만남의 분수 광장 ----------
   // ---------- 섬 마을의 땅: 섬(잔디·모래톱)과 길만 그리고, 바다는 비워 둔다 ----------
   villageGround() {
-    const S = 236; const TEX = 2048; const k = TEX / S; const rand = seeded(11);
+    const S = 276; const TEX = 2048; const k = TEX / S; const rand = seeded(11);
     const c = document.createElement('canvas'); c.width = c.height = TEX; const g = c.getContext('2d');
     const P2 = (x, z) => [(x + S / 2) * k, (z + S / 2) * k];
     const poly = (pts) => { g.beginPath(); pts.forEach(([x, z], i) => { const [px, pz] = P2(x, z); if (i) g.lineTo(px, pz); else g.moveTo(px, pz); }); g.closePath(); };
@@ -755,7 +772,7 @@ export class World {
 
   // ---------- 작은 지도 (마을에서만) ----------
   // 지도 한 칸 = 마을 108m 네모. 바탕은 땅 그림을 줄여 쓰고, 건물은 그림 글자로.
-  static MAP_R = 114;
+  static MAP_R = 136;
   mapXY(x, z, W) { const R = World.MAP_R; return [((x + R) / (2 * R)) * W, ((z + R) / (2 * R)) * W]; }
   mapBase(W) {
     if (this._mapBase?.width === W) return this._mapBase;
@@ -1336,7 +1353,7 @@ export class World {
   // 화면 비율에 맞춰 보이는 거리: 섬 전체(가로 약 220m) 또는 섬 하나
   viewDist(v = this.view) {
     const t = Math.tan(THREE.MathUtils.degToRad(this.camera.fov / 2)); const asp = this.camera.aspect;
-    if (v === 'all' || !ISLAND[v]) return Math.min(460, Math.max(205, 170 / (t * asp)));
+    if (v === 'all' || !ISLAND[v]) return Math.min(520, Math.max(205, 200 / (t * asp)));
     const isl = ISLAND[v];
     return Math.min(300, Math.max((isl.rz + 6) * 2.3, (isl.rx + 4) * 1.18 / (t * asp)));
   }
