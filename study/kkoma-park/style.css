@@ -71,6 +71,13 @@ button.opt:active, .opt-main:active { transform: translateY(3px); }
 .charpick button[aria-pressed="true"] { border: 5px solid var(--brown); box-shadow: 0 0 0 4px var(--gold); background: #fff3c4; }
 .charpick button:hover { background: #fff3c4; }
 .charpick canvas { max-width: 100%; max-height: 100%; image-rendering: pixelated; }
+.charpick button { position: relative; }
+.charpick button.locked { background: #eee6d8; }
+.charpick button.locked canvas { filter: grayscale(1) brightness(0.55); opacity: 0.55; }
+.charpick button.locked::after { content: attr(data-need); position: absolute; left: 50%; bottom: 4px; transform: translateX(-50%); padding: 1px 7px; border-radius: 999px; background: var(--brown); color: #fff; font-size: 13px; white-space: nowrap; }
+.unlock-list { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
+.unlock-char { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 10px; border-radius: 18px; background: #fff3c4; border: 4px solid var(--gold); font-size: 17px; }
+.unlock-char canvas { height: 120px; image-rendering: pixelated; }
 .thumbs { display: grid; grid-template-columns: repeat(auto-fill, minmax(64px, 1fr)); gap: 8px; }
 .thumbs button { height: 72px; display: grid; place-items: center; padding: 4px; border: 4px solid #e2cfb0; border-radius: 16px; background: #fffaf0; font: inherit; font-size: 16px; color: var(--brown); cursor: pointer; }
 .thumbs button[aria-pressed="true"] { border: 5px solid var(--brown); box-shadow: 0 0 0 4px var(--gold); background: #fff3c4; }
