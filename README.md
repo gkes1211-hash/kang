@@ -9,7 +9,7 @@
 | 🏃 [체육시간](pe/) | https://gkes1211-hash.github.io/kang/pe/ | [무궁화 꽃이 피었습니다](pe/mugunghwa/) · [풍선 터트리기](pe/balloon/) · [벽 통과하기](pe/byeok/) · [체력왕 운동 카운터](pe/fitness/) · [제기차기](pe/jegi/) |
 | 📚 [공부](study/) | https://gkes1211-hash.github.io/kang/study/ | [꼬마 탐험대 공원](study/kkoma-park/) · [우리 아이 공부 플래너](study/planner/) |
 | 🔤 [영어](english/) | https://gkes1211-hash.github.io/kang/english/ | [여행 영어 첫걸음](english/travel/) |
-| 🎵 [음악](music/) | https://gkes1211-hash.github.io/kang/music/ | [노래 연습장](music/sing/) |
+| 🎵 [음악](music/) | https://gkes1211-hash.github.io/kang/music/ | [노래 연습장](music/sing/) · [반짝 건반](music/tiles/) |
 
 ## 주소 구조
 
