@@ -125,6 +125,7 @@
   function resize() {
     const dpr = Math.min(2, window.devicePixelRatio || 1);
     W = window.innerWidth; H = window.innerHeight;
+    cv.style.width = W + 'px'; cv.style.height = H + 'px'; // 화면에 보이는 크기는 CSS 픽셀로 고정(폰에서 2~3배로 커지지 않게)
     cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
     cx.setTransform(dpr, 0, 0, dpr, 0, 0);
     boardW = Math.min(W, 480); boardX = (W - boardW) / 2; laneW = boardW / 4;
@@ -132,6 +133,7 @@
     hitY = H - sab - Math.max(84, Math.min(130, H * 0.15));
   }
   window.addEventListener('resize', resize);
+  if (window.visualViewport) window.visualViewport.addEventListener('resize', resize);
   resize();
 
   let FAM = getComputedStyle(document.body).fontFamily;
@@ -278,7 +280,7 @@
   function setJudge(text, color) { G.judge = { text, color, t: pnow() }; }
   function laneCenter(l) { return boardX + laneW * l + laneW / 2; }
 
-  function press(lane) {
+  function press(lane, y) {
     if (state !== 'play' || !G || G.over) return;
     const g = gnow();
     let pick = null, bd = 1e9;
@@ -288,6 +290,17 @@
       if (n.hit || n.miss || n.lane !== lane) continue;
       const d = Math.abs(n.t - g);
       if (d <= OK && d < bd) { bd = d; pick = n; }
+    }
+    if (!pick && y != null && g >= 0) {
+      // 선에 닿기 전이라도 그 줄의 다음 타일 자체를 손가락으로 누르면 인정한다(점수는 '괜찮아요')
+      const pps = (hitY + 30) / G.travel;
+      for (let i = G.scan; i < G.notes.length; i++) {
+        const n = G.notes[i];
+        if (n.hit || n.miss || n.lane !== lane) continue;
+        const bottom = hitY - (n.t - g) * pps, top = bottom - Math.max(46, n.d * pps - 6);
+        if (y >= top - 24 && y <= bottom + 24 && n.t - g < 1.2) { pick = n; bd = OK; }
+        break; // 그 줄에서 가장 먼저 올 타일만 본다
+      }
     }
     if (!pick) {
       G.flash[lane] = { t: pnow(), bad: g >= 0 };
@@ -367,10 +380,11 @@
   cv.addEventListener('pointerdown', (e) => {
     e.preventDefault();
     if (state !== 'play') return;
+    if (ac && ac.state === 'suspended') ac.resume(); // 아이폰은 소리가 잠들어 있을 수 있다
     try { cv.setPointerCapture(e.pointerId); } catch (err) { /* 무시 */ }
     const lane = laneAt(e.clientX);
     activeLanes.set('p' + e.pointerId, lane);
-    press(lane);
+    press(lane, e.clientY);
   });
   const lift = (id) => {
     if (!activeLanes.has(id)) return;
