@@ -42,6 +42,20 @@
 
     .label { font-size: 13px; letter-spacing: .08em; color: var(--mute); margin: 0 0 8px; }
     .songs { display: flex; flex-direction: column; gap: 8px; }
+    .songview { display: flex; flex-direction: column; gap: 16px; }
+    .cats { display: flex; flex-direction: column; gap: 10px; }
+    .cat { display: flex; align-items: center; gap: 14px; text-align: left; padding: 14px; border-radius: 18px; background: var(--panel2); border: 2px solid transparent; transition: transform .08s; }
+    .cat:hover { border-color: var(--c); }
+    .cat:active { transform: scale(.97); }
+    .cat .em { width: 58px; height: 58px; flex: none; border-radius: 16px; display: grid; place-items: center; font-size: 32px; background: rgba(255,255,255,.07); box-shadow: inset 0 -4px 0 var(--c); }
+    .cat .tx { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+    .cat b { font-size: 24px; font-weight: 400; color: var(--c); }
+    .cat small { color: var(--mute); font-size: 13px; line-height: 1.4; }
+    .cat .n { flex: none; text-align: right; color: var(--mute); font-size: 13px; line-height: 1.5; font-variant-numeric: tabular-nums; }
+    .songhead { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .songhead b { font-size: 22px; font-weight: 400; }
+    .chip { border: 1px solid var(--line); background: none; border-radius: 999px; padding: 7px 12px; font-size: 14px; color: var(--mute); }
+    .song:active { transform: scale(.98); }
     .song { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 4px 10px; text-align: left; padding: 12px 14px;
       background: var(--panel2); border: 2px solid transparent; border-radius: 16px; }
     .song.on { border-color: var(--gold); background: #352d74; }
@@ -94,7 +108,7 @@
     .counts span { font-size: 12px; color: var(--mute); }
     @media (prefers-reduced-motion: reduce) { .stars span.on, .hud.shake { animation: none; } }
   </style>
-  <script src="game.js?v=3" defer></script>
+  <script src="game.js?v=4" defer></script>
 </head>
 <body>
   <canvas id="board" aria-label="건반 판: 내려오는 타일을 박자에 맞춰 눌러요"></canvas>
@@ -114,10 +128,13 @@
         <h1><span>반짝</span> <span>건반</span></h1>
         <p>타일이 선에 닿을 때 톡! 누르면<br>내가 누른 대로 노래가 흘러나와요.</p>
       </div>
-      <div>
-        <p class="label">곡 고르기</p>
-        <div class="songs" id="songs"></div>
+      <div id="catView">
+        <p class="label">어떤 노래를 칠까요?</p>
+        <div class="cats" id="cats"></div>
       </div>
+      <div id="songView" class="songview" hidden>
+      <div class="songhead"><button type="button" class="chip" id="catBack">← 갈래 고르기</button><b id="catName"></b></div>
+      <div class="songs" id="songs"></div>
       <div class="opts">
         <div class="opt"><span>빠르기</span><div class="seg" data-opt="speed">
           <button type="button" data-val="0.8">느리게</button><button type="button" data-val="1">보통</button><button type="button" data-val="1.25">빠르게</button></div></div>
@@ -127,7 +144,8 @@
           <button type="button" data-val="on">켜기</button><button type="button" data-val="off">끄기</button></div></div>
       </div>
       <button type="button" class="big" id="startBtn">시작하기</button>
-      <p class="tip">타일 색은 음 이름 색이에요. 긴 타일은 꾹 누르고 있어요.<br>컴퓨터에서는 <kbd>D</kbd> <kbd>F</kbd> <kbd>J</kbd> <kbd>K</kbd> 키로도 칠 수 있어요.</p>
+      </div>
+      <p class="tip">타일 색은 음 이름 색이에요. 긴 타일은 끝까지 꾹 누르면 보너스!<br>컴퓨터에서는 <kbd>D</kbd> <kbd>F</kbd> <kbd>J</kbd> <kbd>K</kbd> 키로도 칠 수 있어요.</p>
       <p class="ver" id="ver"></p>
     </div>
   </div>

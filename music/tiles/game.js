@@ -14,26 +14,70 @@
   const SOLFA = ['도', '도#', '레', '레#', '미', '파', '파#', '솔', '솔#', '라', '라#', '시'];
   // 음악 시간에 쓰는 음 이름 색(도 빨강, 레 주황, 미 노랑, 파 연두, 솔 초록, 라 보라, 시 분홍)
   const PCOLOR = ['#ff6b6b', '#ff6b6b', '#ffa14a', '#ffa14a', '#ffe05a', '#a6e85a', '#a6e85a', '#3fd6b0', '#3fd6b0', '#a596ff', '#a596ff', '#ff86c8'];
-  const CHORDS = { C: [0, 4, 7], F: [5, 9, 12], G: [7, 11, 14], Am: [9, 12, 16], Dm: [2, 5, 9], Em: [4, 7, 11] };
+  const CHORDS = { C: [0, 4, 7], F: [5, 9, 12], G: [7, 11, 14], Am: [9, 12, 16], Dm: [2, 5, 9], Em: [4, 7, 11], D: [2, 6, 9], E: [4, 8, 11] };
 
   // ---------- 곡 ----------
-  // mel: "음:박" (박을 빼면 1박), ch: 반주 화음 "화음:박"
+  const CATS = [
+    { id: 'kids', name: '동요', em: '🧸', about: '다 같이 부르는 어린이 노래', c: '#ffb36b' },
+    { id: 'pop', name: '가요', em: '🎤', about: '가요 느낌으로 새로 지은 노래', c: '#ff86c8' },
+    { id: 'classic', name: '멜로디', em: '🎻', about: '귀에 익은 클래식 멜로디', c: '#8fd6ff' },
+  ];
+  // mel: "음:박" (박을 빼면 1박, R은 쉼표), ch: 반주 화음 "화음:박" (N은 반주 쉼)
   const SONGS = [
-    { id: 'star', title: '작은 별', about: '반짝반짝 작은 별, 아름답게 비치네', bpm: 92, level: 1,
+    // ----- 동요 -----
+    { id: 'star', cat: 'kids', title: '작은 별', about: '반짝반짝 작은 별, 아름답게 비치네', bpm: 92, level: 1,
       mel: 'C4 C4 G4 G4 A4 A4 G4:2 F4 F4 E4 E4 D4 D4 C4:2 G4 G4 F4 F4 E4 E4 D4:2 G4 G4 F4 F4 E4 E4 D4:2 C4 C4 G4 G4 A4 A4 G4:2 F4 F4 E4 E4 D4 D4 C4:2',
       ch: 'C:2 C:2 F:2 C:2 F:2 C:2 G:2 C:2 C:2 F:2 C:2 G:2 C:2 F:2 C:2 G:2 C:2 C:2 F:2 C:2 F:2 C:2 G:2 C:2' },
-    { id: 'nabi', title: '나비야', about: '나비야 나비야 이리 날아오너라', bpm: 104, level: 1,
+    { id: 'plane', cat: 'kids', title: '떴다 떴다 비행기', about: '날아라 날아라 높이 높이 날아라', bpm: 100, level: 1,
+      mel: 'E4 D4 C4 D4 E4 E4 E4:2 D4 D4 D4:2 E4 G4 G4:2 E4 D4 C4 D4 E4 E4 E4:2 D4 D4 E4 D4 C4:4',
+      ch: 'C:4 C:4 G:4 C:4 C:4 C:4 G:4 C:4' },
+    { id: 'nabi', cat: 'kids', title: '나비야', about: '나비야 나비야 이리 날아오너라', bpm: 104, level: 1,
       mel: 'G4 E4 E4:2 F4 D4 D4:2 C4 D4 E4 F4 G4 G4 G4:2 G4 E4 E4:2 F4 D4 D4:2 C4 E4 G4 G4 E4 E4 E4:2 D4 D4 D4 D4 D4 E4 F4:2 E4 E4 E4 E4 E4 F4 G4:2 G4 E4 E4:2 F4 D4 D4:2 C4 E4 G4 G4 C4:4',
       ch: 'C:4 G:4 C:4 C:4 C:4 G:4 C:4 C:4 G:4 G:4 C:4 C:4 C:4 G:4 C:4 C:4' },
-    { id: 'joy', title: '기쁨의 노래', about: '베토벤 교향곡 9번의 그 멜로디', bpm: 112, level: 2,
-      mel: 'E4 E4 F4 G4 G4 F4 E4 D4 C4 C4 D4 E4 E4:1.5 D4:0.5 D4:2 E4 E4 F4 G4 G4 F4 E4 D4 C4 C4 D4 E4 D4:1.5 C4:0.5 C4:2 D4 D4 E4 C4 D4 E4:0.5 F4:0.5 E4 C4 D4 E4:0.5 F4:0.5 E4 D4 C4 D4 G3:2 E4 E4 F4 G4 G4 F4 E4 D4 C4 C4 D4 E4 D4:1.5 C4:0.5 C4:2',
-      ch: 'C:4 G:4 C:4 G:4 C:4 G:4 C:4 G:2 C:2 G:4 C:4 G:4 C:2 G:2 C:4 G:4 C:4 G:2 C:2' },
-    { id: 'bday', title: '생일 축하 노래', about: '세 박자 노래, 친구 생일에 쳐 줘요', bpm: 96, level: 2,
+    { id: 'bear', cat: 'kids', title: '곰 세 마리', about: '아빠 곰, 엄마 곰, 애기 곰', bpm: 100, level: 1,
+      mel: 'C4 C4:0.5 C4:0.5 C4 C4 E4 G4:0.5 G4:0.5 E4 C4 G4:0.5 G4:0.5 E4 G4:0.5 G4:0.5 E4 C4 C4 C4:2 G4 G4 E4 C4 G4 G4 G4:2 G4 G4 E4 C4 G4 G4 G4:2 G4 G4 E4 C4 G4:0.5 G4:0.5 G4:0.5 A4:0.5 G4:2 C5:0.5 G4:0.5 C5:0.5 G4:0.5 E4:0.5 D4:0.5 C4:2',
+      ch: 'C:4 C:4 C:4 C:4 C:4 C:4 C:4 C:4 C:4 C:4 C:2 G:1 C:2' },
+    { id: 'london', cat: 'kids', title: '런던 다리', about: '런던 다리 무너진다 무너진다', bpm: 108, level: 2,
+      mel: 'G4:1.5 A4:0.5 G4 F4 E4 F4 G4:2 D4 E4 F4:2 E4 F4 G4:2 G4:1.5 A4:0.5 G4 F4 E4 F4 G4:2 D4:2 G4:2 E4 C4:3',
+      ch: 'C:4 C:4 G:4 C:4 C:4 C:4 G:4 C:4' },
+    { id: 'farm', cat: 'kids', title: '맥도날드 할아버지 농장', about: '이 아이 이 아이 오', bpm: 112, level: 2,
+      mel: 'C4 C4 C4 G3 A3 A3 G3:2 E4 E4 D4 D4 C4:3 G3 C4 C4 C4 G3 A3 A3 G3:2 E4 E4 D4 D4 C4:4',
+      ch: 'C:4 F:2 C:2 C:2 G:2 C:4 C:4 F:2 C:2 C:2 G:2 C:4' },
+    { id: 'jingle', cat: 'kids', title: '징글벨', about: '종소리 울려라 종소리 울려', bpm: 112, level: 2,
+      mel: 'E4 E4 E4:2 E4 E4 E4:2 E4 G4 C4:1.5 D4:0.5 E4:4 F4 F4 F4:1.5 F4:0.5 F4 E4 E4 E4:0.5 E4:0.5 E4 D4 D4 E4 D4:2 G4:2 E4 E4 E4:2 E4 E4 E4:2 E4 G4 C4:1.5 D4:0.5 E4:4 F4 F4 F4:1.5 F4:0.5 F4 E4 E4 E4:0.5 E4:0.5 G4 G4 F4 D4 C4:4',
+      ch: 'C:4 C:4 C:4 C:4 F:4 C:4 G:4 G:4 C:4 C:4 C:4 C:4 F:4 C:4 G:4 C:4' },
+    { id: 'bday', cat: 'kids', title: '생일 축하 노래', about: '세 박자 노래, 친구 생일에 쳐 줘요', bpm: 96, level: 2,
       mel: 'G3:0.5 G3:0.5 A3 G3 C4 B3:2 G3:0.5 G3:0.5 A3 G3 D4 C4:2 G3:0.5 G3:0.5 G4 E4 C4 B3 A3 F4:0.5 F4:0.5 E4 C4 D4 C4:3',
       ch: 'C:1 C:3 G:3 G:3 C:3 C:3 F:3 C:1.5 G:1.5 C:3' },
-    { id: 'meteor', title: '별똥별 행진', about: '이 게임을 위해 새로 지은 곡', bpm: 116, level: 3,
+    // ----- 가요 (이 게임을 위해 새로 지은 곡) -----
+    { id: 'meteor', cat: 'pop', title: '별똥별 행진', about: '씩씩하게 걷는 행진곡', bpm: 116, level: 1,
       mel: 'C4 E4 G4 E4 A4 G4 E4:2 D4 E4 G4 A4 G4:4 A4 C5 A4 G4 E4 G4 D4:2 C4 D4 E4 G4 D4:4 C4 E4 G4 E4 A4 G4 E4:2 D4 E4 G4 A4 G4:4 A4 C5 A4 G4 E4 G4 D4 E4 G4 A4 G4 E4 C4:4',
       ch: 'C:4 Am:2 C:2 G:4 C:4 F:4 C:2 G:2 C:4 G:4 C:4 Am:2 C:2 G:4 C:4 F:4 C:2 G:2 C:4 C:4' },
+    { id: 'sea', cat: 'pop', title: '여름 바다로', about: '창문 열고 달리는 신나는 여름 노래', bpm: 120, level: 2,
+      mel: 'E4:0.5 G4:0.5 A4 G4:0.5 E4:0.5 C4 D4:0.5 E4:0.5 C4 A3:2 F4:0.5 A4:0.5 C5 A4:0.5 G4:0.5 F4 G4:3 R:1 E4:0.5 G4:0.5 C5 B4:0.5 A4:0.5 G4 A4:0.5 G4:0.5 E4 C4:2 D4:0.5 E4:0.5 F4 A4:0.5 G4:0.5 F4 E4:0.5 D4:0.5 C4:3 C5 C5:0.5 B4:0.5 A4 G4 A4:0.5 B4:0.5 C5 E5:2 D5 C5:0.5 A4:0.5 G4 E4 G4:2 R:2 C5 C5:0.5 B4:0.5 A4 G4 A4:0.5 B4:0.5 C5 E5:2 D5:0.5 C5:0.5 B4 D5:0.5 C5:0.5 B4 C5:4',
+      ch: 'C:4 Am:4 F:4 G:4 C:4 Am:4 F:2 G:2 C:4 F:4 C:4 Dm:4 G:4 F:4 C:4 G:4 C:4' },
+    { id: 'rain', cat: 'pop', title: '비 오는 날 우산', about: '창밖에 비가 오는 날의 잔잔한 노래', bpm: 92, level: 2,
+      mel: 'A4 C5:0.5 B4:0.5 A4 E4 F4 A4:0.5 G4:0.5 F4:2 E4 G4:0.5 F4:0.5 E4 C4 D4:3 R:1 A4 C5:0.5 B4:0.5 A4 E4 F4 A4:0.5 B4:0.5 C5:2 B4:0.5 A4:0.5 G4 B4:0.5 A4:0.5 G4 A4:4 C5:1.5 B4:0.5 A4 C5 D5:1.5 C5:0.5 B4:2 C5 B4:0.5 A4:0.5 G4 E4 F4:2 G4:2 A4:1.5 G4:0.5 A4 C5 B4:1.5 A4:0.5 G4:2 A4:0.5 B4:0.5 C5 B4 G4 A4:4',
+      ch: 'Am:4 F:4 C:4 G:4 Am:4 F:4 G:4 Am:4 F:4 G:4 C:4 F:2 G:2 F:4 G:4 F:2 G:2 Am:4' },
+    { id: 'dance', cat: 'pop', title: '신나는 댄스 타임', about: '엇박자가 많은 빠른 댄스곡', bpm: 124, level: 3,
+      mel: 'C5:0.5 C5:0.5 R:0.5 C5:0.5 B4:0.5 A4:0.5 G4 A4:0.5 A4:0.5 R:0.5 A4:0.5 G4:0.5 E4:0.5 D4 E4:0.5 G4:0.5 A4:0.5 C5:0.5 R:0.5 A4:0.5 G4 E4:0.5 D4:0.5 C4 R:2 C5:0.5 C5:0.5 R:0.5 C5:0.5 B4:0.5 A4:0.5 G4 A4:0.5 A4:0.5 R:0.5 A4:0.5 G4:0.5 E4:0.5 D4 E4:0.5 G4:0.5 A4:0.5 C5:0.5 R:0.5 D5:0.5 E5 D5:0.5 C5:0.5 C5:3 E5 D5:0.5 C5:0.5 R:0.5 C5:0.5 D5 E5:0.5 D5:0.5 C5 A4:2 G4:0.5 A4:0.5 C5:0.5 D5:0.5 R:0.5 E5:0.5 D5 C5:4 E5 D5:0.5 C5:0.5 R:0.5 C5:0.5 D5 E5:0.5 D5:0.5 C5 A4:2 G4:0.5 A4:0.5 C5:0.5 D5:0.5 R:0.5 E5:0.5 D5 C5:4',
+      ch: 'C:4 Am:4 F:4 G:4 C:4 Am:4 F:4 G:2 C:2 C:4 Am:4 F:2 G:2 C:4 C:4 Am:4 F:2 G:2 C:4' },
+    // ----- 멜로디 (옛 작곡가의 곡) -----
+    { id: 'joy', cat: 'classic', title: '기쁨의 노래', about: '베토벤 · 교향곡 9번', bpm: 112, level: 1,
+      mel: 'E4 E4 F4 G4 G4 F4 E4 D4 C4 C4 D4 E4 E4:1.5 D4:0.5 D4:2 E4 E4 F4 G4 G4 F4 E4 D4 C4 C4 D4 E4 D4:1.5 C4:0.5 C4:2 D4 D4 E4 C4 D4 E4:0.5 F4:0.5 E4 C4 D4 E4:0.5 F4:0.5 E4 D4 C4 D4 G3:2 E4 E4 F4 G4 G4 F4 E4 D4 C4 C4 D4 E4 D4:1.5 C4:0.5 C4:2',
+      ch: 'C:4 G:4 C:4 G:4 C:4 G:4 C:4 G:2 C:2 G:4 C:4 G:4 C:2 G:2 C:4 G:4 C:4 G:2 C:2' },
+    { id: 'canon', cat: 'classic', title: '캐논', about: '파헬벨 · 긴 타일을 꾹 누르는 연습', bpm: 72, level: 2,
+      mel: 'E5:2 D5:2 C5:2 B4:2 A4:2 G4:2 A4:2 B4:2 C5:2 B4:2 A4:2 G4:2 F4:2 E4:2 F4:2 D4:2 E4 G4 D4 G4 C4 E4 B3 E4 A3 C4 G3 C4 A3 C4 B3 D4 C4:4',
+      ch: 'C:2 G:2 Am:2 Em:2 F:2 C:2 F:2 G:2 C:2 G:2 Am:2 Em:2 F:2 C:2 F:2 G:2 C:2 G:2 Am:2 Em:2 F:2 C:2 F:2 G:2 C:4' },
+    { id: 'minuet', cat: 'classic', title: '미뉴에트 G장조', about: '바흐 · 안나 막달레나의 음악 노트', bpm: 100, level: 2,
+      mel: 'D5 G4:0.5 A4:0.5 B4:0.5 C5:0.5 D5 G4 G4 E5 C5:0.5 D5:0.5 E5:0.5 F#5:0.5 G5 G4 G4 C5 D5:0.5 C5:0.5 B4:0.5 A4:0.5 B4 C5:0.5 B4:0.5 A4:0.5 G4:0.5 F#4 G4:0.5 A4:0.5 B4:0.5 G4:0.5 A4:3 D5 G4:0.5 A4:0.5 B4:0.5 C5:0.5 D5 G4 G4 E5 C5:0.5 D5:0.5 E5:0.5 F#5:0.5 G5 G4 G4 C5 D5:0.5 C5:0.5 B4:0.5 A4:0.5 B4 C5:0.5 B4:0.5 A4:0.5 G4:0.5 A4 B4:0.5 A4:0.5 G4:0.5 F#4:0.5 G4:3',
+      ch: 'G:3 G:3 C:3 G:3 C:3 G:3 D:3 D:3 G:3 G:3 C:3 G:3 C:3 G:3 D:3 G:3' },
+    { id: 'elise', cat: 'classic', title: '엘리제를 위하여', about: '베토벤 · 검은 건반 음이 나와요', bpm: 84, level: 3,
+      mel: 'E5:0.5 D#5:0.5 E5:0.5 D#5:0.5 E5:0.5 B4:0.5 D5:0.5 C5:0.5 A4:1.5 C4:0.5 E4:0.5 A4:0.5 B4:1.5 E4:0.5 G#4:0.5 B4:0.5 C5:1.5 E4:0.5 E5:0.5 D#5:0.5 E5:0.5 D#5:0.5 E5:0.5 B4:0.5 D5:0.5 C5:0.5 A4:1.5 C4:0.5 E4:0.5 A4:0.5 B4:1.5 E4:0.5 C5:0.5 B4:0.5 A4:3',
+      ch: 'N:1 N:3 Am:3 E:3 Am:3 N:3 Am:3 E:3 Am:3' },
+    { id: 'turkish', cat: 'classic', title: '터키 행진곡', about: '모차르트 · 빠르고 신나는 곡', bpm: 84, level: 3,
+      mel: 'B4:0.5 A4:0.5 G#4:0.5 A4:0.5 C5:2 D5:0.5 C5:0.5 B4:0.5 C5:0.5 E5:2 F5:0.5 E5:0.5 D#5:0.5 E5:0.5 B5:0.5 A5:0.5 G#5:0.5 A5:0.5 B5:0.5 A5:0.5 G#5:0.5 A5:0.5 C6:2 A5 C6 B5 A5 G5 A5 B5 A5 G5 A5 B5 A5 G5 F#5 E5:2',
+      ch: 'Am:4 Am:4 Am:4 Am:4 Am:2 G:4 C:4 G:4 Em:2' },
   ];
 
   function parse(song) {
@@ -51,7 +95,10 @@
     set(k, v) { try { localStorage.setItem('banjjak-' + k, JSON.stringify(v)); } catch (e) { /* 저장 못 해도 게임은 된다 */ } },
   };
   const opt = Object.assign({ speed: '1', hearts: '3', band: 'on' }, store.get('opt', {}));
-  let sel = Math.max(0, Math.min(SONGS.length - 1, store.get('sel', 0) | 0));
+  let selId = store.get('song', 'star');
+  if (!SONGS.some((x) => x.id === selId)) selId = 'star';
+  let cat = null; // 처음에는 갈래(동요·가요·멜로디)부터 고른다
+  const curSong = () => SONGS.find((x) => x.id === selId) || SONGS[0];
   const best = store.get('best', {});
 
   // ---------- 소리 ----------
@@ -115,6 +162,12 @@
     o.connect(g); g.connect(bus); o.start(t); o.stop(t + 0.16);
   }
 
+  function chime(bus, m) { // 끝까지 누르면 한 옥타브 위에서 반짝
+    const t = ac.currentTime;
+    pluck(bus, m + 12, t, 0.22, 0.6); pluck(bus, m + 19, t + 0.08, 0.16, 0.6);
+  }
+  const buzz = (p) => { try { if (navigator.vibrate) navigator.vibrate(p); } catch (e) { /* 진동 없는 기기 */ } };
+
   // ---------- 화면 ----------
   const $ = (s) => document.querySelector(s);
   const cv = $('#board'), cx = cv.getContext('2d');
@@ -171,7 +224,7 @@
         if (lane === prevLane) lane = (prevLane + 2) % 4;
       }
       prevLane = lane; prevM = n.m;
-      return { m: n.m, lane, t: n.beat * spb, d: n.dur * spb, hold: n.dur >= 2, hit: false, miss: false, holding: false, hitAt: 0, endAt: 0, voice: null };
+      return { m: n.m, lane, t: n.beat * spb, d: n.dur * spb, hold: n.dur >= 2, hit: false, miss: false, holding: false, hitAt: 0, endAt: 0, voice: null, earned: 0, full: false };
     });
     const last = notes[notes.length - 1];
     return {
@@ -182,7 +235,8 @@
       score: 0, combo: 0, maxCombo: 0, pts: 0,
       hearts: opt.hearts === '3' ? 3 : Infinity,
       counts: { p: 0, g: 0, o: 0, m: 0 },
-      scan: 0, ticks: -4, judge: null, flash: [null, null, null, null], parts: [], over: false,
+      scan: 0, ticks: -4, judge: null, flash: [null, null, null, null], laneCol: ['#fff', '#fff', '#fff', '#fff'], parts: [], rips: [], over: false,
+      holds: notes.filter((n) => n.hold).length, holdsFull: 0,
       bus: newBus(),
     };
   }
@@ -191,20 +245,48 @@
   const songsEl = $('#songs');
   $('#legend').innerHTML = [0, 2, 4, 5, 7, 9, 11].map((pc) => `<i style="--c:${PCOLOR[pc]}">${SOLFA[pc]}</i>`).join('');
   function starText(n) { return '★'.repeat(n) + '☆'.repeat(3 - n); }
+  const catsEl = $('#cats');
+  function renderCats() {
+    catsEl.innerHTML = CATS.map((c) => {
+      const list = SONGS.filter((x) => x.cat === c.id);
+      const stars = list.reduce((a, x) => a + (best[x.id] ? best[x.id].stars : 0), 0);
+      return `<button type="button" class="cat" data-cat="${c.id}" style="--c:${c.c}">
+        <span class="em" aria-hidden="true">${c.em}</span>
+        <span class="tx"><b>${c.name}</b><small>${c.about}</small></span>
+        <span class="n">${list.length}곡<br>★ ${stars}/${list.length * 3}</span></button>`;
+    }).join('');
+  }
+  function showView() {
+    show('#catView', !cat); show('#songView', !!cat);
+    if (cat) {
+      const c = CATS.find((x) => x.id === cat);
+      $('#catName').textContent = c.em + ' ' + c.name;
+      $('#catName').style.color = c.c;
+      renderSongs();
+    } else renderCats();
+  }
+  catsEl.addEventListener('click', (e) => {
+    const b = e.target.closest('.cat'); if (!b) return;
+    cat = b.dataset.cat;
+    if (curSong().cat !== cat) { selId = SONGS.find((x) => x.cat === cat).id; store.set('song', selId); }
+    showView();
+    $('#menu').scrollTop = 0;
+  });
+  $('#catBack').addEventListener('click', () => { cat = null; showView(); });
   function renderSongs() {
-    songsEl.innerHTML = SONGS.map((s, i) => {
-      const b = best[s.id];
-      return `<button type="button" class="song${i === sel ? ' on' : ''}" data-i="${i}" aria-pressed="${i === sel}">
+    songsEl.innerHTML = SONGS.filter((x) => x.cat === cat).map((s) => {
+      const b = best[s.id], on = s.id === selId;
+      return `<button type="button" class="song${on ? ' on' : ''}" data-id="${s.id}" aria-pressed="${on}">
         <b>${s.title}</b><span class="lv" aria-label="어려움 ${s.level}">${'●'.repeat(s.level)}${'○'.repeat(3 - s.level)}</span>
         <small>${s.about}</small><span class="best">${b ? starText(b.stars) + ' ' + b.score : ''}</span></button>`;
     }).join('');
   }
   songsEl.addEventListener('click', (e) => {
     const b = e.target.closest('.song'); if (!b) return;
-    sel = +b.dataset.i; store.set('sel', sel); renderSongs();
+    selId = b.dataset.id; store.set('song', selId); renderSongs();
     ensureAudio();
     if (ac) { // 고른 곡의 첫 소절을 살짝 들려준다
-      const p = parse(SONGS[sel]); const spb = 60 / SONGS[sel].bpm; const bus = newBus(); const t0 = ac.currentTime + 0.05;
+      const song = curSong(), p = parse(song), spb = 60 / song.bpm, bus = newBus(), t0 = ac.currentTime + 0.05;
       p.notes.slice(0, 4).forEach((n) => pluck(bus, n.m, t0 + n.beat * spb, 0.3, 0.7));
       setTimeout(() => bus.disconnect(), 4000);
     }
@@ -219,13 +301,13 @@
     const b = e.target.closest('button'); if (!b) return;
     opt[seg.dataset.opt] = b.dataset.val; store.set('opt', opt); renderOpts();
   }));
-  renderSongs(); renderOpts();
+  showView(); renderOpts();
   const ver = document.getElementById('ver');
-  const showVer = () => { if (ver) ver.textContent = `버전 3 · 화면 ${W}×${H}`; };
+  const showVer = () => { if (ver) ver.textContent = `버전 4 · 화면 ${W}×${H}`; };
   showVer(); window.addEventListener('resize', showVer);
 
   // ---------- 화면 전환 ----------
-  const show = (id, on) => { $(id).hidden = !on; };
+  function show(id, on) { $(id).hidden = !on; }
   let wakeLock = null;
   async function lockScreen() { try { if (navigator.wakeLock) wakeLock = await navigator.wakeLock.request('screen'); } catch (e) { wakeLock = null; } }
   function unlockScreen() { try { if (wakeLock) wakeLock.release(); } catch (e) { /* 무시 */ } wakeLock = null; }
@@ -239,7 +321,7 @@
     ensureAudio();
     if (!ac) { alertNoAudio(); return; }
     stopRun();
-    G = buildRun(SONGS[sel]);
+    G = buildRun(curSong());
     if (ac.state === 'suspended') ac.resume();
     perf0 = pnow() + G.lead + 0.15; audio0 = ac.currentTime + G.lead + 0.15;
     state = 'play';
@@ -253,7 +335,7 @@
     stopRun(); state = 'menu';
     if (ac && ac.state === 'suspended') ac.resume();
     show('#hud', false); show('#pause', false); show('#result', false); show('#menu', true);
-    renderSongs(); unlockScreen();
+    showView(); unlockScreen();
   }
   function pauseGame() {
     if (state !== 'play' || !G) return;
@@ -309,8 +391,8 @@
       }
     }
     if (!pick) {
-      G.flash[lane] = { t: pnow(), bad: g >= 0 };
-      if (g >= 0) { thud(G.bus); G.combo = 0; }
+      // 빈 곳을 눌러도 꾸중하지 않는다: 줄만 살짝 빛난다
+      G.flash[lane] = { t: pnow(), bad: false, soft: true };
       return;
     }
     const kind = bd <= PERF ? 'p' : bd <= GOOD ? 'g' : 'o';
@@ -320,8 +402,12 @@
     pick.hit = true; pick.hitAt = g;
     pick.voice = pluck(G.bus, pick.m, ac.currentTime, 0.5, pick.hold ? pick.d + 0.35 : 1.1);
     if (pick.hold) pick.holding = true; else pick.endAt = g;
+    const col = PCOLOR[pick.m % 12];
     G.flash[lane] = { t: pnow(), bad: false };
-    burst(laneCenter(lane), hitY, PCOLOR[pick.m % 12], 14);
+    G.laneCol[lane] = col;
+    G.rips.push({ x: laneCenter(lane), t: pnow(), c: col });
+    burst(laneCenter(lane), hitY, col, 16);
+    buzz(pick.hold ? 18 : 12);
     setJudge(J.text, J.color);
     updateHud();
   }
@@ -330,15 +416,32 @@
     const g = gnow();
     for (const n of G.notes) if (n.holding && n.lane === lane) finishHold(n, g);
   }
+  // 긴 타일: 누르고 있는 동안 1박마다 50점씩 쌓이고, 끝까지 누르면 길이만큼 큰 보너스
+  function holdTick(n, g) {
+    const held = Math.max(0, Math.min(g, n.t + n.d) - n.t);
+    const want = Math.floor((held / G.spb) * 50);
+    if (want > n.earned) { G.score += want - n.earned; n.earned = want; updateHud(); }
+  }
   function finishHold(n, g) {
-    const frac = Math.max(0, Math.min(1, (g - n.t) / n.d));
+    holdTick(n, g);
+    const left = n.t + n.d - g;
+    const full = left <= 0.15 || (g - n.t) / n.d >= 0.93;
     n.holding = false; n.endAt = g;
-    G.score += Math.round(frac * 200);
-    if (frac < 0.97 && n.voice && ac) {
-      const t = ac.currentTime;
-      try { n.voice.gain.cancelScheduledValues(t); n.voice.gain.setTargetAtTime(0.0001, t, 0.05); } catch (e) { /* 무시 */ }
+    if (full) {
+      const bonus = Math.round(n.d / G.spb) * 100 + 100;
+      G.score += bonus; G.holdsFull++; n.full = true;
+      setJudge('끝까지 꾹! +' + bonus, '#ffe27a');
+      burst(laneCenter(n.lane), hitY, '#ffe27a', 28);
+      G.rips.push({ x: laneCenter(n.lane), t: pnow(), c: '#ffe27a', big: true });
+      buzz([20, 40, 30]);
+      if (ac) chime(G.bus, n.m);
+    } else {
+      if (n.voice && ac) {
+        const t = ac.currentTime;
+        try { n.voice.gain.cancelScheduledValues(t); n.voice.gain.setTargetAtTime(0.0001, t, 0.05); } catch (e) { /* 무시 */ }
+      }
+      if (state === 'play') setJudge('조금만 더 꾹~', '#8fe3ff');
     }
-    if (frac >= 0.85) { setJudge('쭉~ 최고!', '#ffe27a'); burst(laneCenter(n.lane), hitY, '#ffe27a', 18); }
     updateHud();
   }
   function doMiss(n) {
@@ -370,7 +473,7 @@
     $('#resCounts').innerHTML = [['p', '최고'], ['g', '좋아요'], ['o', '괜찮아요'], ['m', '놓침']]
       .map(([k, l]) => `<div><b>${G.counts[k]}</b><span>${l}</span></div>`).join('');
     $('#resNote').textContent = clear
-      ? `가장 긴 콤보 ${G.maxCombo} · 정확도 ${Math.round(acc * 100)}%`
+      ? `가장 긴 콤보 ${G.maxCombo} · 정확도 ${Math.round(acc * 100)}%` + (G.holds ? ` · 끝까지 꾹 ${G.holdsFull}/${G.holds}` : '')
       : `${Math.round((done / N) * 100)}%까지 쳤어요. '끝까지 연습'을 켜면 하트 없이 칠 수 있어요.`;
     setTimeout(() => { if (state === 'end') { show('#hud', false); show('#result', true); unlockScreen(); } }, clear ? 900 : 700);
   }
@@ -436,10 +539,15 @@
         if (c.sched) continue;
         if (c.t > g + 0.25) break;
         c.sched = true;
-        if (c.t + c.d > g) pad(G.bus, c.name, Math.max(ac.currentTime, at(c.t)), c.d);
+        if (c.name !== 'N' && c.t + c.d > g) pad(G.bus, c.name, Math.max(ac.currentTime, at(c.t)), c.d);
       }
     }
-    for (const n of G.notes) if (n.holding && g >= n.t + n.d) finishHold(n, n.t + n.d);
+    for (const n of G.notes) {
+      if (!n.holding) continue;
+      if (g >= n.t + n.d) { finishHold(n, n.t + n.d); continue; }
+      holdTick(n, g);
+      if (Math.random() < 0.5) G.parts.push({ x: laneCenter(n.lane) + (Math.random() - 0.5) * laneW * 0.6, y: hitY, vx: (Math.random() - 0.5) * 60, vy: -120 - Math.random() * 200, life: 0.5, age: 0, r: 1.5 + Math.random() * 2, color: PCOLOR[n.m % 12] });
+    }
     for (let i = G.scan; i < G.notes.length; i++) {
       const n = G.notes[i];
       if (n.t + OK >= g) break;
@@ -450,6 +558,11 @@
   }
 
   // ---------- 그리기 ----------
+  function hexA(hex, a) {
+    const v = parseInt(hex.slice(1), 16);
+    if (hex.length === 4) return `rgba(${((v >> 8) & 15) * 17},${((v >> 4) & 15) * 17},${(v & 15) * 17},${a})`;
+    return `rgba(${(v >> 16) & 255},${(v >> 8) & 255},${v & 255},${a})`;
+  }
   function rr(x, y, w, h, r) {
     r = Math.min(r, w / 2, h / 2);
     cx.beginPath();
@@ -478,14 +591,17 @@
     cx.fillStyle = 'rgba(255,255,255,0.035)'; cx.fillRect(boardX, 0, boardW, H);
     cx.fillStyle = 'rgba(255,255,255,0.08)';
     for (let i = 0; i <= 4; i++) cx.fillRect(Math.round(boardX + laneW * i) - 0.5, 0, 1, H);
-    // 누른 줄 빛
+    // 누른 줄 빛: 손가락을 대고 있는 동안 계속 켜져 있고, 막 쳤을 때 더 밝게 번쩍
+    const down = new Set(state === 'play' ? activeLanes.values() : []);
     if (G) for (let l = 0; l < 4; l++) {
-      const f = G.flash[l]; if (!f) continue;
-      const a = 1 - (rt - f.t) / 0.18; if (a <= 0) continue;
-      const gr = cx.createLinearGradient(0, hitY - 220, 0, hitY);
-      const c = f.bad ? '255,122,138' : '255,255,255';
-      gr.addColorStop(0, `rgba(${c},0)`); gr.addColorStop(1, `rgba(${c},${0.28 * a})`);
-      cx.fillStyle = gr; cx.fillRect(boardX + laneW * l, hitY - 220, laneW, 220);
+      const f = G.flash[l];
+      const fa = f ? Math.max(0, 1 - (rt - f.t) / (f.soft ? 0.15 : 0.3)) : 0;
+      const a = Math.max(down.has(l) ? 0.55 : 0, fa * (f && f.soft ? 0.5 : 1));
+      if (a <= 0) continue;
+      const hgt = 160 + 140 * fa;
+      const gr = cx.createLinearGradient(0, hitY - hgt, 0, hitY);
+      gr.addColorStop(0, 'rgba(255,255,255,0)'); gr.addColorStop(1, hexA(f && !f.soft ? G.laneCol[l] : '#ffffff', 0.38 * a));
+      cx.fillStyle = gr; cx.fillRect(boardX + laneW * l, hitY - hgt, laneW, hgt);
     }
     // 치는 선
     const lg = cx.createLinearGradient(boardX, 0, boardX + boardW, 0);
@@ -499,9 +615,15 @@
     cx.font = '15px ' + FAM;
     for (let l = 0; l < 4; l++) {
       const x = laneCenter(l), y = hitY + Math.min(40, (H - hitY) / 2);
-      cx.strokeStyle = 'rgba(255,255,255,0.18)'; cx.lineWidth = 2;
-      cx.beginPath(); cx.arc(x, y, 17, 0, 6.283); cx.stroke();
-      if (keyboardUsed) { cx.fillStyle = 'rgba(255,255,255,0.5)'; cx.fillText('DFJK'[l], x, y + 1); }
+      const on = down.has(l);
+      if (on) { // 눌린 버튼: 안쪽이 채워지고 조금 작아진다
+        cx.fillStyle = hexA(G ? G.laneCol[l] : '#ffffff', 0.55);
+        cx.shadowColor = G ? G.laneCol[l] : '#fff'; cx.shadowBlur = 18;
+        cx.beginPath(); cx.arc(x, y + 2, 15, 0, 6.283); cx.fill(); cx.shadowBlur = 0;
+      }
+      cx.strokeStyle = on ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.18)'; cx.lineWidth = on ? 3 : 2;
+      cx.beginPath(); cx.arc(x, y + (on ? 2 : 0), on ? 15 : 17, 0, 6.283); cx.stroke();
+      if (keyboardUsed) { cx.fillStyle = 'rgba(255,255,255,0.6)'; cx.fillText('DFJK'[l], x, y + 1 + (on ? 2 : 0)); }
     }
   }
   function drawTiles(g) {
@@ -518,11 +640,16 @@
       const x = boardX + laneW * n.lane + 5, w = laneW - 10;
       const col = PCOLOR[n.m % 12];
       if (n.hit && !n.holding) {
-        const a = 1 - (g - n.endAt) / 0.28; if (a <= 0) continue;
-        cx.globalAlpha = a * 0.7; cx.fillStyle = '#ffffff';
-        if (n.hold) { const b = Math.min(bottom, hitY); top = Math.min(top, b - 4); rr(x, top - (1 - a) * 20, w, b - top, 12); }
-        else rr(x - (1 - a) * 6, top - (1 - a) * 24, w + (1 - a) * 12, h, 12);
-        cx.fill(); cx.globalAlpha = 1; continue;
+        // 친 타일: 그 자리에서 꾹 눌려 납작해지며 하얗게 번쩍이고 사라진다
+        const age = g - n.endAt, k = age / 0.3; if (k >= 1) continue;
+        const tb = n.hold ? hitY : hitY - (n.t - n.endAt) * pps;
+        const th = n.hold ? Math.min(60, Math.max(20, tb - top)) : h;
+        const hh = th * (1 - 0.6 * k), ww = w * (1 + 0.18 * Math.sin(Math.min(1, k * 2) * Math.PI / 2));
+        cx.globalAlpha = 1 - k;
+        cx.fillStyle = col; rr(x + w / 2 - ww / 2, tb - hh, ww, hh, 12); cx.fill();
+        cx.globalAlpha = (1 - k) * (age < 0.08 ? 0.9 : 0.45); cx.fillStyle = '#ffffff';
+        rr(x + w / 2 - ww / 2, tb - hh, ww, hh, 12); cx.fill();
+        cx.globalAlpha = 1; continue;
       }
       let drawBottom = bottom;
       if (n.holding) drawBottom = Math.min(bottom, hitY);
@@ -543,8 +670,14 @@
       if (n.miss) { cx.strokeStyle = '#ff7a8a'; cx.lineWidth = 2; rr(x, top, w, drawBottom - top, 12); cx.stroke(); }
       if (!n.holding) { cx.fillStyle = 'rgba(27,21,48,0.85)'; cx.font = font; cx.fillText(SOLFA[n.m % 12], x + w / 2, bottom - 14); }
       cx.globalAlpha = 1;
-      if (n.holding) { // 누르는 곳에 반짝이
-        cx.fillStyle = 'rgba(255,255,255,0.85)'; cx.beginPath(); cx.arc(x + w / 2, hitY, 10 + 3 * Math.sin(g * 30), 0, 6.283); cx.fill();
+      if (n.holding) { // 누르는 동안: 타일이 숨 쉬듯 빛나고, 얼마나 남았는지 위에 표시
+        const prog = Math.max(0, Math.min(1, (g - n.t) / n.d));
+        cx.globalAlpha = 0.25 + 0.15 * Math.sin(g * 18); cx.fillStyle = '#ffffff';
+        rr(x, top, w, drawBottom - top, 12); cx.fill(); cx.globalAlpha = 1;
+        cx.fillStyle = 'rgba(255,255,255,0.95)'; cx.beginPath(); cx.arc(x + w / 2, hitY, 11 + 3 * Math.sin(g * 30), 0, 6.283); cx.fill();
+        cx.strokeStyle = '#ffe27a'; cx.lineWidth = 4; cx.lineCap = 'round';
+        cx.beginPath(); cx.arc(x + w / 2, hitY, 20, -Math.PI / 2, -Math.PI / 2 + prog * 6.283); cx.stroke();
+        if (drawBottom - top > 40) { cx.fillStyle = 'rgba(27,21,48,0.8)'; cx.font = font; cx.fillText('꾹', x + w / 2, top + 30); }
       }
     }
   }
@@ -569,7 +702,7 @@
         const sc = age < 0.08 ? 0.7 + age / 0.08 * 0.45 : 1.15 - Math.min(0.15, (age - 0.08) * 1.2);
         cx.save(); cx.globalAlpha = age < 0.5 ? 1 : 1 - (age - 0.5) / 0.2;
         cx.translate(cxm, hitY * 0.55); cx.scale(sc, sc);
-        cx.font = '34px ' + fam; cx.lineWidth = 6; cx.strokeStyle = 'rgba(13,10,34,0.8)';
+        cx.font = (G.judge.text.length > 7 ? '28px ' : '34px ') + fam; cx.lineWidth = 6; cx.strokeStyle = 'rgba(13,10,34,0.8)';
         cx.strokeText(G.judge.text, 0, 0); cx.fillStyle = G.judge.color; cx.fillText(G.judge.text, 0, 0);
         cx.restore();
       }
@@ -607,6 +740,14 @@
     if (G) {
       drawTiles(g);
       drawParts(dt);
+      for (let i = G.rips.length - 1; i >= 0; i--) { // 친 자리에 퍼지는 동그라미
+        const r = G.rips[i], age = rt - r.t, life = r.big ? 0.55 : 0.38;
+        if (age >= life) { G.rips.splice(i, 1); continue; }
+        const k = age / life;
+        cx.globalAlpha = 1 - k; cx.strokeStyle = r.c; cx.lineWidth = (r.big ? 5 : 3) * (1 - k) + 1;
+        cx.beginPath(); cx.arc(r.x, hitY, 14 + k * (r.big ? 110 : 60), 0, 6.283); cx.stroke();
+      }
+      cx.globalAlpha = 1;
       drawText(rt, g);
       if (state === 'play' || state === 'end') $('#hudBar').style.width = Math.max(0, Math.min(100, (g / G.end) * 100)) + '%';
     }
