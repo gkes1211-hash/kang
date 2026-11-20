@@ -4,7 +4,7 @@ import { SUBJECTS, SUBJECT, STAMPS_TO_FLY, puzzlesFor, finalPuzzles, JOBS, JOB, 
 import { ISLANDS } from './islands.js';
 import { openPuzzle } from './puzzles.js';
 import { Host, Client, EMOTES, cleanName } from './net.js';
-import { randomLook, cleanLook, CHARACTERS, CATS, SPECIALS, nextSpecial, loadChars, charsReady, drawChar } from './chars.js';
+import { randomLook, cleanLook, CHARACTERS, CATS, SPECIALS, nextSpecial, loadChars, charsReady, drawChar, charBox, charNeed, charOpen } from './chars.js';
 loadChars().catch(() => {});
 import { makeStore } from '../../pe/common/sound.js';
 import { unlockAudio, sfx, speak, speakNow, hush, sound, setSound, bgm } from './audio.js';
@@ -83,12 +83,16 @@ function setupPreview() {
     if (canvas.width !== Math.round(w * dpr)) { canvas.width = Math.round(w * dpr); canvas.height = Math.round(h * dpr); }
     g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, canvas.width, canvas.height); g.imageSmoothingEnabled = false;
     const c = drawChar(me.look, VIEWS[dresser.view]); if (!c) return;
-    const sc = Math.min(canvas.width * 0.9 / c.width, canvas.height * 0.92 / c.height);
-    const dw = c.width * sc; const dh = c.height * sc; const bob = Math.sin(t * 2.4) * 3 * dpr;
+    // 그림이 있는 부분만 크게: 화면 높이를 거의 꽉 채운다
+    let [bx, by, bw, bh] = charBox(me.look) || [0, 0, c.width, c.height];
+    if (VIEWS[dresser.view] === 'sideL') bx = c.width - bx - bw;
+    const sc = Math.min(canvas.width * 0.8 / bw, canvas.height * 0.86 / bh);
+    const dw = bw * sc; const dh = bh * sc; const bob = Math.sin(t * 2.4) * 3 * dpr;
+    const hasPet = me.look.pet && me.look.pet !== 'none';
     // 그림자
-    g.fillStyle = 'rgba(60,90,40,0.25)'; g.beginPath(); g.ellipse(canvas.width / 2, canvas.height * 0.94, dw * 0.28, dh * 0.03, 0, 0, 7); g.fill();
-    g.drawImage(c, (canvas.width - dw) / 2 - (me.look.pet && me.look.pet !== 'none' ? dw * 0.12 : 0), canvas.height * 0.955 - dh + bob, dw, dh);
-    if (me.look.pet && me.look.pet !== 'none') { g.font = `${Math.round(dh * 0.17)}px sans-serif`; g.textAlign = 'center'; g.fillText({ chick: '🐥', puppy: '🐶', kitty: '🐱', turtle: '🐢', dragon: '🐉' }[me.look.pet] || '', canvas.width / 2 + dw * 0.42, canvas.height * 0.93 - Math.abs(Math.sin(t * 3)) * 8 * dpr); }
+    g.fillStyle = 'rgba(60,90,40,0.25)'; g.beginPath(); g.ellipse(canvas.width / 2 - (hasPet ? dw * 0.08 : 0), canvas.height * 0.955, dw * 0.34, dh * 0.03, 0, 0, 7); g.fill();
+    g.drawImage(c, bx, by, bw, bh, (canvas.width - dw) / 2 - (hasPet ? dw * 0.08 : 0), canvas.height * 0.965 - dh + bob, dw, dh);
+    if (me.look.pet && me.look.pet !== 'none') { g.font = `${Math.round(dh * 0.17)}px sans-serif`; g.textAlign = 'center'; g.fillText({ chick: '🐥', puppy: '🐶', kitty: '🐱', turtle: '🐢', dragon: '🐉' }[me.look.pet] || '', canvas.width / 2 + dw * 0.4, canvas.height * 0.95 - Math.abs(Math.sin(t * 3)) * 8 * dpr); }
   };
   requestAnimationFrame(loop);
 }
@@ -109,9 +113,14 @@ function renderDresser() {
       row.className = 'charpick';
       list.forEach((nm, i) => {
         const b = document.createElement('button'); b.type = 'button'; b.setAttribute('aria-pressed', String(me.look.char === i)); b.setAttribute('aria-label', nm); b.title = nm;
+        const need = charNeed(i); const locked = !charOpen(i, prog.keys);
         const th = drawChar({ v: 3, char: i });
         if (th) { const c = document.createElement('canvas'); c.width = th.width; c.height = th.height; c.getContext('2d').drawImage(th, 0, 0); b.append(c); } else b.textContent = String(i + 1);
-        b.addEventListener('click', () => { me.look.char = i; dresser.view = 0; sfx.pop(); renderDresser(); });
+        if (locked) { b.classList.add('locked'); b.dataset.need = `🔒🗝️${need}`; b.title = `열쇠 ${need}개를 모으면 열려요`; }
+        b.addEventListener('click', () => {
+          if (locked) { sfx.fail(); flashKeys(`🔒 열쇠 ${need}개를 모으면 "${nm}"이(가) 열려요! (지금 ${prog.keys}개)`); return; }
+          me.look.char = i; dresser.view = 0; sfx.pop(); renderDresser();
+        });
         row.append(b);
       });
     } else if (kind === 'swatch') {
@@ -139,7 +148,7 @@ function renderDresser() {
     body.append(row);
   }
   const nx = nextSpecial(prog.keys);
-  $('av-keys').innerHTML = `🗝️ 모은 열쇠 <b>${prog.keys}</b>개<br>${nx ? `다음 특별 꾸미기: ${esc(nx.label)} (열쇠 ${nx.need}개)` : '🎉 특별 꾸미기를 모두 열었어요!'}`;
+  $('av-keys').innerHTML = `🗝️ 모은 열쇠 <b>${prog.keys}</b>개<br>${nx ? `다음에 열리는 것: ${esc(nx.label)} (열쇠 ${nx.need}개)` : '🎉 캐릭터와 친구를 모두 열었어요!'}`;
 }
 function flashKeys(text) { const k = $('av-keys'); const old = k.innerHTML; k.innerHTML = text; k.style.background = '#ffe0d9'; setTimeout(() => { k.style.background = ''; renderDresser(); void old; }, 2200); }
 document.querySelectorAll('#av-tabs button').forEach((b) => b.addEventListener('click', () => { dresser.tab = b.dataset.tab; sfx.pop(); renderDresser(); }));
@@ -480,13 +489,14 @@ function takeKey(subj) {
 // 새로 열린 특별 꾸미기
 function showUnlock(list) {
   sfx.win();
-  speak('새 꾸미기가 열렸어요!');
+  speak(list.some((x) => x.cat === 'char') ? '새 친구 캐릭터가 열렸어요!' : '새 꾸미기가 열렸어요!');
   modal(`
     <div class="m-emoji">🎁</div>
-    <h2>새 꾸미기가 열렸어요!</h2>
-    <div>${list.map((x) => `<span class="unlock-item">${esc(x.label)}</span>`).join(' ')}</div>
-    <p>열쇠를 더 모으면 더 멋진 꾸미기가 열려요.</p>
-  `, [['👕 지금 꾸며 보기', () => openDresser('edit', afterDress), 'ok'], ['계속 탐험하기', null, 'ghost']]);
+    <h2>${list.some((x) => x.cat === 'char') ? '새 친구 캐릭터가 열렸어요!' : '새 꾸미기가 열렸어요!'}</h2>
+    <div class="unlock-list">${list.map((x) => (x.cat === 'char' ? `<span class="unlock-char" data-char="${x.id}"><canvas></canvas>${esc(x.label.replace('🧒 ', ''))}</span>` : `<span class="unlock-item">${esc(x.label)}</span>`)).join(' ')}</div>
+    <p>열쇠를 하나 모을 때마다 새 캐릭터가 열려요.</p>
+  `, [['👕 지금 바꿔 보기', () => { const ch = list.find((x) => x.cat === 'char'); if (ch) { me.look.char = ch.id; saveLook(); } openDresser('edit', afterDress); }, 'ok'], ['계속 탐험하기', null, 'ghost']]);
+  $('modal').querySelectorAll('.unlock-char').forEach((el) => { const th = drawChar({ v: 3, char: Number(el.dataset.char) }); const cv = el.querySelector('canvas'); if (th) { cv.width = th.width; cv.height = th.height; cv.getContext('2d').drawImage(th, 0, 0); } });
 }
 function showJobUnlock(j, then) {
   sfx.win();
@@ -575,8 +585,8 @@ function openBook() {
     <h2>${esc(me.name)}의 탐험 수첩</h2>
     <p>🗝️ 열쇠 <b>${prog.keys}</b>개 · 📒 도장 <b>${n}</b>/${STAMPS_TO_FLY} · 🎈 비행 <b>${prog.flights}</b>번</p>
     <div class="book-grid">${SUBJECTS.map((s) => `<div class="${prog.stamps[s.id] ? 'got' : ''}"><b>${s.emoji}</b>${esc(s.name)}<br>${prog.stamps[s.id] ? `✅ ${prog.stamps[s.id]}번 · ${'⭐'.repeat(prog.stars[s.id] || 0)}` : '아직이에요'}</div>`).join('')}</div>
-    <p class="book-next">${n >= STAMPS_TO_FLY ? '🎈 열기구를 탈 수 있어요!' : `🎈 열기구까지 도장 ${STAMPS_TO_FLY - n}개`}<br>${nx ? `🎁 열쇠 ${nx.need - prog.keys}개 더 모으면 <b>${esc(nx.label)}</b>!` : '🎉 특별 꾸미기를 모두 열었어요!'}</p>
-    ${opened.length ? `<p>열린 특별 꾸미기: ${opened.map((x) => esc(x.label)).join(' · ')}</p>` : ''}
+    <p class="book-next">${n >= STAMPS_TO_FLY ? '🎈 열기구를 탈 수 있어요!' : `🎈 열기구까지 도장 ${STAMPS_TO_FLY - n}개`}<br>${nx ? `🎁 열쇠 ${nx.need - prog.keys}개 더 모으면 <b>${esc(nx.label)}</b>!` : '🎉 캐릭터와 친구를 모두 열었어요!'}</p>
+    <p>🧒 캐릭터 <b>${CHARACTERS.filter((_, i) => charOpen(i, prog.keys)).length}</b> / ${CHARACTERS.length}명 열림${opened.some((x) => x.cat === 'pet') ? ` · 같이 다니는 친구: ${opened.filter((x) => x.cat === 'pet').map((x) => esc(x.label)).join(' · ')}` : ''}</p>
     <h3 class="book-h">🏢 직업 도감 ${jobList().length} / ${JOBS.length}</h3>
     <div class="job-book">${JOBS.map((j) => `<span class="${prog.jobs?.[j.id] ? 'got' : ''}" title="${esc(j.name)}">${j.emoji}</span>`).join('')}</div>
   `, [['👕 꾸미기', () => openDresser('edit', afterDress), 'ok'], ['닫기', null, 'ghost']]);

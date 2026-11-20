@@ -23,12 +23,20 @@ export const JOB_BADGES = [
 ];
 export const jobEmoji = (id) => { const j = JOB_BADGES.find((x) => x[0] === id); return j && id !== 'none' ? j[1].split(' ')[0] : ''; };
 export const CATS = { pet: PETS, job: JOB_BADGES };
-export const SPECIALS = PETS.filter((x) => x[2] > 0).map(([id, label, need]) => ({ cat: 'pet', id, label, need }));
+// 캐릭터는 처음에 8명이 열려 있고, 열쇠를 하나 모을 때마다 한 명씩 더 열린다 (9번째 = 열쇠 1개 … 32번째 = 열쇠 24개)
+export const START_CHARS = 8;
+export const charNeed = (i) => Math.max(0, i - (START_CHARS - 1));
+export const charOpen = (i, keys) => charNeed(i) <= keys;
+export const SPECIALS = [
+  ...CHARACTERS.map((name, i) => ({ cat: 'char', id: i, label: `🧒 ${name}`, need: charNeed(i) })).filter((x) => x.need > 0),
+  ...PETS.filter((x) => x[2] > 0).map(([id, label, need]) => ({ cat: 'pet', id, label, need })),
+].sort((a, b) => a.need - b.need);
 export const nextSpecial = (keys) => SPECIALS.find((s) => s.need > keys) || null;
 
 export function randomLook(keys = 0) {
   const pets = PETS.filter((x) => x[2] <= keys).map((x) => x[0]);
-  return { v: 3, char: Math.floor(Math.random() * CHARACTERS.length), pet: Math.random() < 0.5 ? 'none' : pets[Math.floor(Math.random() * pets.length)], job: 'none' };
+  const chars = CHARACTERS.map((_, i) => i).filter((i) => charOpen(i, keys));
+  return { v: 3, char: chars[Math.floor(Math.random() * chars.length)], pet: Math.random() < 0.5 ? 'none' : pets[Math.floor(Math.random() * pets.length)], job: 'none' };
 }
 // 받은 look 을 믿을 수 있는 값으로만. 예전 모습이면 캐릭터를 새로 고른다 (같이 다니는 친구는 남긴다)
 // jobs: 체험한 직업 목록 (null 이면 친구 모습처럼 모두 믿는다)
@@ -36,7 +44,8 @@ export function cleanLook(l = {}, keys = 99, jobs = null) {
   l = l || {};
   const open = (need) => (typeof need === 'string' ? (jobs === null || jobs.includes(need.slice(4))) : need <= keys);
   const lock = (list, v) => (list.some((x) => x[0] === v && open(x[2])) ? v : 'none');
-  const ch = Number.isInteger(l.char) && l.char >= 0 && l.char < CHARACTERS.length ? l.char : (l.v === 3 ? 0 : Math.floor(Math.random() * CHARACTERS.length));
+  let ch = Number.isInteger(l.char) && l.char >= 0 && l.char < CHARACTERS.length ? l.char : (l.v === 3 ? 0 : Math.floor(Math.random() * START_CHARS));
+  if (!charOpen(ch, keys)) ch = ch % START_CHARS; // 아직 안 열린 캐릭터면 처음 캐릭터 중 하나로
   return { v: 3, char: ch, pet: lock(PETS, l.pet), job: lock(JOB_BADGES, l.job) };
 }
 
@@ -69,4 +78,16 @@ export function drawChar(look, view = 'front') {
   g.drawImage(ATLAS, x, y, w, h, 0, 0, w, h);
   cache.set(key, c);
   return c;
+}
+
+// 캐릭터 그림에서 실제로 그려진 부분(투명하지 않은 곳)의 네모 [x, y, w, h]
+const boxCache = new Map();
+export function charBox(look) {
+  const c = drawChar(look); if (!c) return null;
+  if (boxCache.has(c)) return boxCache.get(c);
+  const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data;
+  let x0 = c.width; let y0 = c.height; let x1 = 0; let y1 = 0;
+  for (let y = 0; y < c.height; y++) for (let x = 0; x < c.width; x++) if (d[(y * c.width + x) * 4 + 3] > 20) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+  const b = x1 >= x0 ? [x0, y0, x1 - x0 + 1, y1 - y0 + 1] : [0, 0, c.width, c.height];
+  boxCache.set(c, b); return b;
 }
