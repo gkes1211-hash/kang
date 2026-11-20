@@ -124,7 +124,10 @@
   document.body.appendChild(probe);
   function resize() {
     const dpr = Math.min(2, window.devicePixelRatio || 1);
-    W = window.innerWidth; H = window.innerHeight;
+    // 보이는 화면 크기. 폰에서 가로가 넓게 잡히는 경우를 막으려고 가장 작은 값을 쓴다
+    const de = document.documentElement, vv = window.visualViewport;
+    W = Math.round(Math.min(window.innerWidth, de.clientWidth || 1e9, vv ? vv.width * (vv.scale || 1) : 1e9));
+    H = Math.round(Math.min(window.innerHeight, de.clientHeight || 1e9, vv ? vv.height * (vv.scale || 1) : 1e9));
     cv.style.width = W + 'px'; cv.style.height = H + 'px'; // 화면에 보이는 크기는 CSS 픽셀로 고정(폰에서 2~3배로 커지지 않게)
     cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
     cx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -217,6 +220,9 @@
     opt[seg.dataset.opt] = b.dataset.val; store.set('opt', opt); renderOpts();
   }));
   renderSongs(); renderOpts();
+  const ver = document.getElementById('ver');
+  const showVer = () => { if (ver) ver.textContent = `버전 3 · 화면 ${W}×${H}`; };
+  showVer(); window.addEventListener('resize', showVer);
 
   // ---------- 화면 전환 ----------
   const show = (id, on) => { $(id).hidden = !on; };
@@ -377,22 +383,36 @@
   // ---------- 입력 ----------
   const activeLanes = new Map(); // 손가락/키 → 줄
   const laneAt = (x) => Math.max(0, Math.min(3, Math.floor((x - boardX) / laneW)));
-  cv.addEventListener('pointerdown', (e) => {
-    e.preventDefault();
+  function down(id, x, y) {
     if (state !== 'play') return;
     if (ac && ac.state === 'suspended') ac.resume(); // 아이폰은 소리가 잠들어 있을 수 있다
-    try { cv.setPointerCapture(e.pointerId); } catch (err) { /* 무시 */ }
-    const lane = laneAt(e.clientX);
-    activeLanes.set('p' + e.pointerId, lane);
-    press(lane, e.clientY);
-  });
+    const lane = laneAt(x);
+    activeLanes.set(id, lane);
+    press(lane, y);
+  }
   const lift = (id) => {
     if (!activeLanes.has(id)) return;
     const lane = activeLanes.get(id); activeLanes.delete(id);
     for (const l of activeLanes.values()) if (l === lane) return; // 같은 줄을 다른 손가락이 아직 누르고 있다
     release(lane);
   };
-  ['pointerup', 'pointercancel', 'lostpointercapture'].forEach((ev) => cv.addEventListener(ev, (e) => lift('p' + e.pointerId)));
+  // 손가락은 터치 이벤트로 받는다(폰에서 가장 확실하다). 마우스·펜은 포인터 이벤트로.
+  cv.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    for (const t of e.changedTouches) down('t' + t.identifier, t.clientX, t.clientY);
+  }, { passive: false });
+  ['touchend', 'touchcancel'].forEach((ev) => cv.addEventListener(ev, (e) => {
+    e.preventDefault();
+    for (const t of e.changedTouches) lift('t' + t.identifier);
+  }, { passive: false }));
+  cv.addEventListener('touchmove', (e) => e.preventDefault(), { passive: false });
+  cv.addEventListener('pointerdown', (e) => {
+    if (e.pointerType === 'touch') return;
+    e.preventDefault();
+    try { cv.setPointerCapture(e.pointerId); } catch (err) { /* 무시 */ }
+    down('p' + e.pointerId, e.clientX, e.clientY);
+  });
+  ['pointerup', 'pointercancel', 'lostpointercapture'].forEach((ev) => cv.addEventListener(ev, (e) => { if (e.pointerType !== 'touch') lift('p' + e.pointerId); }));
   const KEYS = { KeyD: 0, KeyF: 1, KeyJ: 2, KeyK: 3 };
   window.addEventListener('keydown', (e) => {
     if (e.code === 'Escape' || e.code === 'KeyP') { if (state === 'play') pauseGame(); else if (state === 'paused') resumeGame(); return; }
