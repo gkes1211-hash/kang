@@ -79,14 +79,6 @@ button.opt:active, .opt-main:active { transform: translateY(3px); }
 .partpick button.locked { background: #ece8f5; }
 .partpick button.locked canvas { filter: grayscale(1) brightness(0.6); opacity: 0.5; }
 .partpick button.locked::after { content: attr(data-need); position: absolute; left: 50%; bottom: 2px; transform: translateX(-50%); padding: 0 5px; border-radius: 999px; background: #6b56b8; color: #fff; font-size: 11px; white-space: nowrap; }
-.av-palette { background: #f6f2ff; border: 4px solid #b9a6ee; border-radius: 20px; padding: 8px; display: flex; flex-direction: column; gap: 6px; }
-.pal-tabs { display: flex; gap: 4px; }
-.pal-tabs button { flex: 1; border: 3px solid #ddd3fb; border-radius: 12px; background: #fff; font-size: 15px; padding: 3px 0; }
-.pal-tabs button[aria-pressed="true"] { background: #8a6fe0; border-color: #8a6fe0; color: #fff; }
-.pal-row { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; }
-.pal-row button { aspect-ratio: 1; border-radius: 10px; border: 3px solid #fff; box-shadow: 0 0 0 1px #c9bdf0; cursor: pointer; padding: 0; }
-.pal-row button[aria-pressed="true"] { border-color: var(--brown); box-shadow: 0 0 0 3px var(--gold); }
-.pal-row .pal-orig { background: conic-gradient(#ff8b8b, #ffe07a, #a6dd78, #8cc8ff, #b79cff, #ff8b8b); font-size: 11px; color: #3b2a1a; text-shadow: 0 0 3px #fff; }
 .unlock-char { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 10px; border-radius: 18px; background: #fff3c4; border: 4px solid var(--gold); font-size: 17px; }
 .unlock-char canvas { height: 120px; image-rendering: pixelated; }
 .thumbs { display: grid; grid-template-columns: repeat(auto-fill, minmax(64px, 1fr)); gap: 8px; }
