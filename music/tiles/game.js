@@ -46,7 +46,7 @@
     { id: 'jingle', cat: 'kids', title: '징글벨', about: '종소리 울려라 종소리 울려', bpm: 112, level: 2,
       mel: 'E4 E4 E4:2 E4 E4 E4:2 E4 G4 C4:1.5 D4:0.5 E4:4 F4 F4 F4:1.5 F4:0.5 F4 E4 E4 E4:0.5 E4:0.5 E4 D4 D4 E4 D4:2 G4:2 E4 E4 E4:2 E4 E4 E4:2 E4 G4 C4:1.5 D4:0.5 E4:4 F4 F4 F4:1.5 F4:0.5 F4 E4 E4 E4:0.5 E4:0.5 G4 G4 F4 D4 C4:4',
       ch: 'C:4 C:4 C:4 C:4 F:4 C:4 G:4 G:4 C:4 C:4 C:4 C:4 F:4 C:4 G:4 C:4' },
-    { id: 'bday', cat: 'kids', title: '생일 축하 노래', about: '세 박자 노래, 친구 생일에 쳐 줘요', bpm: 96, level: 2,
+    { id: 'bday', cat: 'kids', title: '생일 축하 노래', about: '세 박자 노래, 친구 생일에 쳐 줘요', bpm: 96, level: 2, meter: 3, off: 1,
       mel: 'G3:0.5 G3:0.5 A3 G3 C4 B3:2 G3:0.5 G3:0.5 A3 G3 D4 C4:2 G3:0.5 G3:0.5 G4 E4 C4 B3 A3 F4:0.5 F4:0.5 E4 C4 D4 C4:3',
       ch: 'C:1 C:3 G:3 G:3 C:3 C:3 F:3 C:1.5 G:1.5 C:3' },
     // ----- 가요 (이 게임을 위해 새로 지은 곡) -----
@@ -69,10 +69,10 @@
     { id: 'canon', cat: 'classic', title: '캐논', about: '파헬벨 · 긴 타일을 꾹 누르는 연습', bpm: 72, level: 2,
       mel: 'E5:2 D5:2 C5:2 B4:2 A4:2 G4:2 A4:2 B4:2 C5:2 B4:2 A4:2 G4:2 F4:2 E4:2 F4:2 D4:2 E4 G4 D4 G4 C4 E4 B3 E4 A3 C4 G3 C4 A3 C4 B3 D4 C4:4',
       ch: 'C:2 G:2 Am:2 Em:2 F:2 C:2 F:2 G:2 C:2 G:2 Am:2 Em:2 F:2 C:2 F:2 G:2 C:2 G:2 Am:2 Em:2 F:2 C:2 F:2 G:2 C:4' },
-    { id: 'minuet', cat: 'classic', title: '미뉴에트 G장조', about: '바흐 · 안나 막달레나의 음악 노트', bpm: 100, level: 2,
+    { id: 'minuet', cat: 'classic', title: '미뉴에트 G장조', about: '바흐 · 안나 막달레나의 음악 노트', bpm: 100, level: 2, meter: 3,
       mel: 'D5 G4:0.5 A4:0.5 B4:0.5 C5:0.5 D5 G4 G4 E5 C5:0.5 D5:0.5 E5:0.5 F#5:0.5 G5 G4 G4 C5 D5:0.5 C5:0.5 B4:0.5 A4:0.5 B4 C5:0.5 B4:0.5 A4:0.5 G4:0.5 F#4 G4:0.5 A4:0.5 B4:0.5 G4:0.5 A4:3 D5 G4:0.5 A4:0.5 B4:0.5 C5:0.5 D5 G4 G4 E5 C5:0.5 D5:0.5 E5:0.5 F#5:0.5 G5 G4 G4 C5 D5:0.5 C5:0.5 B4:0.5 A4:0.5 B4 C5:0.5 B4:0.5 A4:0.5 G4:0.5 A4 B4:0.5 A4:0.5 G4:0.5 F#4:0.5 G4:3',
       ch: 'G:3 G:3 C:3 G:3 C:3 G:3 D:3 D:3 G:3 G:3 C:3 G:3 C:3 G:3 D:3 G:3' },
-    { id: 'elise', cat: 'classic', title: '엘리제를 위하여', about: '베토벤 · 검은 건반 음이 나와요', bpm: 84, level: 3,
+    { id: 'elise', cat: 'classic', title: '엘리제를 위하여', about: '베토벤 · 검은 건반 음이 나와요', bpm: 84, level: 3, meter: 3, off: 1,
       mel: 'E5:0.5 D#5:0.5 E5:0.5 D#5:0.5 E5:0.5 B4:0.5 D5:0.5 C5:0.5 A4:1.5 C4:0.5 E4:0.5 A4:0.5 B4:1.5 E4:0.5 G#4:0.5 B4:0.5 C5:1.5 E4:0.5 E5:0.5 D#5:0.5 E5:0.5 D#5:0.5 E5:0.5 B4:0.5 D5:0.5 C5:0.5 A4:1.5 C4:0.5 E4:0.5 A4:0.5 B4:1.5 E4:0.5 C5:0.5 B4:0.5 A4:3',
       ch: 'N:1 N:3 Am:3 E:3 Am:3 N:3 Am:3 E:3 Am:3' },
     { id: 'turkish', cat: 'classic', title: '터키 행진곡', about: '모차르트 · 빠르고 신나는 곡', bpm: 84, level: 3,
@@ -94,7 +94,16 @@
     get(k, d) { try { const v = localStorage.getItem('banjjak-' + k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
     set(k, v) { try { localStorage.setItem('banjjak-' + k, JSON.stringify(v)); } catch (e) { /* 저장 못 해도 게임은 된다 */ } },
   };
-  const opt = Object.assign({ speed: '1', hearts: '3', band: 'on' }, store.get('opt', {}));
+  const opt = Object.assign({ hearts: '3', band: 'on' }, store.get('opt', {}));
+  if (!opt.diff) opt.diff = opt.speed === '1.25' ? 'normal' : 'easy'; // 예전 '빠르기' 설정을 새 난이도로 옮긴다
+  delete opt.speed;
+  // 난이도: 빠르기, 두 개 동시에 누르기가 나오는 간격(마디), 판정 너그러움(초: 최고·좋아요·괜찮아요)
+  const DIFF = {
+    easy: { name: '쉬움', sp: 1.0, every: 4, win: [0.07, 0.13, 0.2], tileTap: true },
+    normal: { name: '보통', sp: 1.25, every: 2, win: [0.065, 0.12, 0.18], tileTap: true },
+    hard: { name: '어려움', sp: 1.4, every: 1, win: [0.055, 0.1, 0.15], tileTap: false },
+  };
+  if (!DIFF[opt.diff]) opt.diff = 'easy';
   let selId = store.get('song', 'star');
   if (!SONGS.some((x) => x.id === selId)) selId = 'star';
   let cat = null; // 처음에는 갈래(동요·가요·멜로디)부터 고른다
@@ -137,16 +146,73 @@
   }
   function pad(bus, name, t, dur) {
     const iv = CHORDS[name] || CHORDS.C;
-    const root = 36 + (iv[0] % 12); // 낮은 베이스
-    const bg = ac.createGain();
-    bg.gain.setValueAtTime(0.0001, t); bg.gain.exponentialRampToValueAtTime(0.22, t + 0.02); bg.gain.exponentialRampToValueAtTime(0.0001, t + Math.max(0.4, dur * 0.95));
-    const bo = ac.createOscillator(); bo.type = 'sine'; bo.frequency.value = hz(root);
-    bo.connect(bg); bg.connect(bus); bo.start(t); bo.stop(t + dur + 0.05);
     for (const i of iv) {
       const o = ac.createOscillator(); o.type = 'triangle'; o.frequency.value = hz(48 + i);
       const g = ac.createGain();
-      g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.035, t + 0.08); g.gain.exponentialRampToValueAtTime(0.0001, t + Math.max(0.3, dur * 0.9));
+      g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.022, t + 0.12); g.gain.exponentialRampToValueAtTime(0.0001, t + Math.max(0.3, dur * 0.9));
       o.connect(g); g.connect(bus); o.start(t); o.stop(t + dur + 0.05);
+    }
+  }
+  // ---------- 배경 밴드: 베이스, 펼친 화음, 드럼 ----------
+  let noiseBuf = null;
+  function noise() {
+    if (!noiseBuf) {
+      noiseBuf = ac.createBuffer(1, ac.sampleRate * 0.5, ac.sampleRate);
+      const d = noiseBuf.getChannelData(0);
+      for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+    }
+    const s = ac.createBufferSource(); s.buffer = noiseBuf; return s;
+  }
+  function env(bus, t, peak, dec) {
+    const g = ac.createGain();
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(peak, t + 0.004); g.gain.exponentialRampToValueAtTime(0.0001, t + dec);
+    g.connect(bus); return g;
+  }
+  function kick(bus, t) {
+    const o = ac.createOscillator(); o.frequency.setValueAtTime(140, t); o.frequency.exponentialRampToValueAtTime(45, t + 0.12);
+    o.connect(env(bus, t, 0.45, 0.22)); o.start(t); o.stop(t + 0.25);
+  }
+  function snare(bus, t, v) {
+    const s = noise(), f = ac.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = 1800; f.Q.value = 0.7;
+    s.connect(f); f.connect(env(bus, t, v, 0.14)); s.start(t); s.stop(t + 0.16);
+  }
+  function hat(bus, t, v) {
+    const s = noise(), f = ac.createBiquadFilter(); f.type = 'highpass'; f.frequency.value = 7000;
+    s.connect(f); f.connect(env(bus, t, v, 0.04)); s.start(t); s.stop(t + 0.06);
+  }
+  function bassNote(bus, m, t, d) {
+    const o = ac.createOscillator(); o.type = 'triangle'; o.frequency.value = hz(m);
+    const lp = ac.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 600;
+    o.connect(lp); lp.connect(env(bus, t, 0.28, Math.max(0.2, d))); o.start(t); o.stop(t + d + 0.05);
+  }
+  function arpNote(bus, m, t) {
+    const o = ac.createOscillator(); o.type = 'sine'; o.frequency.value = hz(m);
+    o.connect(env(bus, t, 0.07, 0.35)); o.start(t); o.stop(t + 0.4);
+  }
+  function band(g) {
+    const spb = G.spb, half = spb / 2;
+    while (G.hb * 0.5 < G.endBeats && G.hb * half <= g + 0.3) {
+      const beat = G.hb * 0.5, k = G.hb; G.hb++;
+      if (beat * spb + half < g) continue; // 멈췄다 다시 할 때 지난 박은 건너뛴다
+      const c = chordAt(G.chordsB, beat);
+      if (!c || c.name === 'N' || !CHORDS[c.name]) continue;
+      const t = Math.max(ac.currentTime, at(beat * spb));
+      const iv = CHORDS[c.name], root = iv[0] % 12;
+      const rel = ((beat - G.off) % G.meter + G.meter) % G.meter, onBeat = Math.abs(beat - Math.round(beat)) < 1e-6;
+      const drums = G.song.cat !== 'classic';
+      // 펼친 화음(낮은 자리): 1-3-5-3
+      const tones = iv.map((i) => 48 + (i % 12)).sort((a, b) => a - b);
+      arpNote(G.bus, tones[[0, 1, 2, 1][k % 4]], t);
+      if (onBeat) {
+        const r = Math.round(rel);
+        if (r === 0) bassNote(G.bus, 36 + root, t, spb * 0.9);
+        else if (G.meter === 4 && r === 2) bassNote(G.bus, 36 + ((root + 7) % 12) - (root + 7 >= 12 ? 0 : 0), t, spb * 0.9);
+        if (drums) {
+          if (r === 0 || (G.meter === 4 && r === 2)) kick(G.bus, t);
+          if ((G.meter === 4 && (r === 1 || r === 3)) || (G.meter === 3 && r > 0)) snare(G.bus, t, G.meter === 3 ? 0.06 : 0.12);
+        }
+      }
+      if (drums) hat(G.bus, t, onBeat ? 0.05 : 0.03);
     }
   }
   function tick(bus, t, hi) {
@@ -199,7 +265,7 @@
   let keyboardUsed = fineMouse;
 
   // ---------- 게임 상태 ----------
-  const OK = 0.2, GOOD = 0.13, PERF = 0.07;
+  let PERF = 0.07, GOOD = 0.13, OK = 0.2;
   let state = 'menu'; // menu | play | paused | resume | end
   let G = null;
   let perf0 = 0, audio0 = 0, pausedAt = null, resumeT0 = 0;
@@ -208,7 +274,9 @@
   const at = (g) => audio0 + g;
 
   function buildRun(song) {
-    const sp = parseFloat(opt.speed) || 1;
+    const D = DIFF[opt.diff];
+    [PERF, GOOD, OK] = D.win;
+    const sp = D.sp;
     const spb = 60 / (song.bpm * sp);
     const p = parse(song);
     let prevLane = 1, prevM = null;
@@ -224,10 +292,14 @@
         if (lane === prevLane) lane = (prevLane + 2) % 4;
       }
       prevLane = lane; prevM = n.m;
-      return { m: n.m, lane, t: n.beat * spb, d: n.dur * spb, hold: n.dur >= 2, hit: false, miss: false, holding: false, hitAt: 0, endAt: 0, voice: null, earned: 0, full: false };
+      return { m: n.m, lane, beat: n.beat, dur: n.dur, t: n.beat * spb, d: n.dur * spb, hold: n.dur >= 2, hit: false, miss: false, holding: false, hitAt: 0, endAt: 0, voice: null, earned: 0, full: false };
     });
-    const last = notes[notes.length - 1];
+    addPairs(song, p, notes, D);
+    notes.sort((a, b) => a.t - b.t || (a.mate ? 1 : 0) - (b.mate ? 1 : 0));
+    const last = notes.reduce((a, n) => (n.t + n.d > a.t + a.d ? n : a), notes[0]);
+    const meter = song.meter || 4, off = song.off || 0;
     return {
+      meter, off, chordsB: p.chords, hb: 0, endBeats: p.chords.reduce((a, c) => a + c.dur, 0),
       song, sp, spb, notes,
       chords: p.chords.map((c) => ({ name: c.name, t: c.beat * spb, d: c.dur * spb, sched: false })),
       lead: 4 * spb, end: last.t + last.d,
@@ -236,9 +308,37 @@
       hearts: opt.hearts === '3' ? 3 : Infinity,
       counts: { p: 0, g: 0, o: 0, m: 0 },
       scan: 0, ticks: -4, judge: null, flash: [null, null, null, null], laneCol: ['#fff', '#fff', '#fff', '#fff'], parts: [], rips: [], over: false,
-      holds: notes.filter((n) => n.hold).length, holdsFull: 0,
+      holds: notes.filter((n) => n.hold).length, holdsFull: 0, diff: D,
       bus: newBus(),
     };
+  }
+
+  // 두 개 동시에: 마디 첫 박(어려움은 마디 가운데도)에 화음 음 타일을 하나 더 놓는다
+  function chordAt(chords, beat) {
+    for (const c of chords) if (beat >= c.beat - 1e-6 && beat < c.beat + c.dur - 1e-6) return c;
+    return null;
+  }
+  function addPairs(song, p, notes, D) {
+    const meter = song.meter || 4, off = song.off || 0;
+    const mains = notes.slice();
+    for (const n of mains) {
+      if (n.dur < 1) continue;
+      const rel = n.beat - off;
+      if (Math.abs(rel - Math.round(rel)) > 1e-6 || rel < 0) continue;
+      const bar = Math.floor(rel / meter), pos = Math.round(rel) % meter;
+      const ok = (pos === 0 && bar % D.every === 0) || (D.every === 1 && meter === 4 && pos === 2 && bar % 2 === 1);
+      if (!ok) continue;
+      const c = chordAt(p.chords, n.beat);
+      if (!c || !CHORDS[c.name]) continue;
+      // 멜로디보다 낮은 화음 음 중 가장 가까운 것
+      let pm = null;
+      for (let m = n.m - 3; m >= 48 && pm === null; m--) if (CHORDS[c.name].some((i) => i % 12 === m % 12) && m % 12 !== n.m % 12) pm = m;
+      if (pm === null) continue;
+      const lanes = [0, 1, 2, 3].filter((l) => l !== n.lane).sort((a, b) => Math.abs(b - n.lane) - Math.abs(a - n.lane));
+      const free = lanes.find((l) => !notes.some((o) => o.lane === l && o.t < n.t + n.d + 0.05 && o.t + o.d > n.t - 0.05));
+      if (free === undefined) continue;
+      notes.push(Object.assign({}, n, { m: pm, lane: free, mate: n }));
+    }
   }
 
   // ---------- 메뉴 ----------
@@ -303,7 +403,7 @@
   }));
   showView(); renderOpts();
   const ver = document.getElementById('ver');
-  const showVer = () => { if (ver) ver.textContent = `버전 4 · 화면 ${W}×${H}`; };
+  const showVer = () => { if (ver) ver.textContent = `버전 5 · 화면 ${W}×${H}`; };
   showVer(); window.addEventListener('resize', showVer);
 
   // ---------- 화면 전환 ----------
@@ -326,7 +426,7 @@
     perf0 = pnow() + G.lead + 0.15; audio0 = ac.currentTime + G.lead + 0.15;
     state = 'play';
     show('#menu', false); show('#pause', false); show('#result', false); show('#hud', true);
-    $('#hudTitle').textContent = G.song.title + ' · ' + ({ '0.8': '느리게', '1': '보통', '1.25': '빠르게' }[opt.speed] || '');
+    $('#hudTitle').textContent = G.song.title + ' · ' + G.diff.name;
     updateHud();
     lockScreen();
   }
@@ -379,7 +479,7 @@
       const d = Math.abs(n.t - g);
       if (d <= OK && d < bd) { bd = d; pick = n; }
     }
-    if (!pick && y != null && g >= 0) {
+    if (!pick && y != null && g >= 0 && G.diff.tileTap) {
       // 선에 닿기 전이라도 그 줄의 다음 타일 자체를 손가락으로 누르면 인정한다(점수는 '괜찮아요')
       const pps = (hitY + 30) / G.travel;
       for (let i = G.scan; i < G.notes.length; i++) {
@@ -400,7 +500,7 @@
     G.counts[kind]++; G.pts += J.pts; G.combo++; G.maxCombo = Math.max(G.maxCombo, G.combo);
     G.score += J.pts * 100 + Math.min(G.combo, 30) * 5;
     pick.hit = true; pick.hitAt = g;
-    pick.voice = pluck(G.bus, pick.m, ac.currentTime, 0.5, pick.hold ? pick.d + 0.35 : 1.1);
+    pick.voice = pluck(G.bus, pick.m, ac.currentTime, pick.mate ? 0.34 : 0.5, pick.hold ? pick.d + 0.35 : 1.1);
     if (pick.hold) pick.holding = true; else pick.endAt = g;
     const col = PCOLOR[pick.m % 12];
     G.flash[lane] = { t: pnow(), bad: false };
@@ -535,6 +635,7 @@
       G.ticks++;
     }
     if (opt.band === 'on') {
+      band(g);
       for (const c of G.chords) {
         if (c.sched) continue;
         if (c.t > g + 0.25) break;
@@ -639,6 +740,11 @@
       if (top > H) continue;
       const x = boardX + laneW * n.lane + 5, w = laneW - 10;
       const col = PCOLOR[n.m % 12];
+      if (n.mate && !n.hit && !n.miss && !n.mate.hit && !n.mate.miss) { // 같이 누를 두 타일을 잇는 줄
+        const x1 = laneCenter(n.lane), x2 = laneCenter(n.mate.lane);
+        cx.fillStyle = 'rgba(255,255,255,0.55)';
+        cx.fillRect(Math.min(x1, x2), bottom - 24, Math.abs(x2 - x1), 4);
+      }
       if (n.hit && !n.holding) {
         // 친 타일: 그 자리에서 꾹 눌려 납작해지며 하얗게 번쩍이고 사라진다
         const age = g - n.endAt, k = age / 0.3; if (k >= 1) continue;
