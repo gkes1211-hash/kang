@@ -27,6 +27,8 @@ js = (here / "game.js").read_text(encoding="utf-8")
 html = re.sub(r'\s*<!--[^>]*?-->\s*<meta http-equiv="Content-Security-Policy"[^>]*>', "", html, flags=re.S)
 html = html.replace('<link rel="stylesheet" href="style.css">', f"<style>\n{css}</style>")
 html = html.replace('<script type="module" src="game.js"></script>', "")
+# 파일로 열 때는 홈 화면 추가(manifest)가 안 되니 뺀다
+html = re.sub(r'\s*<link rel="(apple-touch-icon|manifest)"[^>]*>', "", html)
 html = html.replace('href="icon.png"', f'href="data:image/png;base64,{b64(here / "icon.png")}"')
 
 data = "\n".join(

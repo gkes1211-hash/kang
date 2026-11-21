@@ -29,5 +29,9 @@ def balloon(color, dark, light):
 
 img = balloon((255, 79, 109, 255), (196, 30, 70, 255), (255, 255, 255, 170))
 img.resize((512, 512), Image.LANCZOS).save(here / "icon.png")
+img.resize((192, 192), Image.LANCZOS).save(here / "icon-192.png")
+# 아이폰 홈 화면용: 투명 배경 대신 하늘색 바탕
+bg = Image.new("RGBA", (S, S), (159, 224, 255, 255))
+Image.alpha_composite(bg, img).convert("RGB").resize((180, 180), Image.LANCZOS).save(here / "icon-180.png")
 img.save(here / "balloon.ico", sizes=[(16, 16), (24, 24), (32, 32), (48, 48), (64, 64), (128, 128), (256, 256)])
-print("icon.png, balloon.ico")
+print("icon.png, icon-192.png, icon-180.png, balloon.ico")

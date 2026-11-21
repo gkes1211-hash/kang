@@ -135,6 +135,7 @@ h2 { margin: 10px 0 4px; font-size: 28px; }
   align-items: center;
 }
 .rules span { font-size: 22px; }
+.rules b { white-space: nowrap; }
 .bad { color: var(--bad); }
 
 .setting h2 { font-size: 16px; color: var(--muted); margin: 0 0 8px; }
@@ -214,10 +215,24 @@ h2 { margin: 10px 0 4px; font-size: 28px; }
   80% { transform: translate(6px, -2px); }
 }
 
+/* 핸드폰 */
 @media (max-width: 520px) {
-  .pill { padding: 4px 12px; }
+  #hud { left: 10px; right: 10px; gap: 6px; }
+  .pill { padding: 4px 10px; gap: 4px; }
   .pill b { font-size: 22px; }
   .pill .label { font-size: 12px; }
+  .time-pill .label { display: none; }
+  .time-pill::before { content: "⏱"; font-size: 16px; }
+  .hud-buttons { gap: 6px; }
+  .hud-buttons button { padding: 8px 12px; font-size: 14px; }
+  #music-btn { padding: 8px 10px; }
+  #hud.two { padding-top: 46px; }
+  .card { padding: 20px 16px; border-radius: 22px; }
+  .big-emoji { font-size: 42px; }
+  h1 { font-size: 30px; }
+  .rules li { padding: 6px 10px; font-size: 14px; }
+  .rules span { font-size: 18px; }
+  .big { padding: 14px; font-size: 22px; }
 }
 
 /* 게임 시간 · 배경음악을 한 줄에 */

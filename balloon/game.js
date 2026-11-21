@@ -646,7 +646,10 @@ function drawNoHand(now) {
   zones.forEach((z, p) => {
     if (now - players[p].lastHand < 1500) return;
     const text = mode === 2 ? `✋ ${p + 1}P 손을 보여 주세요!` : '✋ 카메라에 손을 보여 주세요!';
-    const size = Math.round(Math.min(unit * 0.045, (z.x1 - z.x0) / text.length * 1.4));
+    // 구역 폭에 맞게 글자 크기를 줄인다 (핸드폰 반쪽 화면에서도 안 잘리게)
+    ctx.font = '800 100px system-ui, sans-serif';
+    const fit = (z.x1 - z.x0 - 40) / (ctx.measureText(text).width / 100 + 1.6);
+    const size = Math.max(10, Math.round(Math.min(unit * 0.045, fit)));
     ctx.font = `800 ${size}px system-ui, sans-serif`;
     const w = ctx.measureText(text).width + size * 1.6, cx = (z.x0 + z.x1) / 2, cy = H - unit * 0.2;
     ctx.fillStyle = 'rgba(36, 31, 51, 0.85)';
@@ -948,11 +951,28 @@ async function countdown() {
   el.hidden = true;
 }
 
+// ---------- 핸드폰: 게임 중 화면 꺼짐 막기, 다른 앱으로 가면 음악 멈춤 ----------
+let wakeLock = null;
+async function keepAwake() {
+  try { wakeLock = await navigator.wakeLock?.request('screen'); } catch { wakeLock = null; }
+}
+function releaseAwake() {
+  try { wakeLock?.release(); } catch { /* 이미 풀림 */ }
+  wakeLock = null;
+}
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) { stopMusic(); return; }
+  if (game.state === 'play') { startMusic(); keepAwake(); }
+});
+
 async function startGame() {
   show(null);
   resetGame();
   $('hud').hidden = false;
   renderMusic();
+  keepAwake();
+  // 혼자면 손 둘, 둘이서면 손 넷까지 (핸드폰에서 덜 느리게)
+  try { await landmarker?.setOptions({ numHands: mode === 2 ? 4 : 2 }); } catch { /* 그대로 써도 된다 */ }
   await countdown();
   if (game.state !== 'countdown') return;
   const now = performance.now();
@@ -964,6 +984,7 @@ async function startGame() {
 function endGame() {
   game.state = 'over';
   stopMusic();
+  releaseAwake();
   playFanfare();
   $('hud').hidden = true;
   if (mode === 2) {
@@ -994,6 +1015,7 @@ function endGame() {
 function quitGame() {
   game.state = 'home';
   stopMusic();
+  releaseAwake();
   $('countdown').hidden = true;
   $('hud').hidden = true;
   objects = [];
