@@ -189,7 +189,55 @@
     const o = ac.createOscillator(); o.type = 'sine'; o.frequency.value = hz(m);
     o.connect(env(bus, t, 0.07, 0.35)); o.start(t); o.stop(t + 0.4);
   }
+  // 배경 멜로디 1: 곡의 노래 선율을 부드러운 피리 소리로 (내가 누르는 건반 소리 밑에 깔린다)
+  function flute(bus, m, t, d) {
+    const f = hz(m), len = Math.max(0.15, d * 0.92);
+    const o = ac.createOscillator(); o.type = 'triangle'; o.frequency.value = f;
+    const o2 = ac.createOscillator(); o2.type = 'sine'; o2.frequency.value = f * 2;
+    const vib = ac.createOscillator(); vib.frequency.value = 5.2;
+    const vg = ac.createGain(); vg.gain.value = f * 0.006; vib.connect(vg); vg.connect(o.frequency); vg.connect(o2.frequency);
+    const g2 = ac.createGain(); g2.gain.value = 0.25; o2.connect(g2);
+    const g = ac.createGain();
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.085, t + 0.05);
+    g.gain.setValueAtTime(0.085, t + len * 0.7); g.gain.exponentialRampToValueAtTime(0.0001, t + len + 0.08);
+    o.connect(g); g2.connect(g); g.connect(bus);
+    for (const x of [o, o2, vib]) { x.start(t); x.stop(t + len + 0.12); }
+  }
+  // 배경 멜로디 2: 높은 현악기 소리가 화음을 따라 천천히 움직인다
+  function strings(bus, m, t, d) {
+    const lp = ac.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 1900;
+    const g = ac.createGain();
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.028, t + Math.min(0.25, d * 0.3));
+    g.gain.setValueAtTime(0.028, t + d * 0.8); g.gain.exponentialRampToValueAtTime(0.0001, t + d + 0.15);
+    for (const det of [-6, 6]) {
+      const o = ac.createOscillator(); o.type = 'sawtooth'; o.frequency.value = hz(m); o.detune.value = det;
+      o.connect(lp); o.start(t); o.stop(t + d + 0.2);
+    }
+    lp.connect(g); g.connect(bus);
+  }
+  function backMelody(g) {
+    const ns = G.notes;
+    while (G.mi < ns.length && ns[G.mi].t <= g + 0.3) {
+      const n = ns[G.mi++];
+      if (n.mate || n.t + n.d * 0.5 < g) continue;
+      flute(G.bus, n.m, Math.max(ac.currentTime, at(n.t)), n.d);
+    }
+    while (G.ci < G.chords.length && G.chords[G.ci].t <= g + 0.3) {
+      const c = G.chords[G.ci++];
+      if (c.name === 'N' || !CHORDS[c.name] || c.t + c.d < g) continue;
+      // 바로 앞 음과 가장 가까운 화음 음으로 부드럽게 이어 간다
+      let bestM = 76, bd = 99;
+      for (let m = 69; m <= 81; m++) {
+        if (!CHORDS[c.name].some((i) => i % 12 === m % 12)) continue;
+        const dd = Math.abs(m - G.strM);
+        if (dd < bd) { bd = dd; bestM = m; }
+      }
+      G.strM = bestM;
+      strings(G.bus, bestM, Math.max(ac.currentTime, at(c.t)), c.d);
+    }
+  }
   function band(g) {
+    backMelody(g);
     const spb = G.spb, half = spb / 2;
     while (G.hb * 0.5 < G.endBeats && G.hb * half <= g + 0.3) {
       const beat = G.hb * 0.5, k = G.hb; G.hb++;
@@ -299,7 +347,7 @@
     const last = notes.reduce((a, n) => (n.t + n.d > a.t + a.d ? n : a), notes[0]);
     const meter = song.meter || 4, off = song.off || 0;
     return {
-      meter, off, chordsB: p.chords, hb: 0, endBeats: p.chords.reduce((a, c) => a + c.dur, 0),
+      meter, off, chordsB: p.chords, hb: 0, mi: 0, ci: 0, strM: 76, endBeats: p.chords.reduce((a, c) => a + c.dur, 0),
       song, sp, spb, notes,
       chords: p.chords.map((c) => ({ name: c.name, t: c.beat * spb, d: c.dur * spb, sched: false })),
       lead: 4 * spb, end: last.t + last.d,
@@ -403,7 +451,7 @@
   }));
   showView(); renderOpts();
   const ver = document.getElementById('ver');
-  const showVer = () => { if (ver) ver.textContent = `버전 5 · 화면 ${W}×${H}`; };
+  const showVer = () => { if (ver) ver.textContent = `버전 6 · 화면 ${W}×${H}`; };
   showVer(); window.addEventListener('resize', showVer);
 
   // ---------- 화면 전환 ----------
