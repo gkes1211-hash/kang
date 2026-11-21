@@ -4,7 +4,7 @@ import { SUBJECTS, SUBJECT, STAMPS_TO_FLY, puzzlesFor, finalPuzzles, JOBS, JOB, 
 import { ISLANDS } from './islands.js';
 import { openPuzzle } from './puzzles.js';
 import { Host, Client, EMOTES, cleanName } from './net.js';
-import { randomLook, cleanLook, CATS, SPECIALS, nextSpecial, loadChars, charsReady, drawChar, charBox, drawThumb, SKINS, FACES, HAIRS, TOPS, BOTTOMS, SHOES, ACCS, PALETTE, HAIR_PALETTE, PART_KINDS, partNeed, partOpen } from './chars.js';
+import { randomLook, cleanLook, CATS, SPECIALS, nextSpecial, loadChars, charsReady, drawChar, charBox, drawThumb, SKINS, FACES, HAIRS, TOPS, BOTTOMS, SHOES, ACCS, PART_KINDS, partNeed, partOpen } from './chars.js';
 loadChars().catch(() => {});
 import { makeStore } from '../../pe/common/sound.js';
 import { unlockAudio, sfx, speak, speakNow, hush, sound, setSound, bgm } from './audio.js';
@@ -63,7 +63,7 @@ const saveLook = () => store.set(`look.${me.name}`, JSON.stringify(me.look));
 // ============================================================
 // 캐릭터 꾸미기 화면
 // ============================================================
-const dresser = { onDone: null, mode: 'start', r: null, view: 0, paint: 'top' };
+const dresser = { onDone: null, mode: 'start', r: null, view: 0 };
 const VIEWS = ['front', 'sideL', 'back'];
 // 미리보기: 받침대 위의 큰 캐릭터. 누르면 앞 → 옆 → 뒤로 돌려 본다
 function setupPreview() {
@@ -101,8 +101,6 @@ function setupPreview() {
   requestAnimationFrame(loop);
 }
 function refreshPreview() { /* 그림은 매 화면마다 다시 그린다 */ }
-// 색칠할 수 있는 것: [이름, look 의 색 칸, 팔레트]
-const PAINT = { hair: ['머리', 'hc', HAIR_PALETTE], top: ['윗옷', 'tc', PALETTE], bot: ['아래옷', 'bc', PALETTE], shoe: ['신발', 'sc', PALETTE] };
 // 꾸미기 판: [제목 아이콘, 제목, [[종류, 이름 목록], ...]]
 const PANELS = [
   ['🎨', '피부색', [['skin', SKINS]]],
@@ -115,7 +113,6 @@ const PANELS = [
 const isOn = (kind, i) => (kind === 'acc' ? me.look[ACCS[i][1]] === i : me.look[kind] === i);
 function pickPart(kind, i) {
   if (kind === 'acc') { const slot = ACCS[i][1]; me.look[slot] = me.look[slot] === i ? -1 : i; } else me.look[kind] = i;
-  if (PAINT[kind]) dresser.paint = kind;
   if (kind === 'acc' && me.look[ACCS[i][1]] === i && dresser.view === 2 && ACCS[i][1] === 'eye') dresser.view = 0;
   sfx.pop(); renderDresser();
 }
@@ -163,17 +160,8 @@ function renderDresser() {
     });
     panel.append(row); body.append(panel);
   }
-  renderPalette();
   const nx = nextSpecial(prog.keys);
   $('av-keys').innerHTML = `🗝️ 모은 열쇠 <b>${prog.keys}</b>개<br>${nx ? `다음에 열리는 것: ${esc(nx.label)} (열쇠 ${nx.need}개)` : '🎉 꾸미기와 친구를 모두 열었어요!'}`;
-}
-// 색 고르기: 머리·윗옷·아래옷·신발 중 하나를 골라 색을 바꾼다
-function renderPalette() {
-  const el = $('av-palette'); const [name, key, pal] = PAINT[dresser.paint];
-  el.innerHTML = `<div class="pal-tabs">${Object.entries(PAINT).map(([k, v]) => `<button type="button" data-paint="${k}" aria-pressed="${k === dresser.paint}">${v[0]}</button>`).join('')}</div>
-    <div class="pal-row" aria-label="${esc(name)} 색"><button type="button" class="pal-orig" data-c="-1" aria-pressed="${me.look[key] === -1}" title="원래 색">원래</button>${pal.map((c, i) => `<button type="button" data-c="${i}" style="background:${c}" aria-label="${esc(name)} 색 ${i + 1}" aria-pressed="${me.look[key] === i}"></button>`).join('')}</div>`;
-  el.querySelectorAll('[data-paint]').forEach((b) => b.addEventListener('click', () => { dresser.paint = b.dataset.paint; sfx.pop(); renderPalette(); }));
-  el.querySelectorAll('[data-c]').forEach((b) => b.addEventListener('click', () => { me.look[key] = Number(b.dataset.c); sfx.pop(); renderDresser(); }));
 }
 function flashKeys(text) { const k = $('av-keys'); const old = k.innerHTML; k.innerHTML = text; k.style.background = '#ffe0d9'; setTimeout(() => { k.style.background = ''; renderDresser(); void old; }, 2200); }
 $('av-random').addEventListener('click', () => { me.look = randomLook(prog.keys); sfx.good(3); renderDresser(); refreshPreview(); });
@@ -305,7 +293,7 @@ function startGame(how) {
 }
 
 // ---------------- 안내하는 탐험대장 토리 ----------------
-const GUIDE_LOOK = { v: 4, skin: 1, face: 0, hair: 0, hc: -1, top: 0, tc: -1, bot: 0, bc: 1, shoe: 0, sc: -1, hat: 0, pin: -1, eye: -1, back: 7, hand: -1, pet: 'none', job: 'none' }; // 야구모자 탐험대장
+const GUIDE_LOOK = { v: 4, skin: 1, face: 0, hair: 0, top: 0, bot: 0, shoe: 0, hat: 0, pin: -1, eye: -1, back: 7, hand: -1, pet: 'none', job: 'none' }; // 야구모자 탐험대장
 function guideLines() {
   return [
     ['👋', `안녕, ${me.name}! 나는 꼬마 탐험대의 대장, 토리야. 꼬마 탐험대 공원에 온 걸 환영해!`],

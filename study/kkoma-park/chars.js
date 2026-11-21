@@ -16,9 +16,13 @@ export const ACCS = [
   ['동그란 안경', 'eye'], ['책가방', 'back'], ['나비 날개', 'back'], ['망토', 'back'], ['요술봉', 'hand'], ['꽃 핀', 'pin'],
 ];
 export const SLOTS = ['hat', 'pin', 'eye', 'back', 'hand'];
-// 색: -1 = 원래 색
-export const PALETTE = ['#ffffff', '#ff8b8b', '#ffb36b', '#ffe07a', '#a6dd78', '#6fd0c0', '#8cc8ff', '#5f7fe0', '#b79cff', '#ff9ccf', '#c89b72', '#6b5546', '#4a4d5e'];
-export const HAIR_PALETTE = ['#2b211e', '#5a3a28', '#c0703a', '#f0c85f', '#f2a7c0', '#e0565b', '#8a6fe0', '#5ab8c8', '#6bbf6b', '#c9c9d6'];
+// 부품마다 정해진 색 (null = 그림 원래 색). 색을 따로 고르지 않고, 색이 입혀진 완성 그림을 고른다
+const HAIR_COLORS = [null, '#2b211e', '#c0703a', '#3a2620', '#f0c85f', '#f2a7c0', null, '#2b211e', '#8a6fe0', '#c0703a'];
+const TOP_COLORS = [null, '#ff9ccf', '#8cc8ff', null, '#ffc9dc', '#6fb6ff', '#5f7fe0', '#7fa8e0', '#ffe07a', '#b79cff'];
+const BOT_COLORS = ['#5f7fe0', '#4a5a8a', '#ff9ccf', '#b79cff', '#7fa8e0'];
+const SHOE_COLORS = [null, '#e0565b', '#7a4a36', '#ffd24a', '#ff9ccf'];
+const COLORS = { hair: HAIR_COLORS, top: TOP_COLORS, bot: BOT_COLORS, shoe: SHOE_COLORS };
+const colorOf = (kind, i) => COLORS[kind][i] ?? null;
 
 // [아이디, 이름, 열쇠 수(0 = 처음부터)]
 export const PETS = [['none', '없음', 0], ['chick', '🐥 병아리', 1], ['puppy', '🐶 강아지', 4], ['kitty', '🐱 고양이', 7], ['turtle', '🐢 거북이', 12], ['dragon', '🐉 아기 용', 18]];
@@ -56,10 +60,7 @@ export function randomLook(keys = 0, rnd = Math.random) {
   const pets = PETS.filter((x) => x[2] <= keys).map((x) => x[0]);
   const L = {
     v: 4, skin: Math.floor(rnd() * SKINS.length), face: pick(openIdx('face', keys)), hair: pick(openIdx('hair', keys)),
-    hc: rnd() < 0.5 ? -1 : Math.floor(rnd() * HAIR_PALETTE.length),
-    top: pick(openIdx('top', keys)), tc: rnd() < 0.4 ? -1 : Math.floor(rnd() * PALETTE.length),
-    bot: pick(openIdx('bot', keys)), bc: rnd() < 0.4 ? -1 : Math.floor(rnd() * PALETTE.length),
-    shoe: pick(openIdx('shoe', keys)), sc: -1,
+    top: pick(openIdx('top', keys)), bot: pick(openIdx('bot', keys)), shoe: pick(openIdx('shoe', keys)),
     hat: -1, pin: -1, eye: -1, back: -1, hand: -1,
     pet: rnd() < 0.5 ? 'none' : pick(pets), job: 'none',
   };
@@ -79,15 +80,14 @@ export function cleanLook(l = {}, keys = 99, jobs = null) {
   const int = (v, n, d) => (Number.isInteger(v) && v >= -1 && v < n ? v : d);
   const part = (kind, v) => { const i = int(v, PART_KINDS[kind].length, 0); return i >= 0 && partOpen(kind, i, keys) ? i : 0; };
   const L = {
-    v: 4, skin: Math.max(0, int(base.skin, SKINS.length, 0)), face: part('face', base.face), hair: part('hair', base.hair), hc: int(base.hc, HAIR_PALETTE.length, -1),
-    top: part('top', base.top), tc: int(base.tc, PALETTE.length, -1), bot: part('bot', base.bot), bc: int(base.bc, PALETTE.length, -1),
-    shoe: part('shoe', base.shoe), sc: int(base.sc, PALETTE.length, -1),
+    v: 4, skin: Math.max(0, int(base.skin, SKINS.length, 0)), face: part('face', base.face), hair: part('hair', base.hair),
+    top: part('top', base.top), bot: part('bot', base.bot), shoe: part('shoe', base.shoe),
     pet: lock(PETS, l.pet), job: lock(JOB_BADGES, l.job),
   };
   for (const s of SLOTS) { const a = int(base[s], ACCS.length, -1); L[s] = a >= 0 && ACCS[a][1] === s && partOpen('acc', a, keys) ? a : -1; }
   return L;
 }
-export const lookColor = (L) => (L && L.tc >= 0 ? PALETTE[L.tc] : '#8cc8ff');
+export const lookColor = (L) => (L && colorOf('top', L.top)) || '#8cc8ff';
 
 // ---------- 그림 불러오기 ----------
 let META = null; let ATLAS = null; let ready = null;
@@ -173,24 +173,23 @@ function backHead(skin, hairColor) {
   const p = { c, x: b.x, y: b.y }; partCache.set(key, p); return p;
 }
 
-const colorOf = (pal, i) => (i >= 0 ? pal[i] : null);
 // look → 캔버스(CW×CH). view: 'front' | 'sideL'(왼쪽 보기 = 뒤집기) | 'back' | 'backL'
 const cache = new Map();
 export function drawChar(look, view = 'front') {
   if (!META) return null;
   const L = cleanLook(look);
   const flip = view === 'sideL' || view === 'backL'; const back = view === 'back' || view === 'backL';
-  const key = `${JSON.stringify([L.skin, L.face, L.hair, L.hc, L.top, L.tc, L.bot, L.bc, L.shoe, L.sc, L.hat, L.pin, L.eye, L.back, L.hand])}|${flip}|${back}`;
+  const key = `${JSON.stringify([L.skin, L.face, L.hair, L.top, L.bot, L.shoe, L.hat, L.pin, L.eye, L.back, L.hand])}|${flip}|${back}`;
   if (cache.has(key)) return cache.get(key);
   const c = mk(META.fw, META.fh); const g = c.getContext('2d'); g.imageSmoothingEnabled = false;
   if (flip) { g.translate(META.fw, 0); g.scale(-1, 1); }
   const put = (p) => { if (p) g.drawImage(p.c, p.x, p.y); };
-  const hc = colorOf(HAIR_PALETTE, L.hc);
+  const hc = colorOf('hair', L.hair);
   const hair = (n) => part(n, 'hair', hc);
   const cloth = () => {
-    put(part(`shoe${L.shoe}`, 'cloth', colorOf(PALETTE, L.sc)));
-    put(part(`bot${L.bot}`, 'cloth', colorOf(PALETTE, L.bc)));
-    put(part(`top${L.top}`, 'cloth', colorOf(PALETTE, L.tc)));
+    put(part(`shoe${L.shoe}`, 'cloth', colorOf('shoe', L.shoe)));
+    put(part(`bot${L.bot}`, 'cloth', colorOf('bot', L.bot)));
+    put(part(`top${L.top}`, 'cloth', colorOf('top', L.top)));
   };
   const acc = (s) => { if (L[s] >= 0) put(part(`acc${L[s]}`)); };
   if (!back) {
@@ -237,15 +236,15 @@ export function drawThumb(kind, i, look) {
     // 머리 부분만: 몸+표정(+머리)을 그려 목 위를 자른다
     const b = bodyWithFace(kind === 'skin' ? i : L.skin, kind === 'face' ? i : kind === 'skin' ? L.face : 0);
     const c = mk(META.fw, META.fh); const g = c.getContext('2d');
-    if (kind === 'hair') { const hb = part(`hb${i}`, 'hair', colorOf(HAIR_PALETTE, L.hc)); g.drawImage(hb.c, hb.x, hb.y); }
+    if (kind === 'hair') { const hb = part(`hb${i}`, 'hair', colorOf('hair', i)); g.drawImage(hb.c, hb.x, hb.y); }
     g.drawImage(b.c, b.x, b.y);
-    if (kind === 'hair') { const hf = part(`hf${i}`, 'hair', colorOf(HAIR_PALETTE, L.hc)); g.drawImage(hf.c, hf.x, hf.y); }
+    if (kind === 'hair') { const hf = part(`hf${i}`, 'hair', colorOf('hair', i)); g.drawImage(hf.c, hf.x, hf.y); }
     const headH = Math.round(b.c.height * 0.44);
     const top = kind === 'hair' ? Math.max(0, b.y - 30) : b.y;
     const out = mk(b.c.width + 30, b.y + headH - top); out.getContext('2d').drawImage(c, b.x - 15, top, out.width, out.height, 0, 0, out.width, out.height);
     return out;
   } else {
-    const col = { top: colorOf(PALETTE, L.tc), bot: colorOf(PALETTE, L.bc), shoe: colorOf(PALETTE, L.sc) }[kind] || null;
+    const col = kind === 'acc' ? null : colorOf(kind, i);
     src = part(`${kind}${i}`, kind === 'acc' ? '' : 'cloth', col);
   }
   if (!src) return null;
