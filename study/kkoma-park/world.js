@@ -319,7 +319,7 @@ export function emoteOn(av, emoji) {
   u.bubbleT = 2.6;
   av.add(u.bubble);
 }
-// 2D 픽셀아트 캐릭터: 늘 카메라를 보는 그림(Sprite). 왼쪽으로 걸으면 좌우로 뒤집는다
+// 2D 픽셀아트 캐릭터: 늘 카메라를 보는 그림(Sprite). 왼쪽으로 걸으면 좌우로 뒤집고, 멀어지면 뒷모습
 const CHAR_H = 3.0; // 세상 속 키
 function buildPaper(look) {
   const L = cleanLook(look);
@@ -350,9 +350,9 @@ function animatePaper(g, root, moving, dt, t, camYaw) {
   u.sprite.scale.x = CHAR_H * CW / CH * (moving ? 1 + s * 0.02 : 1);
   // 바라보는 방향(root.rotation.y: 0 = 화면 앞쪽)을 카메라 기준으로
   let a = root.rotation.y - camYaw; a = Math.atan2(Math.sin(a), Math.cos(a));
-  // 왼쪽으로 가면 그림을 뒤집고, 오른쪽으로 가면 되돌린다 (앞뒤로만 갈 때는 그대로)
-  const sx = Math.sin(a);
-  const view = sx < -0.35 ? 'sideL' : sx > 0.35 ? 'front' : (u.view || 'front');
+  // 화면 안쪽으로 가면 뒷모습, 왼쪽으로 가면 그림을 뒤집고, 오른쪽으로 가면 되돌린다
+  const sx = Math.sin(a); const cz = Math.cos(a);
+  const view = cz < -0.55 ? (sx < -0.2 ? 'backL' : 'back') : sx < -0.35 ? 'sideL' : sx > 0.35 || cz > 0.55 ? 'front' : (u.view || 'front');
   setPaperView(g, view);
 }
 // 캐릭터 + 이름표 + 같이 다니는 친구
