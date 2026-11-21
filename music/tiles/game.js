@@ -99,9 +99,9 @@
   delete opt.speed;
   // 난이도: 빠르기, 두 개 동시에 누르기가 나오는 간격(마디), 판정 너그러움(초: 최고·좋아요·괜찮아요)
   const DIFF = {
-    easy: { name: '쉬움', sp: 1.0, every: 4, win: [0.07, 0.13, 0.2], tileTap: true },
-    normal: { name: '보통', sp: 1.25, every: 2, win: [0.065, 0.12, 0.18], tileTap: true },
-    hard: { name: '어려움', sp: 1.4, every: 1, win: [0.055, 0.1, 0.15], tileTap: false },
+    easy: { name: '쉬움', sp: 1.0, every: 4, win: [0.08, 0.15, 0.26], tileAhead: 1.2 },
+    normal: { name: '보통', sp: 1.25, every: 2, win: [0.075, 0.14, 0.24], tileAhead: 0.8 },
+    hard: { name: '어려움', sp: 1.4, every: 1, win: [0.065, 0.12, 0.21], tileAhead: 0.45 },
   };
   if (!DIFF[opt.diff]) opt.diff = 'easy';
   let selId = store.get('song', 'star');
@@ -451,7 +451,7 @@
   }));
   showView(); renderOpts();
   const ver = document.getElementById('ver');
-  const showVer = () => { if (ver) ver.textContent = `버전 6 · 화면 ${W}×${H}`; };
+  const showVer = () => { if (ver) ver.textContent = `버전 7 · 화면 ${W}×${H}`; };
   showVer(); window.addEventListener('resize', showVer);
 
   // ---------- 화면 전환 ----------
@@ -516,33 +516,50 @@
   function setJudge(text, color) { G.judge = { text, color, t: pnow() }; }
   function laneCenter(l) { return boardX + laneW * l + laneW / 2; }
 
-  function press(lane, y) {
-    if (state !== 'play' || !G || G.over) return;
+  // 폰 터치는 화면에 닿은 뒤 조금 늦게 들어오므로, 늦게 누른 쪽을 LATE초 더 봐준다
+  const LATE = 0.05;
+  const offBy = (n, g) => { const d = g - n.t; return d > 0 ? Math.max(0, d - LATE) : -d; };
+  function press(lane, y, x) {
+    if (state !== 'play' || !G || G.over) return lane;
     const g = gnow();
-    let pick = null, bd = 1e9;
-    for (let i = G.scan; i < G.notes.length; i++) {
-      const n = G.notes[i];
-      if (n.t - g > OK) break;
-      if (n.hit || n.miss || n.lane !== lane) continue;
-      const d = Math.abs(n.t - g);
-      if (d <= OK && d < bd) { bd = d; pick = n; }
+    // 손가락이 줄 경계 가까이에 닿으면 옆 줄도 후보로 본다(누른 줄을 먼저)
+    const lanes = [lane];
+    if (x != null) {
+      const f = (x - boardX) / laneW - lane;
+      if (f < 0.4 && lane > 0) lanes.push(lane - 1);
+      if (f > 0.6 && lane < 3) lanes.push(lane + 1);
     }
-    if (!pick && y != null && g >= 0 && G.diff.tileTap) {
-      // 선에 닿기 전이라도 그 줄의 다음 타일 자체를 손가락으로 누르면 인정한다(점수는 '괜찮아요')
-      const pps = (hitY + 30) / G.travel;
+    let pick = null, bd = 1e9;
+    for (const L of lanes) {
       for (let i = G.scan; i < G.notes.length; i++) {
         const n = G.notes[i];
-        if (n.hit || n.miss || n.lane !== lane) continue;
-        const bottom = hitY - (n.t - g) * pps, top = bottom - Math.max(46, n.d * pps - 6);
-        if (y >= top - 24 && y <= bottom + 24 && n.t - g < 1.2) { pick = n; bd = OK; }
-        break; // 그 줄에서 가장 먼저 올 타일만 본다
+        if (n.t - g > OK) break;
+        if (n.hit || n.miss || n.lane !== L) continue;
+        const d = offBy(n, g);
+        if (d <= OK && d < bd) { bd = d; pick = n; }
+      }
+      if (pick) break;
+    }
+    if (!pick && y != null && g >= -0.3) {
+      // 선에 닿기 전이라도 그 줄의 다음 타일 자체를 손가락으로 누르면 인정한다(점수는 '괜찮아요')
+      const pps = (hitY + 30) / G.travel;
+      for (const L of lanes) {
+        for (let i = G.scan; i < G.notes.length; i++) {
+          const n = G.notes[i];
+          if (n.hit || n.miss || n.lane !== L) continue;
+          const bottom = hitY - (n.t - g) * pps, top = bottom - Math.max(46, n.d * pps - 6);
+          if (y >= top - 40 && y <= bottom + 60 && n.t - g < G.diff.tileAhead) { pick = n; bd = OK; }
+          break; // 그 줄에서 가장 먼저 올 타일만 본다
+        }
+        if (pick) break;
       }
     }
     if (!pick) {
       // 빈 곳을 눌러도 꾸중하지 않는다: 줄만 살짝 빛난다
       G.flash[lane] = { t: pnow(), bad: false, soft: true };
-      return;
+      return lane;
     }
+    lane = pick.lane;
     const kind = bd <= PERF ? 'p' : bd <= GOOD ? 'g' : 'o';
     const J = JUDGE[kind];
     G.counts[kind]++; G.pts += J.pts; G.combo++; G.maxCombo = Math.max(G.maxCombo, G.combo);
@@ -558,6 +575,7 @@
     buzz(pick.hold ? 18 : 12);
     setJudge(J.text, J.color);
     updateHud();
+    return lane;
   }
   function release(lane) {
     if (!G) return;
@@ -637,9 +655,8 @@
   function down(id, x, y) {
     if (state !== 'play') return;
     if (ac && ac.state === 'suspended') ac.resume(); // 아이폰은 소리가 잠들어 있을 수 있다
-    const lane = laneAt(x);
+    const lane = press(laneAt(x), y, x); // 실제로 친 줄(옆 줄일 수도 있다)을 기억해야 긴 타일 떼기가 맞는다
     activeLanes.set(id, lane);
-    press(lane, y);
   }
   const lift = (id) => {
     if (!activeLanes.has(id)) return;
@@ -699,7 +716,7 @@
     }
     for (let i = G.scan; i < G.notes.length; i++) {
       const n = G.notes[i];
-      if (n.t + OK >= g) break;
+      if (n.t + OK + LATE >= g) break;
       if (!n.hit && !n.miss) { doMiss(n); if (G.over) return; }
     }
     while (G.scan < G.notes.length && (G.notes[G.scan].hit || G.notes[G.scan].miss)) G.scan++;
@@ -767,8 +784,7 @@
       const on = down.has(l);
       if (on) { // 눌린 버튼: 안쪽이 채워지고 조금 작아진다
         cx.fillStyle = hexA(G ? G.laneCol[l] : '#ffffff', 0.55);
-        cx.shadowColor = G ? G.laneCol[l] : '#fff'; cx.shadowBlur = 18;
-        cx.beginPath(); cx.arc(x, y + 2, 15, 0, 6.283); cx.fill(); cx.shadowBlur = 0;
+        cx.beginPath(); cx.arc(x, y + 2, 15, 0, 6.283); cx.fill();
       }
       cx.strokeStyle = on ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.18)'; cx.lineWidth = on ? 3 : 2;
       cx.beginPath(); cx.arc(x, y + (on ? 2 : 0), on ? 15 : 17, 0, 6.283); cx.stroke();
@@ -810,7 +826,7 @@
       if (drawBottom - top < 2) continue;
       cx.globalAlpha = n.miss ? 0.28 : 1;
       // 몸통
-      cx.shadowColor = col; cx.shadowBlur = n.holding ? 26 : 10;
+      if (!n.miss) { cx.globalAlpha = n.holding ? 0.35 : 0.18; cx.fillStyle = col; rr(x - 3, top - 3, w + 6, drawBottom - top + 6, 15); cx.fill(); cx.globalAlpha = 1; }
       cx.fillStyle = col; rr(x, top, w, drawBottom - top, 12); cx.fill();
       cx.shadowBlur = 0;
       const shine = cx.createLinearGradient(0, top, 0, top + Math.min(40, drawBottom - top));
