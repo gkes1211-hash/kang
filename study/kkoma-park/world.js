@@ -4,8 +4,7 @@
 // - 열기구 탈출장: 상자 4개에서 비밀번호 숫자를 찾아 열기구를 타고 날아간다
 // 모든 장소를 한 장면 안에 멀리 떨어뜨려 두어서, 같은 구역에 있는 친구만 화면에 보인다.
 import { THREE, toon, part, at, sph, cap, cyl, box, OUTLINE } from './toon.js';
-import { buildPet } from './avatar.js';
-import { drawChar, loadChars, charsReady, cleanLook, jobEmoji, CW, CH } from './chars.js';
+import { drawChar, loadChars, charsReady, cleanLook, jobEmoji, drawPet, CW, CH } from './chars.js';
 import { buildBuilding, texMat, windowAt, doorAt, emblem } from './buildings.js';
 import { SUBJECTS, SUBJECT, STAMPS_TO_FLY } from './content.js';
 import { ISLANDS, ISLAND, BRIDGES, SLOTS, LOTS, ROADS, walkable, islandAt, shoreR, shorePoints } from './islands.js';
@@ -354,6 +353,18 @@ function animatePaper(g, root, moving, dt, t, camYaw) {
   const sx = Math.sin(a); const cz = Math.cos(a);
   const view = cz < -0.55 ? (sx < -0.2 ? 'backL' : 'back') : sx < -0.35 ? 'sideL' : sx > 0.35 || cz > 0.55 ? 'front' : (u.view || 'front');
   setPaperView(g, view);
+}
+// 같이 다니는 친구: 픽셀아트 그림(Sprite), 발이 땅에 닿게
+const PET_H = 1.15;
+function buildPet(id) {
+  const c = drawPet(id); if (!c) return null;
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.magFilter = THREE.NearestFilter; t.minFilter = THREE.NearestFilter;
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: t, transparent: true, alphaTest: 0.5 }));
+  sp.center.set(0.5, 4 / c.height); sp.scale.set(PET_H * c.width / c.height, PET_H, 1);
+  const shadow = new THREE.Mesh(new THREE.CircleGeometry(0.34, 16), new THREE.MeshBasicMaterial({ color: '#2b3a1e', transparent: true, opacity: 0.22, depthWrite: false }));
+  shadow.rotation.x = -Math.PI / 2; shadow.position.y = 0.03; shadow.scale.set(1, 0.6, 1); shadow.userData.flat = true;
+  const g = new THREE.Group(); g.add(sp, shadow); g.userData.hop = 0;
+  return g;
 }
 // 캐릭터 + 이름표 + 같이 다니는 친구
 function makeCharacter(look, name, me) {

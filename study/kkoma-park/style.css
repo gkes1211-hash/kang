@@ -452,3 +452,4 @@ button.pill { pointer-events: auto; }
 #av-go { background: linear-gradient(#ffe27a, #ffc93c); }
 @media (max-width: 760px) { .av-panels { max-height: none; overflow: visible; } }
 @media (max-width: 520px) { .av-panels { grid-template-columns: 1fr; } }
+.chips button .pet-ico { width: 30px; height: 30px; image-rendering: pixelated; vertical-align: middle; margin-right: 4px; }

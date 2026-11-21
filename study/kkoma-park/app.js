@@ -4,7 +4,7 @@ import { SUBJECTS, SUBJECT, STAMPS_TO_FLY, puzzlesFor, finalPuzzles, JOBS, JOB, 
 import { ISLANDS } from './islands.js';
 import { openPuzzle } from './puzzles.js';
 import { Host, Client, EMOTES, cleanName } from './net.js';
-import { randomLook, cleanLook, CATS, SPECIALS, nextSpecial, loadChars, charsReady, drawChar, charBox, drawThumb, SKINS, FACES, HAIRS, TOPS, BOTTOMS, SHOES, ACCS, PART_KINDS, partNeed, partOpen } from './chars.js';
+import { randomLook, cleanLook, CATS, SPECIALS, nextSpecial, loadChars, charsReady, drawChar, charBox, drawThumb, drawPet, SKINS, FACES, HAIRS, TOPS, BOTTOMS, SHOES, ACCS, PART_KINDS, partNeed, partOpen } from './chars.js';
 loadChars().catch(() => {});
 import { makeStore } from '../../pe/common/sound.js';
 import { unlockAudio, sfx, speak, speakNow, hush, sound, setSound, bgm } from './audio.js';
@@ -96,7 +96,8 @@ function setupPreview() {
     g.strokeStyle = '#ffffff'; g.lineWidth = 3 * dpr; g.beginPath(); g.ellipse(canvas.width / 2, foot, pr * 0.78, pr * 0.17, 0, 0, 7); g.stroke();
     g.fillStyle = 'rgba(80,60,140,0.22)'; g.beginPath(); g.ellipse(cx, foot, dw * 0.3, dh * 0.03, 0, 0, 7); g.fill();
     g.drawImage(c, bx, by, bw, bh, cx - dw / 2, foot - dh + bob * 0.4, dw, dh);
-    if (hasPet) { g.font = `${Math.round(dh * 0.17)}px sans-serif`; g.textAlign = 'center'; g.fillText({ chick: '🐥', puppy: '🐶', kitty: '🐱', turtle: '🐢', dragon: '🐉' }[me.look.pet] || '', canvas.width / 2 + dw * 0.42, foot - Math.abs(Math.sin(t * 3)) * 8 * dpr); }
+    const pc = hasPet && drawPet(me.look.pet);
+    if (pc) { const ph = dh * 0.34; const pw = ph * pc.width / pc.height; g.drawImage(pc, canvas.width / 2 + dw * 0.42 - pw / 2, foot - ph + 4 * dpr - Math.abs(Math.sin(t * 3)) * 8 * dpr, pw, ph); }
   };
   requestAnimationFrame(loop);
 }
@@ -147,6 +148,8 @@ function renderDresser() {
     const row = document.createElement('div'); row.className = 'chips';
     list.forEach(([id, label, need]) => {
       const b = document.createElement('button'); b.type = 'button'; b.textContent = label;
+      const pc = key === 'pet' && drawPet(id);
+      if (pc) { const cv = document.createElement('canvas'); cv.width = pc.width; cv.height = pc.height; cv.getContext('2d').drawImage(pc, 0, 0); cv.className = 'pet-ico'; b.textContent = label.split(' ').slice(1).join(' '); b.prepend(cv); }
       const jobNeed = typeof need === 'string' ? JOB[need.slice(4)] : null;
       const locked = jobNeed ? !prog.jobs?.[jobNeed.id] : need > prog.keys;
       if (jobNeed || need > 0) b.classList.add('special');
