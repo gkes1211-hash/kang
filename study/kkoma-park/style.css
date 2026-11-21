@@ -49,11 +49,11 @@ button.opt:active, .opt-main:active { transform: translateY(3px); }
 .btn-soft:active, .btn-go:active { transform: translateY(4px); box-shadow: 0 3px 0 var(--brown); }
 
 /* ---------- 캐릭터 꾸미기 ---------- */
-.card.avatar { max-width: 980px; }
+.card.avatar { max-width: 1120px; }
 .card.avatar h1 { font-size: clamp(30px, 6vw, 44px); margin-bottom: 14px; }
-.av-wrap { display: grid; grid-template-columns: 300px 1fr; gap: 22px; text-align: left; }
+.av-wrap { display: grid; grid-template-columns: 320px 1fr; gap: 22px; text-align: left; }
 .av-left { display: flex; flex-direction: column; gap: 10px; align-items: stretch; }
-.av-stage { position: relative; height: 340px; border: 6px solid var(--brown); border-radius: 26px; overflow: hidden; background: linear-gradient(#bfe6ff, #e6f7ff 62%, #a5e07f 62%); touch-action: none; }
+.av-stage { position: relative; height: 340px; border: 5px solid #b9a6ee; border-radius: 26px; overflow: hidden; background: radial-gradient(circle at 50% 30%, #fff 0, #e7f5ff 45%, #c9e9ff 70%, #b6e39a 70.5%); touch-action: none; }
 .av-stage canvas { position: absolute; inset: 0; width: 100%; height: 100%; image-rendering: pixelated; cursor: pointer; }
 .av-stage span { position: absolute; left: 0; right: 0; bottom: 8px; text-align: center; color: #fff; font-size: 17px; text-shadow: 0 2px 0 var(--brown); pointer-events: none; }
 .av-name { border: 5px solid var(--brown); border-radius: 18px; background: #fff; text-align: center; font-size: 24px; padding: 6px; }
@@ -66,16 +66,27 @@ button.opt:active, .opt-main:active { transform: translateY(3px); }
 .swatches button { width: 50px; height: 50px; border-radius: 16px; border: 4px solid #e2cfb0; }
 .swatches button[aria-pressed="true"] { border: 5px solid var(--brown); box-shadow: 0 0 0 4px var(--gold); }
 .chips { display: flex; flex-wrap: wrap; gap: 8px; }
-.charpick { display: grid; grid-template-columns: repeat(auto-fill, minmax(86px, 1fr)); gap: 10px; max-height: min(430px, calc(100dvh - 330px)); min-height: 240px; overflow-y: auto; padding: 6px 6px 6px 2px; overscroll-behavior: contain; }
-.charpick button { height: 112px; display: grid; place-items: center; padding: 4px; border: 4px solid #e2cfb0; border-radius: 18px; background: #fffaf0; cursor: pointer; }
-.charpick button[aria-pressed="true"] { border: 5px solid var(--brown); box-shadow: 0 0 0 4px var(--gold); background: #fff3c4; }
-.charpick button:hover { background: #fff3c4; }
-.charpick canvas { max-width: 100%; max-height: 100%; image-rendering: pixelated; }
-.charpick button { position: relative; }
-.charpick button.locked { background: #eee6d8; }
-.charpick button.locked canvas { filter: grayscale(1) brightness(0.55); opacity: 0.55; }
-.charpick button.locked::after { content: attr(data-need); position: absolute; left: 50%; bottom: 4px; transform: translateX(-50%); padding: 1px 7px; border-radius: 999px; background: var(--brown); color: #fff; font-size: 13px; white-space: nowrap; }
-.unlock-list { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
+.av-panels { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; max-height: min(640px, calc(100dvh - 210px)); overflow-y: auto; padding: 4px; overscroll-behavior: contain; }
+.av-panel { background: #f6f2ff; border: 4px solid #b9a6ee; border-radius: 22px; padding: 8px 10px 10px; box-shadow: 0 4px 0 #9d87e0; }
+.av-panel.wide { grid-column: 1 / -1; }
+.av-panel h3 { margin: 0 0 6px; font-weight: 400; font-size: 19px; color: #4b3a8c; display: flex; align-items: center; gap: 6px; }
+.av-panel h3 i { font-style: normal; display: grid; place-items: center; width: 32px; height: 32px; border-radius: 50%; background: #fff; border: 3px solid #b9a6ee; font-size: 17px; }
+.partpick { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+.partpick button { position: relative; aspect-ratio: 1; display: grid; place-items: center; padding: 3px; border: 3px solid #ddd3fb; border-radius: 14px; background: #fff; cursor: pointer; font-size: 11px; overflow: hidden; }
+.partpick button:hover { background: #fff7d6; }
+.partpick button[aria-pressed="true"] { border-color: #8a6fe0; background: #fff3c4; box-shadow: 0 0 0 3px var(--gold); }
+.partpick canvas { max-width: 100%; max-height: 100%; image-rendering: pixelated; }
+.partpick button.locked { background: #ece8f5; }
+.partpick button.locked canvas { filter: grayscale(1) brightness(0.6); opacity: 0.5; }
+.partpick button.locked::after { content: attr(data-need); position: absolute; left: 50%; bottom: 2px; transform: translateX(-50%); padding: 0 5px; border-radius: 999px; background: #6b56b8; color: #fff; font-size: 11px; white-space: nowrap; }
+.av-palette { background: #f6f2ff; border: 4px solid #b9a6ee; border-radius: 20px; padding: 8px; display: flex; flex-direction: column; gap: 6px; }
+.pal-tabs { display: flex; gap: 4px; }
+.pal-tabs button { flex: 1; border: 3px solid #ddd3fb; border-radius: 12px; background: #fff; font-size: 15px; padding: 3px 0; }
+.pal-tabs button[aria-pressed="true"] { background: #8a6fe0; border-color: #8a6fe0; color: #fff; }
+.pal-row { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; }
+.pal-row button { aspect-ratio: 1; border-radius: 10px; border: 3px solid #fff; box-shadow: 0 0 0 1px #c9bdf0; cursor: pointer; padding: 0; }
+.pal-row button[aria-pressed="true"] { border-color: var(--brown); box-shadow: 0 0 0 3px var(--gold); }
+.pal-row .pal-orig { background: conic-gradient(#ff8b8b, #ffe07a, #a6dd78, #8cc8ff, #b79cff, #ff8b8b); font-size: 11px; color: #3b2a1a; text-shadow: 0 0 3px #fff; }
 .unlock-char { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 10px; border-radius: 18px; background: #fff3c4; border: 4px solid var(--gold); font-size: 17px; }
 .unlock-char canvas { height: 120px; image-rendering: pixelated; }
 .thumbs { display: grid; grid-template-columns: repeat(auto-fill, minmax(64px, 1fr)); gap: 8px; }
@@ -445,3 +456,7 @@ button.pill { pointer-events: auto; }
   .isle-bld { padding: 4px 8px; font-size: 15px; }
   .isle-title { font-size: 18px; }
 }
+/* 꾸미기: 노란 체크 버튼, 좁은 화면에서는 판을 한 줄로 */
+#av-go { background: linear-gradient(#ffe27a, #ffc93c); }
+@media (max-width: 760px) { .av-panels { max-height: none; overflow: visible; } }
+@media (max-width: 520px) { .av-panels { grid-template-columns: 1fr; } }
