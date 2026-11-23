@@ -7,7 +7,8 @@
 export const SKINS = ['아주 밝은 피부', '밝은 피부', '살구빛 피부', '갈색 피부', '진한 갈색 피부'];
 export const FACES = ['활짝 웃음', '방긋 미소', '윙크', '반짝 눈', '하트 눈', '깜짝', '심드렁', '메롱', '동글 안경', '부끄부끄'];
 export const HAIRS = ['부스스 머리', '덮은 머리', '삐죽 머리', '바가지 머리', '단발', '양 갈래', '옆 포니테일', '똥 머리', '곱슬 머리', '긴 생머리'];
-export const TOPS = ['별 티셔츠', '후드티', '셔츠', '세일러 옷', '블라우스', '줄무늬 티', '야구 점퍼', '청재킷', '카디건', '멜빵 원피스'];
+export const TOPS = ['별 티셔츠', '후드티', '셔츠', '세일러 옷', '블라우스', '줄무늬 티', '야구 점퍼', '청재킷', '카디건', '멜빵 원피스',
+  '노란 비옷', '공룡 후드티', '빨간 체크 셔츠', '분홍 니트 조끼', '파란 체육복', '주황 맨투맨', '한복 저고리', '별 파자마', '교복 재킷', '민트 블라우스'];
 export const BOTTOMS = ['반바지', '긴바지', '주름치마', '미니 스커트', '멜빵 반바지'];
 export const SHOES = ['운동화', '하이탑', '구두', '장화', '리본 운동화'];
 // 소품: [이름, 자리]. 같은 자리에는 하나만 달 수 있다
@@ -18,7 +19,7 @@ export const ACCS = [
 export const SLOTS = ['hat', 'pin', 'eye', 'back', 'hand'];
 // 부품마다 정해진 색 (null = 그림 원래 색). 색을 따로 고르지 않고, 색이 입혀진 완성 그림을 고른다
 const HAIR_COLORS = [null, '#2b211e', '#c0703a', '#3a2620', '#f0c85f', '#f2a7c0', null, '#2b211e', '#8a6fe0', '#c0703a'];
-const TOP_COLORS = [null, '#ff9ccf', '#8cc8ff', null, '#ffc9dc', '#6fb6ff', '#5f7fe0', '#7fa8e0', '#ffe07a', '#b79cff'];
+const TOP_COLORS = [null, '#ff9ccf', '#8cc8ff', null, '#ffc9dc', '#6fb6ff', '#5f7fe0', '#7fa8e0', '#ffe07a', '#b79cff', null, null, null, null, null, null, null, null, null, null];
 const BOT_COLORS = ['#5f7fe0', '#4a5a8a', '#ff9ccf', '#b79cff', '#7fa8e0'];
 const SHOE_COLORS = [null, '#e0565b', '#7a4a36', '#ffd24a', '#ff9ccf'];
 const COLORS = { hair: HAIR_COLORS, top: TOP_COLORS, bot: BOT_COLORS, shoe: SHOE_COLORS };
@@ -44,6 +45,7 @@ const UNLOCK_ORDER = [
   ['hair', 6], ['top', 6], ['acc', 4], ['face', 6], ['shoe', 3], ['acc', 3], ['hair', 7], ['top', 7], ['bot', 3], ['acc', 11],
   ['face', 7], ['acc', 7], ['hair', 8], ['top', 8], ['shoe', 4], ['face', 8], ['acc', 10], ['bot', 4], ['hair', 9], ['top', 9],
   ['face', 9], ['acc', 9], ['acc', 8], ['acc', 2],
+  ['top', 11], ['top', 16], ['top', 13], ['top', 17], ['top', 18],
 ];
 export const partNeed = (kind, i) => { const k = UNLOCK_ORDER.findIndex(([a, b]) => a === kind && b === i); return k < 0 ? 0 : k + 1; };
 export const partOpen = (kind, i, keys) => partNeed(kind, i) <= keys;
