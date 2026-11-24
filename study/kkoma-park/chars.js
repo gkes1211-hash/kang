@@ -1,5 +1,5 @@
 // 꼬마 탐험대 공원: 2D 픽셀아트 캐릭터를 부품으로 직접 꾸민다
-// chars/parts.webp 한 장에 몸(피부 5)·표정 10·머리(앞·뒤) 15·윗옷 20·아래옷 10·신발 10·소품 12 가 들어 있다.
+// chars/parts.webp 한 장에 몸(피부 5)·표정 10·머리(앞·뒤) 15·윗옷 20·아래옷 10·신발 10·소품 24 가 들어 있다.
 // chars/parts.json: rects[이름] = [그림 x, y, 너비, 높이, 틀 안 x, 틀 안 y], fw·fh = 캐릭터 틀 크기
 // 표정은 "몸 색에 더할 값(+128)"으로 저장돼 있어 어떤 피부에도 맞는다.
 // 옷·머리 색은 그림의 밝기를 살려 고른 색으로 바꾼다. 마을에서는 걷는 방향에 따라 앞·뒤·옆(뒤집기) 모습이 된다.
@@ -15,8 +15,11 @@ export const SHOES = ['운동화', '하이탑', '구두', '장화', '리본 운�
 export const ACCS = [
   ['야구 모자', 'hat'], ['베레모', 'hat'], ['왕관', 'hat'], ['헤드폰', 'hat'], ['고양이 머리띠', 'hat'], ['분홍 리본', 'pin'],
   ['동그란 안경', 'eye'], ['책가방', 'back'], ['나비 날개', 'back'], ['망토', 'back'], ['요술봉', 'hand'], ['꽃 핀', 'pin'],
+  ['밀짚모자', 'hat'], ['방울 털모자', 'hat'], ['해적 모자', 'hat'], ['마법사 모자', 'hat'], ['토끼 머리띠', 'hat'], ['별 핀', 'pin'],
+  ['선글라스', 'eye'], ['빨간 목도리', 'neck'], ['곰돌이 가방', 'back'], ['천사 날개', 'back'], ['파란 우산', 'hand'], ['분홍 풍선', 'hand'],
 ];
-export const SLOTS = ['hat', 'pin', 'eye', 'back', 'hand'];
+export const SLOTS = ['hat', 'pin', 'eye', 'neck', 'back', 'hand'];
+const BEHIND = [8, 21]; // 몸 뒤에 그리는 날개
 // 부품마다 정해진 색 (null = 그림 원래 색). 색을 따로 고르지 않고, 색이 입혀진 완성 그림을 고른다
 const HAIR_COLORS = [null, '#2b211e', '#c0703a', '#3a2620', '#f0c85f', '#f2a7c0', null, '#2b211e', '#8a6fe0', '#c0703a', null, null, null, null, null];
 const TOP_COLORS = [null, '#ff9ccf', '#8cc8ff', null, '#ffc9dc', '#6fb6ff', '#5f7fe0', '#7fa8e0', '#ffe07a', '#b79cff', null, null, null, null, null, null, null, null, null, null];
@@ -47,6 +50,7 @@ const PRICE = {
   'top:6': 2, 'top:7': 2, 'top:8': 2, 'top:9': 2, 'top:11': 3, 'top:13': 2, 'top:16': 3, 'top:17': 2, 'top:18': 3,
   'bot:3': 1, 'bot:4': 1, 'bot:8': 2, 'bot:9': 3, 'shoe:3': 1, 'shoe:4': 1, 'shoe:5': 1, 'shoe:9': 2,
   'acc:11': 1, 'acc:3': 2, 'acc:4': 2, 'acc:7': 2, 'acc:10': 3, 'acc:9': 3, 'acc:8': 4, 'acc:2': 5,
+  'acc:14': 3, 'acc:15': 3, 'acc:16': 2, 'acc:21': 4, 'acc:22': 2, 'acc:23': 2,
 };
 for (const [id, , price] of PETS) if (price) PRICE[`pet:${id}`] = price;
 export const partPrice = (kind, i) => PRICE[`${kind}:${i}`] || 0;
@@ -75,7 +79,7 @@ export function randomLook(owned = [], rnd = Math.random) {
   const L = {
     v: 4, skin: Math.floor(rnd() * SKINS.length), face: pick(openIdx('face', owned)), hair: pick(openIdx('hair', owned)),
     top: pick(openIdx('top', owned)), bot: pick(openIdx('bot', owned)), shoe: pick(openIdx('shoe', owned)),
-    hat: -1, pin: -1, eye: -1, back: -1, hand: -1,
+    hat: -1, pin: -1, eye: -1, neck: -1, back: -1, hand: -1,
     pet: rnd() < 0.5 ? 'none' : pick(pets), job: 'none',
   };
   if (rnd() < 0.5) { const a = pick(openIdx('acc', owned)); L[ACCS[a][1]] = a; }
@@ -114,7 +118,7 @@ export function loadChars() {
   return ready;
 }
 export const charsReady = () => !!META;
-export const CW = 221; export const CH = 347; // 캐릭터 틀 (parts.json 의 fw·fh, 발이 틀 바닥에 닿는다)
+export const CW = 241; export const CH = 357; // 캐릭터 틀 (parts.json 의 fw·fh, 발이 틀 바닥에 닿는다)
 
 const mk = (w, h) => { const c = document.createElement('canvas'); c.width = w; c.height = h; return c; };
 const hex = (h) => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
@@ -192,7 +196,7 @@ export function drawChar(look, view = 'front') {
   if (!META) return null;
   const L = cleanLook(look);
   const flip = view === 'sideL' || view === 'backL'; const back = view === 'back' || view === 'backL';
-  const key = `${JSON.stringify([L.skin, L.face, L.hair, L.top, L.bot, L.shoe, L.hat, L.pin, L.eye, L.back, L.hand])}|${flip}|${back}`;
+  const key = `${JSON.stringify([L.skin, L.face, L.hair, L.top, L.bot, L.shoe, L.hat, L.pin, L.eye, L.neck, L.back, L.hand])}|${flip}|${back}`;
   if (cache.has(key)) return cache.get(key);
   const c = mk(META.fw, META.fh); const g = c.getContext('2d'); g.imageSmoothingEnabled = false;
   if (flip) { g.translate(META.fw, 0); g.scale(-1, 1); }
@@ -206,16 +210,18 @@ export function drawChar(look, view = 'front') {
   };
   const acc = (s) => { if (L[s] >= 0) put(part(`acc${L[s]}`)); };
   if (!back) {
-    if (L.back === 8) acc('back'); // 날개는 몸 뒤
+    if (BEHIND.includes(L.back)) acc('back'); // 날개는 몸 뒤
     if (L.hair < 10) put(hair(`hb${L.hair}`)); // 처음 머리 10가지는 뒷머리를 몸 뒤에 (새 머리는 앞 그림에 다 들어 있다)
     put(bodyWithFace(L.skin, L.face));
     cloth();
-    if (L.back >= 0 && L.back !== 8) acc('back');
+    acc('neck');
+    if (L.back >= 0 && !BEHIND.includes(L.back)) acc('back');
     put(hair(`hf${L.hair}`));
     acc('eye'); acc('hat'); acc('pin'); acc('hand');
   } else {
     put(part(`body${L.skin}`));
     cloth();
+    acc('neck');
     acc('back');
     put(backHead(L.skin, hc || '#7a4a36'));
     put(hair(`hb${L.hair}`)); // 아랫줄 머리 그림 = 뒷모습
