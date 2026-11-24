@@ -4,7 +4,7 @@ import { SUBJECTS, SUBJECT, STAMPS_TO_FLY, puzzlesFor, finalPuzzles, JOBS, JOB, 
 import { ISLANDS } from './islands.js';
 import { openPuzzle } from './puzzles.js';
 import { Host, Client, EMOTES, cleanName } from './net.js';
-import { randomLook, cleanLook, CATS, SPECIALS, nextSpecial, loadChars, charsReady, drawChar, charBox, drawThumb, drawPet, SKINS, FACES, HAIRS, TOPS, BOTTOMS, SHOES, ACCS, PART_KINDS, partNeed, partOpen } from './chars.js';
+import { randomLook, cleanLook, CATS, loadChars, charsReady, drawChar, charBox, drawThumb, drawPet, SKINS, FACES, HAIRS, TOPS, BOTTOMS, SHOES, ACCS, PART_KINDS, partPrice, partOpen, partName, shopOrder, SHOP, migrateOwned } from './chars.js';
 loadChars().catch(() => {});
 import { makeStore } from '../../pe/common/sound.js';
 import { unlockAudio, sfx, speak, speakNow, hush, sound, setSound, bgm } from './audio.js';
@@ -45,19 +45,22 @@ function show(id) { document.querySelectorAll('.screen').forEach((s) => s.classL
 function homeError(text) { $('home-msg').textContent = text; $('home-msg').hidden = !text; }
 
 // ---------------- 기록 (이름+학년마다) ----------------
-// keys: 모은 열쇠 수, stamps: {구역: 깬 횟수}, stars: {구역: 가장 많이 받은 별}, flights: 열기구 탄 횟수
+// keys: 모은 열쇠 수(지금까지 모두), spent: 꾸미기에 쓴 열쇠, owned: 산 꾸미기 ['top:11', 'pet:chick' …], stamps: {구역: 깬 횟수}, stars: {구역: 가장 많이 받은 별}, flights: 열기구 탄 횟수
 const progKey = () => `prog2.${me.grade}.${me.name}`;
-let prog = { keys: 0, stamps: {}, stars: {}, flights: 0, right: 0, stage: {}, jobs: {} };
+let prog = { keys: 0, spent: 0, owned: [], stamps: {}, stars: {}, flights: 0, right: 0, stage: {}, jobs: {} };
 function loadProg() {
   try {
     const p = JSON.parse(store.get(progKey(), '{}'));
-    return { keys: Math.max(0, p.keys | 0), stamps: p.stamps && typeof p.stamps === 'object' ? p.stamps : {}, stars: p.stars || {}, flights: p.flights | 0, right: p.right | 0, stage: p.stage && typeof p.stage === 'object' ? p.stage : {}, jobs: p.jobs && typeof p.jobs === 'object' ? p.jobs : {} };
-  } catch { return { keys: 0, stamps: {}, stars: {}, flights: 0, right: 0, stage: {}, jobs: {} }; }
+    const keys = Math.max(0, p.keys | 0);
+    const owned = Array.isArray(p.owned) ? p.owned.filter((x) => typeof x === 'string') : migrateOwned(keys);
+    return { keys, spent: Math.min(keys, Math.max(0, p.spent | 0)), owned, stamps: p.stamps && typeof p.stamps === 'object' ? p.stamps : {}, stars: p.stars || {}, flights: p.flights | 0, right: p.right | 0, stage: p.stage && typeof p.stage === 'object' ? p.stage : {}, jobs: p.jobs && typeof p.jobs === 'object' ? p.jobs : {} };
+  } catch { return { keys: 0, spent: 0, owned: [], stamps: {}, stars: {}, flights: 0, right: 0, stage: {}, jobs: {} }; }
 }
 const saveProg = () => store.set(progKey(), JSON.stringify(prog));
+const wallet = () => Math.max(0, prog.keys - (prog.spent | 0)); // 지금 쓸 수 있는 열쇠
 const stampList = () => SUBJECTS.filter((s) => prog.stamps[s.id] > 0).map((s) => s.id);
 const jobList = () => Object.keys(prog.jobs || {}).filter((k) => prog.jobs[k]);
-function loadLook() { try { const l = JSON.parse(store.get(`look.${me.name}`, 'null')); return l ? cleanLook(l, prog.keys, jobList()) : randomLook(0); } catch { return randomLook(0); } }
+function loadLook() { try { const l = JSON.parse(store.get(`look.${me.name}`, 'null')); return l ? cleanLook(l, prog.owned, jobList()) : randomLook(prog.owned); } catch { return randomLook(prog.owned); } }
 const saveLook = () => store.set(`look.${me.name}`, JSON.stringify(me.look));
 
 // ============================================================
@@ -126,14 +129,16 @@ function renderDresser() {
     panel.innerHTML = `<h3><i>${icon}</i>${esc(title)}</h3>`;
     const grid = document.createElement('div'); grid.className = 'partpick';
     for (const [kind, names] of groups) {
-      names.forEach((nm, i) => {
+      // 처음부터 고를 수 있는 것 먼저, 그다음 열쇠로 살 것 (싼 것부터)
+      (kind === 'skin' ? names.map((_, i) => i) : shopOrder(kind)).forEach((i) => {
+        const nm = names[i];
         const b = document.createElement('button'); b.type = 'button'; b.setAttribute('aria-pressed', String(isOn(kind, i))); b.setAttribute('aria-label', nm); b.title = nm;
-        const locked = kind !== 'skin' && !partOpen(kind, i, prog.keys); const need = kind !== 'skin' ? partNeed(kind, i) : 0;
+        const locked = kind !== 'skin' && !partOpen(kind, i, prog.owned); const price = kind !== 'skin' ? partPrice(kind, i) : 0;
         const th = ready ? drawThumb(kind, i, me.look) : null;
         if (th) { const c = document.createElement('canvas'); c.width = th.width; c.height = th.height; c.getContext('2d').drawImage(th, 0, 0); b.append(c); } else b.textContent = nm;
-        if (locked) { b.classList.add('locked'); b.dataset.need = `🔒${need}`; b.title = `열쇠 ${need}개를 모으면 열려요`; }
+        if (locked) { b.classList.add('locked'); b.dataset.need = `🗝️${price}`; b.title = `열쇠 ${price}개로 살 수 있어요`; } else if (price) b.classList.add('bought');
         b.addEventListener('click', () => {
-          if (locked) { sfx.fail(); flashKeys(`🔒 열쇠 ${need}개를 모으면 "${nm}"이(가) 열려요! (지금 ${prog.keys}개)`); return; }
+          if (locked) { askBuy(kind, i, price); return; }
           pickPart(kind, i);
         });
         grid.append(b);
@@ -151,25 +156,45 @@ function renderDresser() {
       const pc = key === 'pet' && drawPet(id);
       if (pc) { const cv = document.createElement('canvas'); cv.width = pc.width; cv.height = pc.height; cv.getContext('2d').drawImage(pc, 0, 0); cv.className = 'pet-ico'; b.textContent = label.split(' ').slice(1).join(' '); b.prepend(cv); }
       const jobNeed = typeof need === 'string' ? JOB[need.slice(4)] : null;
-      const locked = jobNeed ? !prog.jobs?.[jobNeed.id] : need > prog.keys;
+      const locked = jobNeed ? !prog.jobs?.[jobNeed.id] : !partOpen('pet', id, prog.owned);
       if (jobNeed || need > 0) b.classList.add('special');
-      if (locked) { b.classList.add('locked'); b.dataset.need = jobNeed ? '🔒🏢' : `🔒🗝️${need}`; b.title = jobNeed ? `직업 체험관에서 ${jobNeed.name} 체험을 하면 열려요` : `열쇠 ${need}개를 모으면 열려요`; }
+      if (locked) { b.classList.add('locked'); b.dataset.need = jobNeed ? '🔒🏢' : `🗝️${need}`; b.title = jobNeed ? `직업 체험관에서 ${jobNeed.name} 체험을 하면 열려요` : `열쇠 ${need}개로 살 수 있어요`; }
       b.setAttribute('aria-pressed', String(me.look[key] === id));
       b.addEventListener('click', () => {
-        if (locked) { sfx.fail(); flashKeys(jobNeed ? `🔒 생활 섬 🏢 직업 체험관에서 ${jobNeed.emoji} ${jobNeed.name} 미션을 해내면 "${label}"이(가) 열려요!` : `🔒 열쇠 ${need}개를 모으면 "${label}"이(가) 열려요! (지금 ${prog.keys}개)`); return; }
+        if (locked && !jobNeed) { askBuy('pet', id, need); return; }
+        if (locked) { sfx.fail(); flashKeys(`🔒 생활 섬 🏢 직업 체험관에서 ${jobNeed.emoji} ${jobNeed.name} 미션을 해내면 "${label}"이(가) 열려요!`); return; }
         me.look[key] = id; sfx.pop(); renderDresser();
       });
       row.append(b);
     });
     panel.append(row); body.append(panel);
   }
-  const nx = nextSpecial(prog.keys);
-  $('av-keys').innerHTML = `🗝️ 모은 열쇠 <b>${prog.keys}</b>개<br>${nx ? `다음에 열리는 것: ${esc(nx.label)} (열쇠 ${nx.need}개)` : '🎉 꾸미기와 친구를 모두 열었어요!'}`;
+  const left = SHOP.filter((x) => !prog.owned.includes(`${x.kind}:${x.id}`)).length;
+  $('av-keys').innerHTML = `🗝️ 가진 열쇠 <b>${wallet()}</b>개 <small>(지금까지 모은 열쇠 ${prog.keys}개)</small><br>${left ? '🛍️ 🗝️ 표시가 있는 것을 누르면 열쇠로 살 수 있어요.' : '🎉 꾸미기와 친구를 모두 샀어요!'}`;
+}
+// 열쇠로 사기: 그림과 값을 보여 주고, 가진 열쇠가 넉넉하면 산다
+function askBuy(kind, id, price) {
+  const name = partName(kind, id); const have = wallet();
+  if (have < price) {
+    sfx.fail();
+    modal(`<div class="m-emoji">🗝️</div><h2>열쇠가 ${price - have}개 더 필요해요</h2><div class="unlock-list"><span class="unlock-char"><canvas id="buy-pic"></canvas>${esc(name)} · 🗝️ ${price}개</span></div><p>가진 열쇠 <b>${have}</b>개. 건물에서 보물 상자 문제를 풀면 열쇠를 얻어요!</p>`, [['알겠어요', null, 'ok']]);
+  } else {
+    sfx.pop();
+    modal(`<div class="m-emoji">🛍️</div><h2>열쇠 ${price}개로 살까요?</h2><div class="unlock-list"><span class="unlock-char"><canvas id="buy-pic"></canvas>${esc(name)} · 🗝️ ${price}개</span></div><p>가진 열쇠 <b>${have}</b>개 → 산 뒤에는 <b>${have - price}</b>개</p>`,
+      [['🗝️ 살래요!', () => {
+        if (wallet() < price || prog.owned.includes(`${kind}:${id}`)) return;
+        prog.spent = (prog.spent | 0) + price; prog.owned.push(`${kind}:${id}`); saveProg();
+        if (kind === 'pet') me.look.pet = id; else if (kind === 'acc') me.look[ACCS[id][1]] = id; else me.look[kind] = id;
+        sfx.win(); speak(`${name}을 샀어요!`); if (world) refreshHud(); renderDresser();
+      }, 'ok'], ['다음에', null, 'ghost']]);
+  }
+  const cv = document.getElementById('buy-pic'); const th = kind === 'pet' ? drawPet(id) : drawThumb(kind, id, me.look);
+  if (cv && th) { cv.width = th.width; cv.height = th.height; cv.getContext('2d').drawImage(th, 0, 0); }
 }
 function flashKeys(text) { const k = $('av-keys'); const old = k.innerHTML; k.innerHTML = text; k.style.background = '#ffe0d9'; setTimeout(() => { k.style.background = ''; renderDresser(); void old; }, 2200); }
-$('av-random').addEventListener('click', () => { me.look = randomLook(prog.keys); sfx.good(3); renderDresser(); refreshPreview(); });
+$('av-random').addEventListener('click', () => { me.look = randomLook(prog.owned); sfx.good(3); renderDresser(); refreshPreview(); });
 $('av-back').addEventListener('click', () => { if (dresser.mode === 'edit') { show('screen-game'); world?.resize(); } else show('screen-home'); });
-$('av-go').addEventListener('click', () => { unlockAudio(); me.look = cleanLook(me.look, prog.keys, jobList()); saveLook(); const f = dresser.onDone; dresser.onDone = null; f?.(); });
+$('av-go').addEventListener('click', () => { unlockAudio(); me.look = cleanLook(me.look, prog.owned, jobList()); saveLook(); const f = dresser.onDone; dresser.onDone = null; f?.(); });
 function openDresser(mode, onDone) {
   dresser.mode = mode; dresser.onDone = onDone;
   $('av-go').textContent = mode === 'edit' ? '✔ 이대로 할래요!' : '✔ 공원으로 출발!';
@@ -256,7 +281,7 @@ function toast(text, ms = 2800) {
 }
 function refreshHud() {
   const n = stampList().length;
-  $('keys').textContent = `🗝️ ${prog.keys}`;
+  $('keys').textContent = `🗝️ ${wallet()}`;
   $('stamps').innerHTML = SUBJECTS.map((s) => `<span class="${prog.stamps[s.id] ? 'got' : ''}" title="${s.name}">${s.emoji}</span>`).join('');
   SUBJECTS.forEach((s) => world.setGateStamp(s.id, prog.stamps[s.id] > 0, prog.stamps[s.id] | 0));
   world.setBalloonOpen(n >= STAMPS_TO_FLY, n);
@@ -474,7 +499,6 @@ function takeKey(subj) {
   const area = `zone:${subj}`;
   world.setKeyVisible(area, false);
   const stars = Math.max(1, 3 - (z.wrong >= 3 ? 1 : 0) - (z.hints >= 2 ? 1 : 0));
-  const before = prog.keys;
   const first = !(prog.stamps[subj] > 0);
   prog.keys += 1;
   prog.stamps[subj] = (prog.stamps[subj] | 0) + 1;
@@ -489,39 +513,19 @@ function takeKey(subj) {
   sfx.win();
   const s = SUBJECT[subj];
   const n = stampList().length;
-  const unlocked = SPECIALS.filter((x) => x.need > before && x.need <= prog.keys);
   const next = n >= STAMPS_TO_FLY ? `🎈 도장 ${STAMPS_TO_FLY}개를 모았어요! 분수 광장 옆 열기구 언덕으로 가 봐요!` : `열기구까지 도장 ${STAMPS_TO_FLY - n}개 더!`;
   speak(first ? `${s.name} 도장 쾅! 열쇠를 얻었어요!` : '열쇠를 하나 더 얻었어요!');
-  const after = () => { if (newJob) showJobUnlock(newJob, () => { if (unlocked.length) showUnlock(unlocked); }); else if (unlocked.length) showUnlock(unlocked); };
+  const after = () => { if (newJob) showJobUnlock(newJob, null); };
+  const cheap = SHOP.filter((x) => !prog.owned.includes(`${x.kind}:${x.id}`) && x.price <= wallet()).length;
   modal(`
     <div class="m-emoji">🗝️</div>
     <h2>${first ? `${esc(s.name)} 도장 쾅! 📒` : '열쇠를 하나 더 얻었어요!'}</h2>
     <p class="m-stars">${'⭐'.repeat(stars)}${'☆'.repeat(3 - stars)}</p>
-    <p>🗝️ 모은 열쇠 <b>${prog.keys}</b>개 · 📒 도장 <b>${n}</b>/${STAMPS_TO_FLY}<br>${first ? next : '이 건물에 다시 들어오면 새 문제가 나와요.'}</p>
+    <p>🗝️ 가진 열쇠 <b>${wallet()}</b>개 · 📒 도장 <b>${n}</b>/${STAMPS_TO_FLY}<br>${first ? next : '이 건물에 다시 들어오면 새 문제가 나와요.'}</p>
+    ${cheap ? `<p class="book-next">🛍️ 지금 열쇠로 살 수 있는 꾸미기가 <b>${cheap}</b>개 있어요! 👕 꾸미기에서 사 보세요.</p>` : ''}
   `, [['🏡 마을로 나가기', () => { world.goTo('plaza', world.plazaSpotFor(subj)); after(); }, 'ok'], ['여기 더 있기', after, 'ghost']]);
 }
 
-// 새로 열린 특별 꾸미기
-function showUnlock(list) {
-  sfx.win();
-  const parts = list.filter((x) => x.cat === 'part');
-  speak(parts.length ? '새 꾸미기 부품이 열렸어요!' : '새 친구가 열렸어요!');
-  modal(`
-    <div class="m-emoji">🎁</div>
-    <h2>${parts.length ? '새 꾸미기 부품이 열렸어요!' : '새 친구가 열렸어요!'}</h2>
-    <div class="unlock-list">${list.map((x, k) => (x.cat === 'part' ? `<span class="unlock-char" data-k="${k}"><canvas></canvas>${esc(x.label)}</span>` : `<span class="unlock-item">${esc(x.label)}</span>`)).join(' ')}</div>
-    <p>열쇠를 하나 모을 때마다 새 꾸미기가 하나씩 열려요.</p>
-  `, [['👕 지금 입어 보기', () => {
-    for (const x of parts) { if (x.kind === 'acc') me.look[ACCS[x.id][1]] = x.id; else me.look[x.kind] = x.id; }
-    const p = list.find((x) => x.cat === 'pet'); if (p) me.look.pet = p.id;
-    saveLook(); openDresser('edit', afterDress);
-  }, 'ok'], ['계속 탐험하기', null, 'ghost']]);
-  const paint = () => $('modal').querySelectorAll('.unlock-char').forEach((el) => {
-    const x = list[Number(el.dataset.k)]; const th = drawThumb(x.kind, x.id, me.look); const cv = el.querySelector('canvas');
-    if (th) { cv.width = th.width; cv.height = th.height; cv.getContext('2d').drawImage(th, 0, 0); }
-  });
-  if (charsReady()) paint(); else loadChars().then(paint).catch(() => {});
-}
 function showJobUnlock(j, then) {
   sfx.win();
   speak(`${j.name} 배지가 열렸어요!`);
@@ -602,15 +606,15 @@ function openGate() {
 // ---------------- 탐험 수첩 ----------------
 function openBook() {
   const n = stampList().length;
-  const nx = nextSpecial(prog.keys);
-  const opened = SPECIALS.filter((x) => x.need <= prog.keys);
+  const left = SHOP.filter((x) => !prog.owned.includes(`${x.kind}:${x.id}`));
+  const cheapest = left.reduce((m, x) => Math.min(m, x.price), 99);
   modal(`
     <div class="m-emoji">📒</div>
     <h2>${esc(me.name)}의 탐험 수첩</h2>
-    <p>🗝️ 열쇠 <b>${prog.keys}</b>개 · 📒 도장 <b>${n}</b>/${STAMPS_TO_FLY} · 🎈 비행 <b>${prog.flights}</b>번</p>
+    <p>🗝️ 가진 열쇠 <b>${wallet()}</b>개 (모은 열쇠 ${prog.keys}개) · 📒 도장 <b>${n}</b>/${STAMPS_TO_FLY} · 🎈 비행 <b>${prog.flights}</b>번</p>
     <div class="book-grid">${SUBJECTS.map((s) => `<div class="${prog.stamps[s.id] ? 'got' : ''}"><b>${s.emoji}</b>${esc(s.name)}<br>${prog.stamps[s.id] ? `✅ ${prog.stamps[s.id]}번 · ${'⭐'.repeat(prog.stars[s.id] || 0)}` : '아직이에요'}</div>`).join('')}</div>
-    <p class="book-next">${n >= STAMPS_TO_FLY ? '🎈 열기구를 탈 수 있어요!' : `🎈 열기구까지 도장 ${STAMPS_TO_FLY - n}개`}<br>${nx ? `🎁 열쇠 ${nx.need - prog.keys}개 더 모으면 <b>${esc(nx.label)}</b>!` : '🎉 꾸미기와 친구를 모두 열었어요!'}</p>
-    <p>👕 꾸미기 부품 <b>${Object.entries(PART_KINDS).reduce((n, [k, l]) => n + l.filter((_, i) => partOpen(k, i, prog.keys)).length, 0)}</b> / ${Object.values(PART_KINDS).reduce((n, l) => n + l.length, 0)}개 열림${opened.some((x) => x.cat === 'pet') ? ` · 같이 다니는 친구: ${opened.filter((x) => x.cat === 'pet').map((x) => esc(x.label)).join(' · ')}` : ''}</p>
+    <p class="book-next">${n >= STAMPS_TO_FLY ? '🎈 열기구를 탈 수 있어요!' : `🎈 열기구까지 도장 ${STAMPS_TO_FLY - n}개`}<br>${!left.length ? '🎉 꾸미기와 친구를 모두 샀어요!' : wallet() >= cheapest ? '🛍️ 👕 꾸미기에서 열쇠로 새 꾸미기를 살 수 있어요!' : `🛍️ 열쇠 ${cheapest - wallet()}개 더 모으면 새 꾸미기를 살 수 있어요!`}</p>
+    <p>👕 꾸미기 부품 <b>${Object.entries(PART_KINDS).reduce((n, [k, l]) => n + l.filter((_, i) => partOpen(k, i, prog.owned)).length, 0)}</b> / ${Object.values(PART_KINDS).reduce((n, l) => n + l.length, 0)}개 고를 수 있어요${prog.owned.some((x) => x.startsWith('pet:')) ? ` · 같이 다니는 친구: ${prog.owned.filter((x) => x.startsWith('pet:')).map((x) => esc(partName('pet', x.slice(4)))).join(' · ')}` : ''}</p>
     <h3 class="book-h">🏢 직업 도감 ${jobList().length} / ${JOBS.length}</h3>
     <div class="job-book">${JOBS.map((j) => `<span class="${prog.jobs?.[j.id] ? 'got' : ''}" title="${esc(j.name)}">${j.emoji}</span>`).join('')}</div>
   `, [['👕 꾸미기', () => openDresser('edit', afterDress), 'ok'], ['닫기', null, 'ghost']]);
