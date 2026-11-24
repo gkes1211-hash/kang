@@ -354,16 +354,22 @@ function animatePaper(g, root, moving, dt, t, camYaw) {
   const view = cz < -0.55 ? (sx < -0.2 ? 'backL' : 'back') : sx < -0.35 ? 'sideL' : sx > 0.35 || cz > 0.55 ? 'front' : (u.view || 'front');
   setPaperView(g, view);
 }
-// 같이 다니는 친구: 픽셀아트 그림(Sprite), 발이 땅에 닿게
-const PET_H = 1.15;
+// 같이 다니는 친구: 그림(Sprite), 발이 땅에 닿게. 그림이 아직 안 왔으면 오고 나서 붙인다
+const PET_H = 1.2;
 function buildPet(id) {
-  const c = drawPet(id); if (!c) return null;
-  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.magFilter = THREE.NearestFilter; t.minFilter = THREE.NearestFilter;
-  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: t, transparent: true, alphaTest: 0.5 }));
-  sp.center.set(0.5, 4 / c.height); sp.scale.set(PET_H * c.width / c.height, PET_H, 1);
-  const shadow = new THREE.Mesh(new THREE.CircleGeometry(0.34, 16), new THREE.MeshBasicMaterial({ color: '#2b3a1e', transparent: true, opacity: 0.22, depthWrite: false }));
+  if (!id || id === 'none') return null;
+  const g = new THREE.Group(); g.userData.hop = 0;
+  const shadow = new THREE.Mesh(new THREE.CircleGeometry(0.38, 16), new THREE.MeshBasicMaterial({ color: '#2b3a1e', transparent: true, opacity: 0.22, depthWrite: false }));
   shadow.rotation.x = -Math.PI / 2; shadow.position.y = 0.03; shadow.scale.set(1, 0.6, 1); shadow.userData.flat = true;
-  const g = new THREE.Group(); g.add(sp, shadow); g.userData.hop = 0;
+  g.add(shadow);
+  const fill = () => {
+    const c = drawPet(id); if (!c) return;
+    const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
+    const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: t, transparent: true, alphaTest: 0.4 }));
+    sp.center.set(0.5, 0.02); sp.scale.set(PET_H * c.width / c.height, PET_H, 1);
+    g.add(sp);
+  };
+  if (drawPet(id)) fill(); else loadChars().then(fill).catch(() => {});
   return g;
 }
 // 캐릭터 + 이름표 + 같이 다니는 친구

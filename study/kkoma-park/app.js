@@ -100,7 +100,7 @@ function setupPreview() {
     g.fillStyle = 'rgba(80,60,140,0.22)'; g.beginPath(); g.ellipse(cx, foot, dw * 0.3, dh * 0.03, 0, 0, 7); g.fill();
     g.drawImage(c, bx, by, bw, bh, cx - dw / 2, foot - dh + bob * 0.4, dw, dh);
     const pc = hasPet && drawPet(me.look.pet);
-    if (pc) { const ph = dh * 0.34; const pw = ph * pc.width / pc.height; g.drawImage(pc, canvas.width / 2 + dw * 0.42 - pw / 2, foot - ph + 4 * dpr - Math.abs(Math.sin(t * 3)) * 8 * dpr, pw, ph); }
+    if (pc) { g.imageSmoothingEnabled = true; const ph = dh * 0.36; const pw = ph * pc.width / pc.height; g.drawImage(pc, canvas.width / 2 + dw * 0.42 - pw / 2, foot - ph + 4 * dpr - Math.abs(Math.sin(t * 3)) * 8 * dpr, pw, ph); }
   };
   requestAnimationFrame(loop);
 }
