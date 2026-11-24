@@ -9,8 +9,8 @@ export const FACES = ['활짝 웃음', '방긋 미소', '윙크', '반짝 눈', 
 export const HAIRS = ['부스스 머리', '덮은 머리', '삐죽 머리', '바가지 머리', '단발', '양 갈래', '옆 포니테일', '똥 머리', '곱슬 머리', '긴 생머리'];
 export const TOPS = ['별 티셔츠', '후드티', '셔츠', '세일러 옷', '블라우스', '줄무늬 티', '야구 점퍼', '청재킷', '카디건', '멜빵 원피스',
   '노란 비옷', '공룡 후드티', '빨간 체크 셔츠', '분홍 니트 조끼', '파란 체육복', '주황 맨투맨', '한복 저고리', '별 파자마', '교복 재킷', '민트 블라우스'];
-export const BOTTOMS = ['반바지', '긴바지', '주름치마', '미니 스커트', '멜빵 반바지'];
-export const SHOES = ['운동화', '하이탑', '구두', '장화', '리본 운동화'];
+export const BOTTOMS = ['반바지', '긴바지', '주름치마', '미니 스커트', '멜빵 반바지', '빨간 체크 치마', '카고 반바지', '체육복 바지', '노란 멜빵치마', '한복 치마'];
+export const SHOES = ['운동화', '하이탑', '구두', '장화', '리본 운동화', '파란 장화', '검은 운동화', '발레 슈즈', '초록 샌들', '털 부츠'];
 // 소품: [이름, 자리]. 같은 자리에는 하나만 달 수 있다
 export const ACCS = [
   ['야구 모자', 'hat'], ['베레모', 'hat'], ['왕관', 'hat'], ['헤드폰', 'hat'], ['고양이 머리띠', 'hat'], ['분홍 리본', 'pin'],
@@ -20,8 +20,8 @@ export const SLOTS = ['hat', 'pin', 'eye', 'back', 'hand'];
 // 부품마다 정해진 색 (null = 그림 원래 색). 색을 따로 고르지 않고, 색이 입혀진 완성 그림을 고른다
 const HAIR_COLORS = [null, '#2b211e', '#c0703a', '#3a2620', '#f0c85f', '#f2a7c0', null, '#2b211e', '#8a6fe0', '#c0703a'];
 const TOP_COLORS = [null, '#ff9ccf', '#8cc8ff', null, '#ffc9dc', '#6fb6ff', '#5f7fe0', '#7fa8e0', '#ffe07a', '#b79cff', null, null, null, null, null, null, null, null, null, null];
-const BOT_COLORS = ['#5f7fe0', '#4a5a8a', '#ff9ccf', '#b79cff', '#7fa8e0'];
-const SHOE_COLORS = [null, '#e0565b', '#7a4a36', '#ffd24a', '#ff9ccf'];
+const BOT_COLORS = ['#5f7fe0', '#4a5a8a', '#ff9ccf', '#b79cff', '#7fa8e0', null, null, null, null, null];
+const SHOE_COLORS = [null, '#e0565b', '#7a4a36', '#ffd24a', '#ff9ccf', null, null, null, null, null];
 const COLORS = { hair: HAIR_COLORS, top: TOP_COLORS, bot: BOT_COLORS, shoe: SHOE_COLORS };
 const colorOf = (kind, i) => COLORS[kind][i] ?? null;
 
@@ -45,7 +45,7 @@ const PRICE = {
   'face:6': 1, 'face:7': 1, 'face:8': 1, 'face:9': 1,
   'hair:6': 2, 'hair:7': 2, 'hair:8': 2, 'hair:9': 2,
   'top:6': 2, 'top:7': 2, 'top:8': 2, 'top:9': 2, 'top:11': 3, 'top:13': 2, 'top:16': 3, 'top:17': 2, 'top:18': 3,
-  'bot:3': 1, 'bot:4': 1, 'shoe:3': 1, 'shoe:4': 1,
+  'bot:3': 1, 'bot:4': 1, 'bot:8': 2, 'bot:9': 3, 'shoe:3': 1, 'shoe:4': 1, 'shoe:5': 1, 'shoe:9': 2,
   'acc:11': 1, 'acc:3': 2, 'acc:4': 2, 'acc:7': 2, 'acc:10': 3, 'acc:9': 3, 'acc:8': 4, 'acc:2': 5,
 };
 for (const [id, , price] of PETS) if (price) PRICE[`pet:${id}`] = price;
