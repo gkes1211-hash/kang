@@ -1,12 +1,12 @@
 // 꼬마 탐험대 공원: 2D 픽셀아트 캐릭터를 부품으로 직접 꾸민다
-// chars/parts.png 한 장에 몸(피부 5)·표정 10·머리(앞·뒤) 10·윗옷 10·아래옷 5·신발 5·소품 12 가 들어 있다.
+// chars/parts.webp 한 장에 몸(피부 5)·표정 10·머리(앞·뒤) 15·윗옷 20·아래옷 10·신발 10·소품 12 가 들어 있다.
 // chars/parts.json: rects[이름] = [그림 x, y, 너비, 높이, 틀 안 x, 틀 안 y], fw·fh = 캐릭터 틀 크기
 // 표정은 "몸 색에 더할 값(+128)"으로 저장돼 있어 어떤 피부에도 맞는다.
 // 옷·머리 색은 그림의 밝기를 살려 고른 색으로 바꾼다. 마을에서는 걷는 방향에 따라 앞·뒤·옆(뒤집기) 모습이 된다.
 
 export const SKINS = ['아주 밝은 피부', '밝은 피부', '살구빛 피부', '갈색 피부', '진한 갈색 피부'];
 export const FACES = ['활짝 웃음', '방긋 미소', '윙크', '반짝 눈', '하트 눈', '깜짝', '심드렁', '메롱', '동글 안경', '부끄부끄'];
-export const HAIRS = ['부스스 머리', '덮은 머리', '삐죽 머리', '바가지 머리', '단발', '양 갈래', '옆 포니테일', '똥 머리', '곱슬 머리', '긴 생머리'];
+export const HAIRS = ['부스스 머리', '덮은 머리', '삐죽 머리', '바가지 머리', '단발', '양 갈래', '옆 포니테일', '똥 머리', '곱슬 머리', '긴 생머리', '검은 웨이브 단발', '양쪽 똥머리', '금발 땋은 머리', '검은 숏컷', '빨간 긴 웨이브'];
 export const TOPS = ['별 티셔츠', '후드티', '셔츠', '세일러 옷', '블라우스', '줄무늬 티', '야구 점퍼', '청재킷', '카디건', '멜빵 원피스',
   '노란 비옷', '공룡 후드티', '빨간 체크 셔츠', '분홍 니트 조끼', '파란 체육복', '주황 맨투맨', '한복 저고리', '별 파자마', '교복 재킷', '민트 블라우스'];
 export const BOTTOMS = ['반바지', '긴바지', '주름치마', '미니 스커트', '멜빵 반바지', '빨간 체크 치마', '카고 반바지', '체육복 바지', '노란 멜빵치마', '한복 치마'];
@@ -18,7 +18,7 @@ export const ACCS = [
 ];
 export const SLOTS = ['hat', 'pin', 'eye', 'back', 'hand'];
 // 부품마다 정해진 색 (null = 그림 원래 색). 색을 따로 고르지 않고, 색이 입혀진 완성 그림을 고른다
-const HAIR_COLORS = [null, '#2b211e', '#c0703a', '#3a2620', '#f0c85f', '#f2a7c0', null, '#2b211e', '#8a6fe0', '#c0703a'];
+const HAIR_COLORS = [null, '#2b211e', '#c0703a', '#3a2620', '#f0c85f', '#f2a7c0', null, '#2b211e', '#8a6fe0', '#c0703a', null, null, null, null, null];
 const TOP_COLORS = [null, '#ff9ccf', '#8cc8ff', null, '#ffc9dc', '#6fb6ff', '#5f7fe0', '#7fa8e0', '#ffe07a', '#b79cff', null, null, null, null, null, null, null, null, null, null];
 const BOT_COLORS = ['#5f7fe0', '#4a5a8a', '#ff9ccf', '#b79cff', '#7fa8e0', null, null, null, null, null];
 const SHOE_COLORS = [null, '#e0565b', '#7a4a36', '#ffd24a', '#ff9ccf', null, null, null, null, null];
@@ -43,7 +43,7 @@ export const PART_KINDS = { face: FACES, hair: HAIRS, top: TOPS, bot: BOTTOMS, s
 export const KIND_ICON = { face: '😊', hair: '💇', top: '👕', bot: '👖', shoe: '👟', acc: '🎀', pet: '🐾' };
 const PRICE = {
   'face:6': 1, 'face:7': 1, 'face:8': 1, 'face:9': 1,
-  'hair:6': 2, 'hair:7': 2, 'hair:8': 2, 'hair:9': 2,
+  'hair:6': 2, 'hair:7': 2, 'hair:8': 2, 'hair:9': 2, 'hair:11': 2, 'hair:14': 2,
   'top:6': 2, 'top:7': 2, 'top:8': 2, 'top:9': 2, 'top:11': 3, 'top:13': 2, 'top:16': 3, 'top:17': 2, 'top:18': 3,
   'bot:3': 1, 'bot:4': 1, 'bot:8': 2, 'bot:9': 3, 'shoe:3': 1, 'shoe:4': 1, 'shoe:5': 1, 'shoe:9': 2,
   'acc:11': 1, 'acc:3': 2, 'acc:4': 2, 'acc:7': 2, 'acc:10': 3, 'acc:9': 3, 'acc:8': 4, 'acc:2': 5,
@@ -109,7 +109,7 @@ export function loadChars() {
   if (ready) return ready;
   ready = Promise.all([
     fetch(new URL('parts.json', base)).then((r) => r.json()),
-    new Promise((res, rej) => { const im = new Image(); im.onload = () => res(im); im.onerror = rej; im.src = new URL('parts.png', base).href; }),
+    new Promise((res, rej) => { const im = new Image(); im.onload = () => res(im); im.onerror = rej; im.src = new URL('parts.webp', base).href; }),
   ]).then(([m, im]) => { META = m; ATLAS = im; });
   return ready;
 }
@@ -207,7 +207,7 @@ export function drawChar(look, view = 'front') {
   const acc = (s) => { if (L[s] >= 0) put(part(`acc${L[s]}`)); };
   if (!back) {
     if (L.back === 8) acc('back'); // 날개는 몸 뒤
-    put(hair(`hb${L.hair}`));
+    if (L.hair < 10) put(hair(`hb${L.hair}`)); // 처음 머리 10가지는 뒷머리를 몸 뒤에 (새 머리는 앞 그림에 다 들어 있다)
     put(bodyWithFace(L.skin, L.face));
     cloth();
     if (L.back >= 0 && L.back !== 8) acc('back');
@@ -249,7 +249,7 @@ export function drawThumb(kind, i, look) {
     // 머리 부분만: 몸+표정(+머리)을 그려 목 위를 자른다
     const b = bodyWithFace(kind === 'skin' ? i : L.skin, kind === 'face' ? i : kind === 'skin' ? L.face : 0);
     const c = mk(META.fw, META.fh); const g = c.getContext('2d');
-    if (kind === 'hair') { const hb = part(`hb${i}`, 'hair', colorOf('hair', i)); g.drawImage(hb.c, hb.x, hb.y); }
+    if (kind === 'hair' && i < 10) { const hb = part(`hb${i}`, 'hair', colorOf('hair', i)); g.drawImage(hb.c, hb.x, hb.y); }
     g.drawImage(b.c, b.x, b.y);
     if (kind === 'hair') { const hf = part(`hf${i}`, 'hair', colorOf('hair', i)); g.drawImage(hf.c, hf.x, hf.y); }
     const headH = Math.round(b.c.height * 0.44);
