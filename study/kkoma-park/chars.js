@@ -25,8 +25,8 @@ const SHOE_COLORS = [null, '#e0565b', '#7a4a36', '#ffd24a', '#ff9ccf'];
 const COLORS = { hair: HAIR_COLORS, top: TOP_COLORS, bot: BOT_COLORS, shoe: SHOE_COLORS };
 const colorOf = (kind, i) => COLORS[kind][i] ?? null;
 
-// [아이디, 이름, 열쇠 수(0 = 처음부터)]
-export const PETS = [['none', '없음', 0], ['chick', '🐥 병아리', 1], ['puppy', '🐶 강아지', 4], ['kitty', '🐱 고양이', 7], ['turtle', '🐢 거북이', 12], ['dragon', '🐉 아기 용', 18]];
+// [아이디, 이름, 값(열쇠 수, 0 = 처음부터)]
+export const PETS = [['none', '없음', 0], ['chick', '🐥 병아리', 1], ['puppy', '🐶 강아지', 2], ['kitty', '🐱 고양이', 2], ['turtle', '🐢 거북이', 3], ['dragon', '🐉 아기 용', 5]];
 // 직업 배지: 직업 체험관에서 체험하면 열리고, 이름표 옆에 달린다
 export const JOB_BADGES = [
   ['none', '없음', 0], ['doctor', '👩‍⚕️ 의사', 'job:doctor'], ['chef', '🧑‍🍳 요리사', 'job:chef'], ['vet', '🐶 수의사', 'job:vet'],
@@ -37,56 +37,67 @@ export const JOB_BADGES = [
 export const jobEmoji = (id) => { const j = JOB_BADGES.find((x) => x[0] === id); return j && id !== 'none' ? j[1].split(' ')[0] : ''; };
 export const CATS = { pet: PETS, job: JOB_BADGES };
 
-// ---------- 열쇠로 여는 부품 ----------
-// 처음에 열린 것 말고는, 열쇠를 하나 모을 때마다 아래 차례대로 하나씩 열린다
+// ---------- 열쇠로 사는 부품 ----------
+// 값이 없는 것은 처음부터 고를 수 있고, 값이 있는 것은 모은 열쇠로 산다 (산 것은 prog.owned 에 'top:11' 처럼 적는다)
 export const PART_KINDS = { face: FACES, hair: HAIRS, top: TOPS, bot: BOTTOMS, shoe: SHOES, acc: ACCS };
-const KIND_ICON = { face: '😊', hair: '💇', top: '👕', bot: '👖', shoe: '👟', acc: '🎀' };
-const UNLOCK_ORDER = [
+export const KIND_ICON = { face: '😊', hair: '💇', top: '👕', bot: '👖', shoe: '👟', acc: '🎀', pet: '🐾' };
+const PRICE = {
+  'face:6': 1, 'face:7': 1, 'face:8': 1, 'face:9': 1,
+  'hair:6': 2, 'hair:7': 2, 'hair:8': 2, 'hair:9': 2,
+  'top:6': 2, 'top:7': 2, 'top:8': 2, 'top:9': 2, 'top:11': 3, 'top:13': 2, 'top:16': 3, 'top:17': 2, 'top:18': 3,
+  'bot:3': 1, 'bot:4': 1, 'shoe:3': 1, 'shoe:4': 1,
+  'acc:11': 1, 'acc:3': 2, 'acc:4': 2, 'acc:7': 2, 'acc:10': 3, 'acc:9': 3, 'acc:8': 4, 'acc:2': 5,
+};
+for (const [id, , price] of PETS) if (price) PRICE[`pet:${id}`] = price;
+export const partPrice = (kind, i) => PRICE[`${kind}:${i}`] || 0;
+// owned: 산 것 목록 (null 이면 친구 모습처럼 모두 믿는다)
+export const partOpen = (kind, i, owned) => !partPrice(kind, i) || owned === null || owned.includes(`${kind}:${i}`);
+export const partName = (kind, i) => { if (kind === 'pet') return PETS.find((x) => x[0] === i)?.[1] || ''; const n = PART_KINDS[kind][i]; return Array.isArray(n) ? n[0] : n; };
+// 꾸미기 판에 보일 차례: 처음부터 고를 수 있는 것 먼저(원래 차례), 그다음 살 것(싼 것부터)
+export const shopOrder = (kind) => PART_KINDS[kind].map((_, i) => i).sort((a, b) => partPrice(kind, a) - partPrice(kind, b) || a - b);
+export const SHOP = Object.keys(PRICE).map((k) => { const [kind, id] = k.split(':'); return { kind, id: kind === 'pet' ? id : Number(id), price: PRICE[k] }; });
+// 예전(열쇠를 모으면 저절로 열리던 때)에 이미 열린 것은 산 것으로 쳐 준다
+const OLD_ORDER = [
   ['hair', 6], ['top', 6], ['acc', 4], ['face', 6], ['shoe', 3], ['acc', 3], ['hair', 7], ['top', 7], ['bot', 3], ['acc', 11],
   ['face', 7], ['acc', 7], ['hair', 8], ['top', 8], ['shoe', 4], ['face', 8], ['acc', 10], ['bot', 4], ['hair', 9], ['top', 9],
-  ['face', 9], ['acc', 9], ['acc', 8], ['acc', 2],
-  ['top', 11], ['top', 16], ['top', 13], ['top', 17], ['top', 18],
+  ['face', 9], ['acc', 9], ['acc', 8], ['acc', 2], ['top', 11], ['top', 16], ['top', 13], ['top', 17], ['top', 18],
 ];
-export const partNeed = (kind, i) => { const k = UNLOCK_ORDER.findIndex(([a, b]) => a === kind && b === i); return k < 0 ? 0 : k + 1; };
-export const partOpen = (kind, i, keys) => partNeed(kind, i) <= keys;
-const partName = (kind, i) => { const n = PART_KINDS[kind][i]; return Array.isArray(n) ? n[0] : n; };
-export const SPECIALS = [
-  ...UNLOCK_ORDER.map(([kind, id], k) => ({ cat: 'part', kind, id, label: `${KIND_ICON[kind]} ${partName(kind, id)}`, need: k + 1 })),
-  ...PETS.filter((x) => x[2] > 0).map(([id, label, need]) => ({ cat: 'pet', id, label, need })),
-].sort((a, b) => a.need - b.need);
-export const nextSpecial = (keys) => SPECIALS.find((s) => s.need > keys) || null;
+export function migrateOwned(keys) {
+  const out = OLD_ORDER.filter((_, k) => k + 1 <= keys).map(([a, b]) => `${a}:${b}`);
+  for (const [id, need] of [['chick', 1], ['puppy', 4], ['kitty', 7], ['turtle', 12], ['dragon', 18]]) if (need <= keys) out.push(`pet:${id}`);
+  return out;
+}
 
-const openIdx = (kind, keys) => PART_KINDS[kind].map((_, i) => i).filter((i) => partOpen(kind, i, keys));
-export function randomLook(keys = 0, rnd = Math.random) {
+const openIdx = (kind, owned) => PART_KINDS[kind].map((_, i) => i).filter((i) => partOpen(kind, i, owned));
+export function randomLook(owned = [], rnd = Math.random) {
   const pick = (arr) => arr[Math.floor(rnd() * arr.length)];
-  const pets = PETS.filter((x) => x[2] <= keys).map((x) => x[0]);
+  const pets = PETS.filter((x) => partOpen('pet', x[0], owned)).map((x) => x[0]);
   const L = {
-    v: 4, skin: Math.floor(rnd() * SKINS.length), face: pick(openIdx('face', keys)), hair: pick(openIdx('hair', keys)),
-    top: pick(openIdx('top', keys)), bot: pick(openIdx('bot', keys)), shoe: pick(openIdx('shoe', keys)),
+    v: 4, skin: Math.floor(rnd() * SKINS.length), face: pick(openIdx('face', owned)), hair: pick(openIdx('hair', owned)),
+    top: pick(openIdx('top', owned)), bot: pick(openIdx('bot', owned)), shoe: pick(openIdx('shoe', owned)),
     hat: -1, pin: -1, eye: -1, back: -1, hand: -1,
     pet: rnd() < 0.5 ? 'none' : pick(pets), job: 'none',
   };
-  if (rnd() < 0.5) { const a = pick(openIdx('acc', keys)); L[ACCS[a][1]] = a; }
+  if (rnd() < 0.5) { const a = pick(openIdx('acc', owned)); L[ACCS[a][1]] = a; }
   return L;
 }
 // 받은 look 을 믿을 수 있는 값으로만. 예전(완성 캐릭터) 모습이면 새로 만든다 (같이 다니는 친구·배지는 남긴다)
-// jobs: 체험한 직업 목록 (null 이면 친구 모습처럼 모두 믿는다)
-export function cleanLook(l = {}, keys = 99, jobs = null) {
+// owned: 산 것 목록, jobs: 체험한 직업 목록 (null 이면 친구 모습처럼 모두 믿는다)
+export function cleanLook(l = {}, owned = null, jobs = null) {
   l = l || {};
-  const open = (need) => (typeof need === 'string' ? (jobs === null || jobs.includes(need.slice(4))) : need <= keys);
-  const lock = (list, v) => (list.some((x) => x[0] === v && open(x[2])) ? v : 'none');
+  const job = JOB_BADGES.some((x) => x[0] === l.job && (x[0] === 'none' || jobs === null || jobs.includes(x[0]))) ? l.job : 'none';
+  const pet = PETS.some((x) => x[0] === l.pet && partOpen('pet', x[0], owned)) ? l.pet : 'none';
   // 예전 모습이면 그 번호로 늘 같은 새 모습을 만든다 (그릴 때마다 바뀌지 않게)
   let seed = (Number(l.char) || 0) * 9301 + 49297;
   const rnd = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
-  const base = l.v === 4 ? l : randomLook(0, rnd);
+  const base = l.v === 4 ? l : randomLook([], rnd);
   const int = (v, n, d) => (Number.isInteger(v) && v >= -1 && v < n ? v : d);
-  const part = (kind, v) => { const i = int(v, PART_KINDS[kind].length, 0); return i >= 0 && partOpen(kind, i, keys) ? i : 0; };
+  const part = (kind, v) => { const i = int(v, PART_KINDS[kind].length, 0); return i >= 0 && partOpen(kind, i, owned) ? i : 0; };
   const L = {
     v: 4, skin: Math.max(0, int(base.skin, SKINS.length, 0)), face: part('face', base.face), hair: part('hair', base.hair),
-    top: part('top', base.top), bot: part('bot', base.bot), shoe: part('shoe', base.shoe),
-    pet: lock(PETS, l.pet), job: lock(JOB_BADGES, l.job),
+    top: part('top', base.top), bot: part('bot', base.bot), shoe: part('shoe', base.shoe), pet, job,
   };
-  for (const s of SLOTS) { const a = int(base[s], ACCS.length, -1); L[s] = a >= 0 && ACCS[a][1] === s && partOpen('acc', a, keys) ? a : -1; }
+  for (const s of SLOTS) { const a = int(base[s], ACCS.length, -1); L[s] = a >= 0 && ACCS[a][1] === s && partOpen('acc', a, owned) ? a : -1; }
   return L;
 }
 export const lookColor = (L) => (L && colorOf('top', L.top)) || '#8cc8ff';
