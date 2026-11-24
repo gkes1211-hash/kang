@@ -189,8 +189,8 @@ export function drawChar(look, view = 'front') {
   const hc = colorOf('hair', L.hair);
   const hair = (n) => part(n, 'hair', hc);
   const cloth = () => {
-    put(part(`shoe${L.shoe}`, 'cloth', colorOf('shoe', L.shoe)));
     put(part(`bot${L.bot}`, 'cloth', colorOf('bot', L.bot)));
+    put(part(`shoe${L.shoe}`, 'cloth', colorOf('shoe', L.shoe))); // 신발은 바짓단 위에
     put(part(`top${L.top}`, 'cloth', colorOf('top', L.top)));
   };
   const acc = (s) => { if (L[s] >= 0) put(part(`acc${L[s]}`)); };
