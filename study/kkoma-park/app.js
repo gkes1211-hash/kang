@@ -321,7 +321,7 @@ function startGame(how) {
 }
 
 // ---------------- 안내하는 탐험대장 토리 ----------------
-const GUIDE_LOOK = { v: 4, skin: 1, face: 0, hair: 0, top: 0, bot: 0, shoe: 0, hat: 0, pin: -1, eye: -1, back: 7, hand: -1, pet: 'none', job: 'none' }; // 야구모자 탐험대장
+const GUIDE_LOOK = { v: 4, skin: 1, face: 0, hair: 0, top: 0, bot: 0, shoe: 0, hat: 0, pin: -1, eye: -1, neck: -1, back: 7, hand: -1, pet: 'none', job: 'none' }; // 야구모자 탐험대장
 function guideLines() {
   return [
     ['👋', `안녕, ${me.name}! 나는 꼬마 탐험대의 대장, 토리야. 꼬마 탐험대 공원에 온 걸 환영해!`],
