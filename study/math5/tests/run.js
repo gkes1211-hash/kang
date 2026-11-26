@@ -316,6 +316,16 @@ for (const tpl of M5.templates) {
 // 문제 종류가 아주 적은 틀(예: 수직선 한쪽)은 가끔 같은 문제가 겹칠 수 있다. 전체의 2% 아래면 통과.
 check('비슷한 문제', simRows.dupSets / simRows.sets < 0.02, `같은 문제가 겹친 세트가 ${simRows.dupSets}개예요`);
 
+// ---------------------------------------------------------------- 난이도 직접 고르기
+{
+  const st = M5.store.fresh();
+  const sess = M5.createSession({ scope: { unit: 1, sub: 'u1s1' }, state: st, rng });
+  sess.record(true); sess.record(true);
+  check('난이도 고르기', sess.setLevel(3) === 3 && st.levels.u1s1 === 3, '고른 난이도가 저장되지 않아요');
+  check('난이도 고르기', sess.record(true) === 0 && sess.level === 3, '난이도를 고른 뒤 연속 정답 수가 처음부터 다시 세어지지 않아요');
+  check('난이도 고르기', sess.next().level <= 3 && sess.setLevel(9) === 4 && sess.setLevel(0) === 1, '난이도 범위(1~4)를 벗어나요');
+  console.log('\n[난이도 직접 고르기] 저장·범위·연속 정답 다시 세기 확인');
+}
 // ---------------------------------------------------------------- 인터넷 없이 열기 (sw.js)
 {
   const sw = fs.readFileSync(path.join(ROOT, 'sw.js'), 'utf8');

@@ -543,3 +543,17 @@ button.mini:hover { border-color: var(--accent); }
 .dg .on { stroke: #7cf29a; }
 .dg .off { stroke: #2c3548; }
 .turned .dg { transform: rotate(180deg); }
+
+/* 난이도 고르기 */
+.subitem { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.subitem .sub { width: 100%; }
+.lvpick { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; padding: 0 4px; }
+.lvpick .k { font-size: 14px; color: var(--ink-2); margin-right: 2px; }
+.lvb { display: inline-flex; flex-direction: column; align-items: center; line-height: 1.1; background: var(--surface); border: 1.5px solid var(--line); border-radius: 10px; padding: 4px 9px; font-size: 13px; color: var(--ink-2); }
+.lvb .st { color: var(--star); font-size: 13px; letter-spacing: 0; }
+.lvb .nm { font-size: 12px; }
+.lvb:hover { border-color: var(--accent); }
+.lvb.on { border-color: var(--accent); background: var(--accent-soft); color: var(--accent-ink); font-weight: 700; }
+.lvchange { font-size: 14px; margin-left: 6px; }
+.lvpop { margin-top: 8px; padding: 8px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface-2); }
+.lvpop p { margin: 6px 4px 0; }

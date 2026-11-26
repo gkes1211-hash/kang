@@ -252,6 +252,12 @@
         return change;
       },
       get last() { return last; },
+      // 아이(어른)가 난이도를 직접 고를 때: 다음 문제부터 이 난이도, 연속 정답·오답 수는 처음부터 다시
+      setLevel(n) {
+        state.levels[lvKey] = Math.max(1, Math.min(4, Math.round(n)));
+        okRun = 0; badRun = 0;
+        return state.levels[lvKey];
+      },
     };
   };
 })();

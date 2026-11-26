@@ -234,18 +234,18 @@
     const lvOf = (k) => state.levels[k] || 1;
     const card = (key, name, desc) => {
       const r = rateOf(key);
-      return `<button class="sub" data-sub="${key}">
+      return `<div class="subitem"><button class="sub" data-sub="${key}">
         <span class="nm">${esc(name)}</span>
-        <span class="meta"><span class="stars" title="난이도">${stars(lvOf(key))}</span> ${r == null ? '' : `정답률 ${r}%`}</span>
+        <span class="meta"><span class="stars" title="난이도">${stars(lvOf(key))}</span> ${M5.LEVELS[lvOf(key) - 1]}${r == null ? '' : ` · 정답률 ${r}%`}</span>
         ${desc ? `<span class="desc">${esc(desc)}</span>` : ''}
-      </button>`;
+      </button>${lvPick(key, lvOf(key))}</div>`;
     };
     app.innerHTML = `${header()}
       <main class="subs">
         <button class="back" data-go="home">← 단원 목록</button>
         ${summary}
         <h2>${u.id}단원 ${esc(u.name)}</h2>
-        <p class="lead">소단원을 고르면 문제가 끝없이 나와요. 그만 풀고 싶을 때 '그만 풀기'를 눌러요.</p>
+        <p class="lead">소단원을 고르면 문제가 끝없이 나와요. 그만 풀고 싶을 때 '그만 풀기'를 눌러요.<br>난이도는 직접 고를 수 있어요. 풀다 보면 3번 연속 맞힐 때 올라가고 2번 연속 틀릴 때 내려가요.</p>
         <div class="sublist">
           ${card('u' + u.id, '🔀 전체 섞기', '모든 소단원 문제가 골고루 나와요')}
           ${u.subs.map((s, i) => card(s.id, `${i + 1}. ${s.name}`)).join('')}
@@ -256,6 +256,18 @@
       const k = b.dataset.sub;
       play(/^u\d+$/.test(k) ? { unit: unitId } : { unit: unitId, sub: k });
     }));
+    $$('.lvb').forEach((b) => b.addEventListener('click', () => {
+      const n = Number(b.dataset.lv);
+      state.levels[b.dataset.key] = n;
+      save();
+      toast(`난이도를 ${stars(n)} ${M5.LEVELS[n - 1]}으로 바꿨어요.`);
+      subs(unitId, summary);
+    }));
+  }
+
+  // 난이도 고르기 단추 4개 (소단원 화면·문제 화면에서 같이 쓴다)
+  function lvPick(key, lv) {
+    return `<div class="lvpick" role="group" aria-label="난이도 고르기"><span class="k">난이도</span>${M5.LEVELS.map((name, i) => `<button type="button" class="lvb ${i + 1 === lv ? 'on' : ''}" data-key="${key}" data-lv="${i + 1}" title="${name}" aria-pressed="${i + 1 === lv}"><span class="st">${'★'.repeat(i + 1)}</span><span class="nm">${name}</span></button>`).join('')}</div>`;
   }
 
   // ------------------------------------------------------------------ 문제 하나 풀기
@@ -309,7 +321,7 @@
     }
 
     function render() {
-      const lvBox = opts.levelText ? `<div class="level">${opts.levelText}</div>` : '';
+      const lvBox = opts.levelText ? `<div class="level">${opts.levelText}${opts.onLevel ? ' <button type="button" class="link lvchange">바꾸기</button><div class="lvpop" hidden></div>' : ''}</div>` : '';
       app.innerHTML = `${header(statsHtml())}
         <main class="play">
           <button id="back" class="back playback">${esc(opts.backLabel || '← 소단원 고르기')}</button>
@@ -345,6 +357,18 @@
       $('#weird').addEventListener('click', () => opts.onWeird(result));
       $('#stop').addEventListener('click', () => opts.onStop());
       $('#back').addEventListener('click', () => opts.onBack());
+      if (opts.onLevel && $('.lvchange')) {
+        $('.lvchange').addEventListener('click', () => {
+          const pop = $('.lvpop');
+          pop.hidden = !pop.hidden;
+          if (pop.hidden) return;
+          pop.innerHTML = lvPick('', opts.levelNow()) + '<p class="small muted">다음 문제부터 바뀌어요.</p>';
+          pop.querySelectorAll('.lvb').forEach((b) => b.addEventListener('click', () => {
+            opts.onLevel(Number(b.dataset.lv));
+            $('.level').innerHTML = `${opts.levelText2()} <span class="small muted">· 다음 문제부터</span>`;
+          }));
+        });
+      }
       $$('.opt').forEach((b) => b.addEventListener('click', () => choose(b)));
       $$('.figure .gp').forEach((c) => c.addEventListener('click', () => pickPoint(c.dataset.p)));
       if ($('#pclear')) $('#pclear').addEventListener('click', () => { if (canInput()) { sel.clear(); paintPoints(); } });
@@ -735,6 +759,13 @@
       solve(p, {
         fix: true,
         levelText: levelText(),
+        levelText2: levelText,
+        levelNow: () => sess.level,
+        onLevel(n) {
+          sess.setLevel(n);
+          save();
+          toast(`다음 문제부터 ${stars(n)} ${M5.LEVELS[n - 1]} 문제가 나와요.`);
+        },
         onFirst(ok) {
           count(p, ok);
           run.normal++;
