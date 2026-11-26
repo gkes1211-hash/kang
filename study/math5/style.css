@@ -329,3 +329,67 @@ button.mini:hover { border-color: var(--accent); }
 .summary .sum-head p { margin: 0; }
 .summary .result { margin: 12px 0 6px; }
 .summary p.small { margin: 6px 0 0; }
+
+/* ---------- 분수 (2단원) ---------- */
+/* 문장·보기 속 분수: 분자 위, 분모 아래 */
+.mixed { display: inline-flex; align-items: center; gap: .12em; vertical-align: middle; margin: 0 .1em; }
+.mixed .fw { font-weight: 700; }
+.fr { display: inline-flex; flex-direction: column; align-items: center; line-height: 1.05; font-size: .82em; font-variant-numeric: tabular-nums; }
+.fr .nu { padding: 0 .25em .08em; border-bottom: .09em solid currentColor; }
+.fr .de { padding: .08em .25em 0; }
+.qtext .fr { font-size: .9em; }
+.qtext { line-height: 2; }
+
+/* 분수 입력칸: [자연수] [분자/분모] */
+.frin { align-items: center; gap: 12px; }
+.frbox { display: inline-flex; flex-direction: column; align-items: center; gap: 4px; }
+.frbox .bar { width: 100%; height: 3px; border-radius: 2px; background: var(--ink); }
+.in.fw { width: 80px; height: 64px; text-align: center; font-size: 30px; }
+.in.fn, .in.fd { width: 96px; text-align: center; padding: 6px 8px; }
+.help { font-size: 14px; color: var(--ink-2); margin: -4px 0 12px; }
+
+/* 넓이 격자 */
+.fig-grid-wrap { display: flex; flex-direction: column; gap: 8px; }
+.fig-grid {
+  display: grid; grid-template-columns: repeat(var(--c), 1fr); grid-template-rows: repeat(var(--r), 1fr);
+  width: min(300px, 100%); aspect-ratio: 4 / 3; border: 3px solid #4a5468; background: #fff;
+}
+.fig-grid.sq { aspect-ratio: 1; width: min(260px, 100%); }
+.fig-grid span { border: 1px solid #b8c2d3; }
+.fig-grid span.col { background: var(--accent-soft); }
+.fig-grid span.on { background: var(--accent); }
+.fig-legend { font-size: 15px; color: var(--ink-2); display: flex; align-items: center; gap: 6px; margin: 0; flex-wrap: wrap; }
+.fig-legend .sw { width: 16px; height: 16px; border: 1px solid #b8c2d3; display: inline-block; }
+.fig-legend .sw.on { background: var(--accent); }
+.fig-legend .sw.col { background: var(--accent-soft); margin-left: 10px; }
+
+/* 직사각형 넓이 */
+.fig-rect { display: grid; grid-template-columns: auto auto; grid-template-rows: auto auto; gap: 6px 10px; width: max-content; max-width: 100%; align-items: center; }
+.fig-rect .box { width: 220px; height: 130px; border: 3px solid #4a5468; background: var(--accent-soft); }
+.fig-rect.sq .box { width: 150px; height: 150px; }
+.fig-rect .lw { grid-row: 2; grid-column: 1; text-align: center; font-weight: 700; }
+.fig-rect .lh { grid-row: 1; grid-column: 2; font-weight: 700; }
+
+/* 화살표 계산 */
+.fig-arrows { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
+.fig-arrows .node {
+  min-width: 64px; min-height: 56px; padding: 4px 10px; display: inline-flex; align-items: center; justify-content: center;
+  border: 2px solid #4a5468; border-radius: 12px; background: #fff; font-size: 22px; font-weight: 700;
+}
+.fig-arrows .node.empty { background: var(--surface-2); border-style: dashed; }
+.fig-arrows .node.q { background: #fff4d6; color: #7a5200; }
+.fig-arrows .arr { display: inline-flex; flex-direction: column; align-items: center; color: var(--accent-ink); font-weight: 700; }
+.fig-arrows .arr .op { font-size: 18px; }
+.fig-arrows .arr .line { font-size: 26px; line-height: 1; }
+
+/* 서술형 */
+.essay-in {
+  width: 100%; font: 17px/1.6 var(--font); padding: 10px 12px; margin-bottom: 12px;
+  border: 2px solid var(--line); border-radius: 12px; resize: vertical; background: #fff; color: var(--ink);
+}
+.essay-in:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 4px var(--accent-soft); }
+.diag.essay .mine-sol, .diag.essay .model { background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px; margin: 8px 0; }
+.diag.essay .model ol { margin: 4px 0 0; padding-left: 20px; }
+.diag.essay .q2 { font-weight: 700; margin-top: 10px; }
+.chk { display: flex; align-items: center; gap: 8px; padding: 4px 0; font-size: 17px; }
+.chk input { width: 20px; height: 20px; }

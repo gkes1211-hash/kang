@@ -15,7 +15,7 @@
   const state = S.load();
 
   const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-  const txt = (s) => esc(s).replace(/\n/g, '<br>');
+  const txt = (s) => M5.text.html(s); // 줄바꿈과 분수 표시 ⟪2 3/4⟫까지 화면용으로
   const $ = (sel) => app.querySelector(sel);
   const $$ = (sel) => [...app.querySelectorAll(sel)];
 
@@ -173,6 +173,8 @@
     let sel = p.answer.type === 'multi' ? new Set() : null;
     const result = { firstOk: null, firstInput: null, firstRes: null, actual: null, self: null };
     let pendingRes = null;
+    let formNoted = false; // 약분·대분수 안내를 기록했는지
+    let essayWarned = false; // 서술형: 풀이를 안 쓰고 냈을 때 한 번 안내했는지
 
     const a = p.answer;
     M5.current = p; // 지금 화면의 문제 (브라우저 자동 테스트에서 쓴다)
@@ -186,6 +188,12 @@
         case 'num': return `<label class="lab" for="in0">답</label><div class="row">${field(0)}${unitTxt}</div>`;
         case 'nums': return `<label class="lab" for="in0">답 (여러 개는 쉼표로 나누어 써요. 예: 12, 15, 18)</label><div class="row">${field(0, 'wide')}</div>`;
         case 'pair': return a.labels.map((l, i) => `<div class="row pair"><label for="in${i}">${esc(l)}</label>${field(i)}</div>`).join('');
+        case 'frac': {
+          const f = (id, cls, label) => `<input id="${id}" class="in ${cls}" type="text" inputmode="numeric" autocomplete="off" spellcheck="false" aria-label="${label}">`;
+          return `<p class="lab">답 (진분수는 분자·분모 칸만, 대분수는 자연수 칸까지, 자연수 답은 자연수 칸만 써요)</p>
+            <div class="row frin">${f('fw', 'fw', '자연수')}<span class="frbox">${f('fn', 'fn', '분자')}<span class="bar" aria-hidden="true"></span>${f('fd', 'fd', '분모')}</span>${unitTxt}</div>
+            <p class="help">칸 이동: Tab (분자 칸에서 / 를 누르면 분모 칸으로)</p>`;
+        }
         case 'ineq': return `<p class="lab">(가) ○ (나): 알맞은 것을 골라요 (키보드 &lt; = &gt;)</p><div class="ineq">${['>', '=', '<'].map((v) => `<button class="opt sym" data-v="${esc(v)}">${esc(v)}</button>`).join('')}</div>`;
         case 'ox': return `<p class="lab">맞으면 O, 틀리면 X (키보드 O, X)</p><div class="ox"><button class="opt big o" data-v="true">O</button><button class="opt big x" data-v="false">X</button></div>`;
         case 'choice':
@@ -214,6 +222,7 @@
           </section>
           <section class="acard">
             ${lvBox}
+            ${p.essay ? '<label class="lab" for="essay">✏️ 풀이 과정을 써요</label><textarea id="essay" class="essay-in" rows="4" placeholder="예) 대분수를 가분수로 바꾸면 …"></textarea>' : ''}
             ${figOpts ? '<p class="lab">왼쪽에서 알맞은 수직선을 골라요.</p>' : `<div id="inputs">${inputHtml()}</div>`}
             <div id="prev"></div>
             <button id="submit" class="btn primary">채점하기 <kbd>Enter</kbd></button>
@@ -239,14 +248,20 @@
         result.firstOk = false;
         result.firstInput = opts.startWith.input;
         result.firstRes = opts.startWith.res;
-        $('#prev').innerHTML = `<p class="prev">처음 낸 답: <b>${esc(inputText(opts.startWith.input))}</b></p>`;
+        $('#prev').innerHTML = `<p class="prev">처음 낸 답: <b>${txt(inputText(opts.startWith.input))}</b></p>`;
         markChosenWrong(opts.startWith.input);
         startDiagnose(opts.startWith.res);
       } else {
-        const first = $('#in0');
+        const first = firstField();
         if (first) first.focus();
       }
+      if (a.type === 'frac') {
+        // 분자 칸에서 / 를 누르면 분모 칸으로, 자연수 칸에서 띄어쓰기를 누르면 분자 칸으로
+        $('#fn').addEventListener('keydown', (ev) => { if (ev.key === '/') { ev.preventDefault(); $('#fd').focus(); } });
+        $('#fw').addEventListener('keydown', (ev) => { if (ev.key === ' ') { ev.preventDefault(); $('#fn').focus(); } });
+      }
     }
+    function firstField() { return p.essay ? $('#essay') : ($('#in0') || $('#fw')); }
 
     // ----- 입력
     function choose(b) {
@@ -267,6 +282,7 @@
       switch (a.type) {
         case 'num': case 'nums': return $('#in0').value;
         case 'pair': return [$('#in0').value, $('#in1').value];
+        case 'frac': return { w: $('#fw').value, n: $('#fn').value, d: $('#fd').value };
         case 'multi': return [...sel];
         default: return sel;
       }
@@ -276,6 +292,12 @@
         case 'num': return String(input).trim() + (a.unit ? ' ' + a.unit : '');
         case 'nums': return String(input).trim();
         case 'pair': return a.labels.map((l, i) => `${l}: ${String(input[i]).trim()}`).join(', ');
+        case 'frac': {
+          const w = String(input.w || '').trim(), n = String(input.n || '').trim(), d = String(input.d || '').trim();
+          const isN = (x) => /^\d+$/.test(x);
+          const body = isN(n) && isN(d) ? M5.frac.mkRaw(n, d, isN(w) ? +w : 0) : [w, n && d ? `${n}/${d}` : n || d].filter(Boolean).join(' ');
+          return body + (a.unit ? ' ' + a.unit : '');
+        }
         case 'ineq': return input;
         case 'ox': return input ? 'O' : 'X';
         case 'choice': return a.options[input].text || `${NUMS[input]}번`;
@@ -296,6 +318,8 @@
         $('#in0').value = input;
       } else if (a.type === 'pair') {
         $('#in0').value = input[0]; $('#in1').value = input[1];
+      } else if (a.type === 'frac') {
+        $('#fw').value = input.w || ''; $('#fn').value = input.n || ''; $('#fd').value = input.d || '';
       } else if (a.type === 'multi') {
         sel = new Set(input);
         $$('.opt').forEach((b) => b.classList.toggle('sel', sel.has(Number(b.dataset.i))));
@@ -313,6 +337,7 @@
         if (/^[1-4]$/.test(ev.key)) { ev.preventDefault(); pickSelf(SELF[Number(ev.key) - 1].id); }
         return;
       }
+      if (ev.target && ev.target.tagName === 'TEXTAREA' && !(ev.key === 'Enter' && (ev.ctrlKey || ev.metaKey))) return;
       if (ev.key === 'Enter') {
         if (ev.target && ev.target.tagName === 'SUMMARY') return;
         ev.preventDefault();
@@ -332,12 +357,29 @@
     function submit() {
       if (phase === 'done') { opts.onDone(result); return; }
       if (phase === 'explained') { startRetry(); return; }
+      if (phase === 'essay') { checkEssay(); return; }
       if (phase === 'diagnose') return;
       const input = getInput();
       const res = G.grade(p, input);
       const fb = $('#fb');
       if (res.empty) { fb.innerHTML = '<p class="warn">답을 먼저 입력해 주세요.</p>'; return; }
       if (res.invalid) { fb.innerHTML = `<p class="warn">${esc(res.invalid)}</p>`; return; }
+      if (res.form) {
+        // 값은 맞았지만 약분이나 대분수 표현이 덜 됨: 틀림으로 세지 않고 고치게 한다 (기획서 8번)
+        fb.innerHTML = res.form === 'reduce'
+          ? '<p class="warn">✨ 값은 맞았어요. 약분을 끝까지 했나요? 분자와 분모를 같은 수로 더 나눌 수 있어요.</p>'
+          : '<p class="warn">✨ 값은 맞았어요. 가분수를 대분수로 나타내 볼까요? 자연수 부분은 자연수 칸에 써요.</p>';
+        if (!formNoted) { formNoted = true; logForm(); }
+        const f = res.form === 'reduce' ? $('#fn') : $('#fw');
+        if (f) { f.focus(); f.select(); }
+        return;
+      }
+      if (phase === 'answer' && p.essay && !essayWarned && !$('#essay').value.trim()) {
+        essayWarned = true;
+        fb.innerHTML = '<p class="warn">풀이 과정도 써 볼까요? 쓰지 않고 채점하려면 한 번 더 누르세요.</p>';
+        $('#essay').focus();
+        return;
+      }
 
       if (phase === 'answer') {
         result.firstOk = !!res.ok;
@@ -370,7 +412,7 @@
           // 힌트를 다 썼는데도 틀리면: 정답과 풀이를 보여 주고 따라 풀게 한다
           phase = 'copy';
           const ansT = G.answerText(p);
-          parts.push(`<p class="reveal">정답은 <b>${esc(ansT)}</b>${T.j(ansT, '이에요/예요').slice(ansT.length)}. 풀이를 천천히 읽고, 정답을 직접 입력(선택)해 봐요.</p>${solutionHtml(true)}`);
+          parts.push(`<p class="reveal">정답은 <b>${txt(ansT)}</b>${T.j(ansT, '이에요/예요').slice(ansT.length)}. 풀이를 천천히 읽고, 정답을 직접 입력(선택)해 봐요.</p>${solutionHtml(true)}`);
           fb.innerHTML = parts.join('');
           markWrongInput(input);
           return;
@@ -386,6 +428,7 @@
     function markWrongInput(input) {
       if (a.type === 'choice' || a.type === 'ineq' || a.type === 'ox') markChosenWrong(input);
       else if (a.type === 'num' || a.type === 'nums' || a.type === 'pair') { const i = $('#in0'); i.focus(); i.select(); }
+      else if (a.type === 'frac') { const i = $('#fn').value ? $('#fn') : $('#fw'); i.focus(); i.select(); }
     }
 
     function finish(html, showAnswer = true) {
@@ -396,7 +439,34 @@
       if (showAnswer) markAnswer();
       const btn = $('#submit');
       btn.innerHTML = `${opts.nextLabel || '다음 문제 →'} <kbd>Enter</kbd>`;
+      if (p.essay) $('#essay').disabled = true;
+      if (p.essay && showAnswer) startEssayCheck();
       btn.focus();
+    }
+
+    // ----- 서술형 (기획서 12번): 모범 풀이를 보고 체크리스트로 내 풀이를 확인
+    function startEssayCheck() {
+      phase = 'essay';
+      const mine = $('#essay').value.trim();
+      $('#diag').innerHTML = `<div class="diag essay">
+          <p class="q">📝 모범 풀이와 내 풀이를 비교해 봐요</p>
+          ${mine ? `<div class="mine-sol"><b>내가 쓴 풀이</b><p>${esc(mine).replace(/\n/g, '<br>')}</p></div>` : '<p class="muted small">풀이를 쓰지 않았어요. 다음에는 꼭 써 봐요.</p>'}
+          <div class="model"><b>모범 풀이</b><ol>${p.solution.map((x) => `<li>${txt(x)}</li>`).join('')}</ol></div>
+          <p class="q2">내 풀이에서 한 것에 체크해요.</p>
+          ${p.essay.checklist.map((c, i) => `<label class="chk"><input type="checkbox" id="chk${i}"> ${txt(c.q)}</label>`).join('')}
+        </div>`;
+      $('#submit').innerHTML = '체크 다 했어요 <kbd>Enter</kbd>';
+      $('#diag').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+    function checkEssay() {
+      const missed = p.essay.checklist.filter((c, i) => !$('#chk' + i).checked);
+      $$('.chk input').forEach((x) => { x.disabled = true; });
+      $('#hints').innerHTML = missed.length
+        ? `<p class="warn">체크하지 못한 단계의 개념을 읽어 봐요.</p>${missed.map((c) => `<div class="hint"><span class="hn">${txt(c.q)}</span>${txt(c.concept)}</div>`).join('')}`
+        : '<p class="good small">👍 풀이를 꼼꼼하게 확인했어요!</p>';
+      phase = 'done';
+      $('#submit').innerHTML = `${opts.nextLabel || '다음 문제 →'} <kbd>Enter</kbd>`;
+      $('#submit').focus();
     }
 
     // ----- 1) 어디서 틀렸을까?
@@ -455,7 +525,7 @@
       if (a.type === 'choice' || a.type === 'ineq' || a.type === 'ox') markChosenWrong(prevInput);
       $('#submit').innerHTML = '다시 채점하기 <kbd>Enter</kbd>';
       $('#fb').innerHTML = '<p>같은 문제를 다시 풀어 봐요. 틀릴 때마다 힌트를 하나씩 더 줄게요.</p>';
-      const first = $('#in0');
+      const first = a.type === 'frac' ? $('#fw') : $('#in0');
       if (first) { first.focus(); first.select(); }
     }
 
@@ -483,6 +553,13 @@
     }
 
     render();
+  }
+
+  // 값은 맞았는데 약분·대분수 표현이 덜 됐을 때 기록 (약점 2: 약분을 끝까지 하지 않는다)
+  function logForm() {
+    const c = state.causes;
+    c.actual.form = (c.actual.form || 0) + 1;
+    save();
   }
 
   function logCause(self, actual) {
@@ -759,7 +836,7 @@
         <button class="back" data-go="home">← 홈</button>
         <h2>🚩 '문제가 이상해요'로 저장한 문제</h2>
         <p class="lead">어른이 확인할 수 있게 저장해 둔 문제예요. 이 문제들은 채점에서 빠졌어요.</p>
-        ${list.length ? `<ol class="reports">${list.map((r) => `<li><div class="when">${esc(new Date(r.at).toLocaleString('ko-KR'))} · ${esc(r.tid)} · 난이도 ${r.level}</div><p>${txt(r.text)}</p><p class="muted">앱이 생각한 정답: ${esc(r.answer)}</p></li>`).join('')}</ol>
+        ${list.length ? `<ol class="reports">${list.map((r) => `<li><div class="when">${esc(new Date(r.at).toLocaleString('ko-KR'))} · ${esc(r.tid)} · 난이도 ${r.level}</div><p>${txt(r.text)}</p><p class="muted">앱이 생각한 정답: ${txt(r.answer)}</p></li>`).join('')}</ol>
           <button id="clear" class="btn">목록 모두 지우기</button>` : '<p class="muted">저장한 문제가 없어요.</p>'}
       </main>`;
     bindCommon();

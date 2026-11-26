@@ -3,6 +3,7 @@
 (function () {
   'use strict';
   const M5 = (globalThis.M5 = globalThis.M5 || {});
+  const H = (s) => M5.text.html(s);
   const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
   // 수직선: { min, max, marks: [{ v, closed }], seg: { from: 수|null, to: 수|null } }  (null이면 끝까지 이어짐)
@@ -39,18 +40,50 @@
 
   // 수 목록: { items: ['12', '15.5'] }
   function chips(f) {
-    return `<div class="fig-chips">${f.items.map((v) => `<span class="chip">${esc(v)}</span>`).join('')}</div>`;
+    return `<div class="fig-chips">${f.items.map((v) => `<span class="chip">${H(v)}</span>`).join('')}</div>`;
   }
 
   // 표: { title, head: [...], rows: [[...], ...] }
   function table(f) {
-    const cap = f.title ? `<caption>${esc(f.title)}</caption>` : '';
-    const head = `<thead><tr>${f.head.map((h) => `<th>${esc(h)}</th>`).join('')}</tr></thead>`;
-    const body = `<tbody>${f.rows.map((r) => `<tr>${r.map((c) => `<td>${esc(c)}</td>`).join('')}</tr>`).join('')}</tbody>`;
+    const cap = f.title ? `<caption>${H(f.title)}</caption>` : '';
+    const head = `<thead><tr>${f.head.map((h) => `<th>${H(h)}</th>`).join('')}</tr></thead>`;
+    const body = `<tbody>${f.rows.map((r) => `<tr>${r.map((c) => `<td>${H(c)}</td>`).join('')}</tr>`).join('')}</tbody>`;
     return `<table class="fig-table">${cap}${head}${body}</table>`;
   }
 
-  const KINDS = { numberline, cards, chips, table };
+  // 넓이 격자: 가로를 cols등분, 세로를 rows등분하고, 왼쪽 shadeCols칸 × 위쪽 shadeRows칸을 색칠
+  //   { cols, rows, shadeCols, shadeRows, square }
+  function grid(f) {
+    const cells = [];
+    for (let r = 0; r < f.rows; r++) {
+      for (let c = 0; c < f.cols; c++) {
+        const on = c < f.shadeCols && r < f.shadeRows;
+        const col = c < f.shadeCols;
+        cells.push(`<span class="${on ? 'on' : col ? 'col' : ''}"></span>`);
+      }
+    }
+    const shape = f.square ? '정사각형' : '직사각형';
+    return `<div class="fig-grid-wrap"><div class="fig-grid ${f.square ? 'sq' : ''}" style="--c:${f.cols};--r:${f.rows}" role="img" aria-label="${shape}을 가로 ${f.cols}등분, 세로 ${f.rows}등분하고 ${f.shadeCols * f.shadeRows}칸을 색칠한 그림">${cells.join('')}</div>
+      <p class="fig-legend"><span class="sw on"></span>색칠한 부분 <span class="sw col"></span>가로의 ${H(M5.frac.mkRaw(f.shadeCols, f.cols))}만큼</p></div>`;
+  }
+
+  // 직사각형(정사각형) 넓이: { w: 가로 글자, h: 세로 글자, square }
+  function rect(f) {
+    return `<div class="fig-rect ${f.square ? 'sq' : ''}" role="img" aria-label="가로 ${H(M5.text.plain(f.w))}, 세로 ${H(M5.text.plain(f.h))}인 ${f.square ? '정사각형' : '직사각형'}">
+      <div class="box"></div><span class="lw">${H(f.w)}</span><span class="lh">${H(f.h)}</span></div>`;
+  }
+
+  // 화살표 계산: { start: 글자, steps: ['× 3/4', ...] } 마지막 칸은 ?
+  function arrows(f) {
+    const parts = [`<span class="node">${H(f.start)}</span>`];
+    f.steps.forEach((s, i) => {
+      parts.push(`<span class="arr"><span class="op">${H(s)}</span><span class="line">→</span></span>`);
+      parts.push(`<span class="node ${i === f.steps.length - 1 ? 'q' : 'empty'}">${i === f.steps.length - 1 ? '?' : ''}</span>`);
+    });
+    return `<div class="fig-arrows" role="img" aria-label="화살표 규칙대로 계산하는 그림">${parts.join('')}</div>`;
+  }
+
+  const KINDS = { numberline, cards, chips, table, grid, rect, arrows };
   function render(fig) {
     if (!fig) return '';
     const fn = KINDS[fig.type];

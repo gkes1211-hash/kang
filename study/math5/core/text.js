@@ -5,6 +5,9 @@
 
   // 마지막 글자의 받침 정보 { bat: 받침 있음, rieul: 받침이 ㄹ }
   function tail(word) {
+    // 분수 표시 ⟪2 3/4⟫는 "2와 4분의 3"처럼 분자로 끝나게 읽는다
+    const fm = /(\d+|□)\/(?:\d+|□)⟫$/.exec(String(word).trim());
+    if (fm) return tail(fm[1]);
     const s = String(word).replace(/[\s'"’”)\]}.,!?…]+$/, '');
     const c = s.charAt(s.length - 1);
     const code = c.charCodeAt(0);
@@ -60,5 +63,16 @@
 
   const MODE = { ceil: '올림', floor: '버림', round: '반올림' };
 
-  M5.text = { tail, j, num, place, MODE };
+  // 분수 표시 ⟪w n/d⟫
+  const FR = /⟪(?:(\d+) )?(\d+|□)\/(\d+|□)⟫/g;
+  const escHtml = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  // 화면용 HTML: 특수 문자를 막고, 줄바꿈과 분수 표시를 바꾼다
+  function html(s) {
+    return escHtml(s).replace(/\n/g, '<br>').replace(FR, (m, w, n, d) =>
+      `<span class="mixed" aria-label="${w ? j(w, '와/과') + ' ' : ''}${d}분의 ${n}">${w ? `<span class="fw">${w}</span>` : ''}<span class="fr"><span class="nu">${n}</span><span class="de">${d}</span></span></span>`);
+  }
+  // 글자만: ⟪2 3/4⟫ → 2 3/4
+  const plain = (s) => String(s).replace(FR, (m, w, n, d) => `${w ? w + ' ' : ''}${n}/${d}`);
+
+  M5.text = { tail, j, num, place, MODE, html, plain };
 })();

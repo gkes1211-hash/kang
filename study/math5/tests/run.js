@@ -19,7 +19,7 @@ const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
 const files = [...html.matchAll(/<script src="([^"]+)"/g)].map((m) => m[1]).filter((f) => f !== 'app.js');
 for (const f of files) require(path.join(ROOT, f));
 const M5 = globalThis.M5;
-const D = M5.dec, G = M5.grade, T = M5.text;
+const D = M5.dec, G = M5.grade, T = M5.text, Fr = M5.frac;
 
 let failCount = 0;
 const failures = [];
@@ -47,6 +47,13 @@ console.log('1) 소수 계산·어림 도우미 검사');
   check('dec', D.parse('abc') === null && D.parse('') === null && D.parse('.') === null, '숫자가 아닌 입력');
   check('dec', D.digitAt('2749', 1) === 4 && D.digitAt('2.347', -2) === 4, '자리 숫자');
   check('text', T.j('25', '이/가') === '25가' && T.j('30', '이/가') === '30이' && T.j('7', '으로/로') === '7로', '조사 붙이기');
+  // 분수: 정수로만 계산
+  check('frac', Fr.key(Fr.mul('2/3', '3/4')) === '1/2' && Fr.key(Fr.mul('1 1/2', '2 1/3')) === '7/2', '분수 곱셈');
+  check('frac', Fr.key(Fr.add('1/3', '1/6')) === '1/2' && Fr.key(Fr.sub(1, '1/4')) === '3/4', '분수 덧셈·뺄셈');
+  check('frac', Fr.str('7/3') === '2 1/3' && Fr.mk('7/3') === '⟪2 1/3⟫' && Fr.mk('6/3') === '2', '대분수로 나타내기');
+  check('frac', Fr.eq('2/4', '1/2') && Fr.cmp('1/12', '1/3') < 0, '분수 비교 (단위분수: 분모가 클수록 작다)');
+  check('text', T.j('⟪2/3⟫', '을/를') === '⟪2/3⟫를' && T.j('⟪1 3/4⟫', '이/가') === '⟪1 3/4⟫이', '분수 뒤 조사 (분자로 읽어요)');
+  check('text', T.plain('⟪1 2/3⟫ × 4') === '1 2/3 × 4' && T.html('⟪2/3⟫').includes('class="fr"'), '분수 표시');
   check('text', T.j('사과', '을/를') === '사과를' && T.j('귤', '을/를') === '귤을' && T.j('5 kg', '은/는') === '5 kg은' && T.j('3 cm', '은/는') === '3 cm는', '조사 붙이기 2');
 }
 
@@ -67,6 +74,14 @@ console.log('2) 채점 규칙 검사');
   check('grade', !r2.ok && r2.missing === 0 && r2.extra === 1, '여러 개: 남는 수');
   const pair = P({ type: 'pair', labels: ['a', 'b'], values: ['241', '250'] });
   check('grade', G.grade(pair, ['241', '250']).ok && G.grade(pair, ['250', '241']).swapped, '두 칸: 정답·바뀜');
+  const fr = P({ type: 'frac', value: '7/3' }, [{ value: '2', cause: 'concept', msg: '' }]);
+  check('grade', G.grade(fr, { w: '2', n: '1', d: '3' }).ok, '분수: 대분수 정답');
+  check('grade', G.grade(fr, { w: '2', n: '2', d: '6' }).form === 'reduce', '분수: 약분 안 함 → 틀림이 아니라 약분 안내');
+  check('grade', G.grade(fr, { w: '', n: '7', d: '3' }).form === 'improper', '분수: 가분수 → 대분수 안내');
+  check('grade', G.grade(fr, { w: '2', n: '', d: '' }).pattern, '분수: 오답 패턴 찾기');
+  check('grade', G.grade(fr, { w: '', n: '3', d: '' }).invalid && G.grade(fr, { w: '', n: '1', d: '0' }).invalid, '분수: 잘못된 입력');
+  const frInt = P({ type: 'frac', value: '4' });
+  check('grade', G.grade(frInt, { w: '4', n: '', d: '' }).ok && G.grade(frInt, { w: '', n: '8', d: '2' }).form === 'reduce', '분수: 자연수 답');
   const multi = P({ type: 'multi', options: [{}, {}, {}], values: [0, 2] });
   check('grade', G.grade(multi, [2, 0]).ok && !G.grade(multi, [0]).ok, '여러 개 고르기');
 }
@@ -146,10 +161,32 @@ for (const tpl of M5.templates) {
     if (a.type === 'num' || a.type === 'pair') {
       for (const v of a.type === 'num' ? [a.value] : a.values) check(where, D.cmp(v, 0) > 0, `정답이 0 이하예요: ${v}`, p);
     }
+    if (a.type === 'frac') {
+      // 분수 답: 기약분수, 0보다 크고, 분모가 지나치게 크지 않은지 (기획서 9번)
+      for (const v of [a.value, ...p.patterns.map((x) => x.value)]) {
+        const f = Fr.parse(v);
+        check(where, !!f && f.n > 0, `분수가 아니거나 0 이하예요: ${v}`, p);
+        if (f) check(where, Fr.key(f) === String(v), `기약분수로 저장되지 않았어요: ${v}`, p);
+      }
+      const f = Fr.parse(a.value);
+      check(where, f.d <= 100, `분모가 너무 커요: ${a.value}`, p);
+      check(where, f.n / f.d < 500, `답이 너무 커요: ${a.value}`, p);
+      // 값은 맞지만 약분하지 않거나 가분수로 쓰면 '틀림'이 아니라 안내 (기획서 8번)
+      const pp = Fr.parts(f);
+      if (pp.n) {
+        check(where, G.grade(p, { w: pp.w ? String(pp.w) : '', n: String(pp.n * 2), d: String(pp.d * 2) }).form === 'reduce', '약분하지 않은 답을 약분 안내로 처리하지 않아요', p);
+        if (pp.w) check(where, G.grade(p, { w: '', n: String(f.n), d: String(f.d) }).form === 'improper', '가분수 답을 대분수 안내로 처리하지 않아요', p);
+      } else {
+        check(where, G.grade(p, { w: '', n: String(pp.w * 3), d: '3' }).form === 'reduce', '자연수 답을 분수로 쓰면 약분 안내가 나와야 해요', p);
+      }
+    }
 
     // (6) 문장·힌트·풀이가 제대로 있는지
     const allText = [p.text, ...(p.hints || []), ...(p.solution || []), ...((a.options || []).map((o) => o.text || ''))].join(' ');
     check(where, !BAD_WORDS.test(allText), '문장에 이상한 글자(undefined 등)가 있어요', p);
+    check(where, !/[⟪⟫]/.test(T.plain(allText)), '분수 표시가 깨졌어요', p);
+    check(where, !/[가-힣]\(이\)|을\(를\)|이\/가|을\/를/.test(allText), '조사가 정리되지 않았어요', p);
+    if (p.essay) check(where, Array.isArray(p.essay.checklist) && p.essay.checklist.length >= 2 && p.essay.checklist.every((c) => c.q && c.concept), '서술형 체크리스트가 없어요', p);
     check(where, Array.isArray(p.hints) && p.hints.length === 3 && p.hints.every((h) => typeof h === 'string' && h.length > 5), '힌트가 3단계가 아니에요', p);
     check(where, Array.isArray(p.solution) && p.solution.length > 0, '풀이가 없어요', p);
     check(where, !!M5.findSub(p.sub) && !!M5.findSub(p.sub).sub.concept, '개념 설명이 없어요', p);
@@ -167,7 +204,7 @@ for (const tpl of M5.templates) {
 console.log('4) 무한 모드 검사 (문제 3000개씩 흉내 내기)');
 const engineRows = [];
 {
-  const scopes = [{ unit: 1 }, ...M5.units[0].subs.map((s) => ({ unit: 1, sub: s.id }))];
+  const scopes = M5.units.flatMap((u) => [{ unit: u.id }, ...u.subs.map((s) => ({ unit: u.id, sub: s.id }))]);
   for (const scope of scopes) {
     const state = M5.store.fresh();
     const sess = M5.createSession({ scope, state, rng });
@@ -193,13 +230,14 @@ const engineRows = [];
       if (badRun === 2) { badRun = 0; if (before > 1) want = -1; }
       if (ch !== want || sess.level !== before + want) levelBad++;
     }
-    const name = scope.sub ? M5.findSub(scope.sub).sub.name : '1단원 전체 섞기';
+    const name = scope.sub ? `${scope.unit}단원 ${M5.findSub(scope.sub).sub.name}` : `${scope.unit}단원 전체 섞기`;
     check('무한 모드 ' + name, triple === 0, `같은 스타일이 3번 연속 ${triple}번 나왔어요`);
     check('무한 모드 ' + name, levelBad === 0, `난이도 조절이 규칙과 달라요 (${levelBad}번)`);
     check('무한 모드 ' + name, repeat / 3000 < 0.01, `최근 50문제와 같은 문제가 ${repeat}번 나왔어요`);
     const ratioA = a / 3000;
     check('무한 모드 ' + name, ratioA > 0.5 && ratioA < 0.72, `문제집 형식 비율이 ${Math.round(ratioA * 100)}%예요`);
-    if (!scope.sub) check('무한 모드 ' + name, Object.keys(subs).length === 7 && Math.min(...Object.values(subs)) > 250, '소단원이 골고루 섞이지 않아요');
+    const nSubs = M5.units.find((u) => u.id === scope.unit).subs.length;
+    if (!scope.sub) check('무한 모드 ' + name, Object.keys(subs).length === nSubs && Math.min(...Object.values(subs)) > 3000 / nSubs / 3, '소단원이 골고루 섞이지 않아요');
     engineRows.push({ name, ratioA, repeat, triple, levelBad, subs });
   }
 }
@@ -251,7 +289,7 @@ console.log(`\n[비슷한 문제 도전]\n  ${simRows.dupSets / simRows.sets < 0
 const subCount = {};
 for (const t of M5.templates) subCount[t.sub] = (subCount[t.sub] || 0) + 1;
 console.log('\n[소단원별 문제 틀 수]');
-for (const s of M5.units[0].subs) {
+for (const s of M5.units.flatMap((u) => u.subs)) {
   const c = subCount[s.id] || 0;
   check('틀 수', c >= 8, `${s.name} 소단원의 틀이 ${c}개예요 (8개 이상 필요)`);
   console.log(`  ${c >= 8 ? '✓' : '✗'} ${s.name}: ${c}개`);

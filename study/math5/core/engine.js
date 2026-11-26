@@ -61,6 +61,7 @@
     const kept = [];
     for (const pt of patterns) {
       if (Array.isArray(pt.value) && !pt.value.length) continue; // 아무것도 고르지 않은 답은 패턴으로 쓰지 않는다
+      if (kept.some((k) => G.sameValue(a.type, k.value, pt.value))) continue; // 값이 같은 패턴은 앞의 것 하나만
       if (G.sameValue(a.type, pt.value, ans)) {
         if (pt.soft) continue;
         return null;

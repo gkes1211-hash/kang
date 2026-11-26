@@ -22,6 +22,7 @@
       case 'nums': return numSetKey(a) === numSetKey(b);
       case 'pair': return numEq(a[0], b[0]) && numEq(a[1], b[1]);
       case 'multi': return idxSetKey(a) === idxSetKey(b);
+      case 'frac': return M5.frac.eq(a, b);
       case 'choice': case 'ineq': case 'ox': return a === b;
       default: throw new Error('모르는 답 형식: ' + type);
     }
@@ -68,6 +69,26 @@
         const swapped = numEq(ds[0], a.values[1]) && numEq(ds[1], a.values[0]);
         return { ok: false, wrong, swapped, pattern: findPattern(p, (v) => numEq(v[0], ds[0]) && numEq(v[1], ds[1])) };
       }
+      case 'frac': {
+        // 입력: { w: 자연수 칸, n: 분자 칸, d: 분모 칸 }
+        const F = M5.frac;
+        const inp = input || {};
+        const w = String(inp.w || '').trim(), n = String(inp.n || '').trim(), d = String(inp.d || '').trim();
+        if (!w && !n && !d) return { empty: true };
+        const nat = (s) => /^\d+$/.test(s);
+        if ((w && !nat(w)) || (n && !nat(n)) || (d && !nat(d))) return { invalid: '칸마다 자연수만 써 주세요.' };
+        if (!n !== !d) return { invalid: '분자와 분모를 모두 써 주세요.' };
+        if (d && +d === 0) return { invalid: '분모에는 0을 쓸 수 없어요.' };
+        if (n && +n === 0) return { invalid: '분자에 0은 쓰지 않아요. 자연수 답이면 자연수 칸에만 써요.' };
+        const val = n ? F.make((+w || 0) * +d + +n, +d) : F.make(+w, 1);
+        if (F.eq(val, a.value)) {
+          // 값은 맞았는데 표현이 덜 된 경우: 틀림이 아니라 따로 안내한다 (기획서 8번)
+          if (n && F.gcd(+n, +d) > 1) return { form: 'reduce' };
+          if (n && +n >= +d) return { form: 'improper' };
+          return { ok: true };
+        }
+        return { ok: false, pattern: findPattern(p, (v) => F.eq(v, val)) };
+      }
       case 'ineq': {
         if (!['>', '<', '='].includes(input)) return { empty: true };
         if (input === a.value) return { ok: true };
@@ -106,6 +127,7 @@
     const unit = a.unit ? ' ' + a.unit : '';
     switch (a.type) {
       case 'num': return n(a.value) + unit;
+      case 'frac': return M5.frac.mk(a.value) + unit;
       case 'nums': return a.values.map(n).join(', ');
       case 'pair': return a.labels.map((l, i) => `${l}: ${n(a.values[i])}`).join(', ');
       case 'ineq': return a.value;
@@ -119,6 +141,10 @@
   // 테스트용: 정답을 아이가 입력한 것처럼 만들기
   function inputFor(type, value) {
     if (type === 'nums') return value.join(', ');
+    if (type === 'frac') {
+      const p = M5.frac.parts(value);
+      return p.n ? { w: p.w ? String(p.w) : '', n: String(p.n), d: String(p.d) } : { w: String(p.w), n: '', d: '' };
+    }
     return value;
   }
 
