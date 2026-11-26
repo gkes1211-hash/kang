@@ -316,3 +316,7 @@ button.mini:hover { border-color: var(--accent); }
   .banner .goal { margin-left: 0; }
   .btns { flex-wrap: wrap; }
 }
+
+/* 문제 풀기 화면의 "← 소단원 고르기" (두 칸 위에 한 줄로) */
+.playback { grid-column: 1 / -1; justify-self: start; margin-bottom: -10px; padding: 4px 0; }
+.playback:hover { color: var(--accent-ink); }

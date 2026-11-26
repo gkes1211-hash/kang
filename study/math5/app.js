@@ -164,6 +164,7 @@
   //   opts.onDone(result) 끝났을 때 { firstOk, firstInput, firstRes, actual, self }
   //   opts.onWeird()  "문제가 이상해요"
   //   opts.onStop()   "그만 풀기"
+  //   opts.onBack()   "← 소단원 고르기"
   function solve(p, opts) {
     // phase: answer(처음 풀기) → diagnose(어디서 틀렸을까) → explained(원인 보기) → retry(다시 풀기) → copy(정답 보고 따라 풀기) → done
     let phase = 'answer';
@@ -198,6 +199,7 @@
       const lvBox = opts.levelText ? `<div class="level">${opts.levelText}</div>` : '';
       app.innerHTML = `${header(statsHtml())}
         <main class="play">
+          <button id="back" class="back playback">← 소단원 고르기</button>
           <section class="qcard">
             ${opts.banner || ''}
             <div class="tags">
@@ -228,6 +230,7 @@
       $('#submit').addEventListener('click', submit);
       $('#weird').addEventListener('click', () => opts.onWeird(result));
       $('#stop').addEventListener('click', () => opts.onStop());
+      $('#back').addEventListener('click', () => opts.onBack());
       $$('.opt').forEach((b) => b.addEventListener('click', () => choose(b)));
       onKey = keyHandler;
       if (opts.startWith) {
@@ -544,6 +547,7 @@
         },
         onWeird(r) { weirdSave(p, r); nextNormal(); },
         onStop: result,
+          onBack: back,
       });
     }
 
@@ -595,6 +599,7 @@
             step();
           },
           onStop: result,
+          onBack: back,
         });
       }
       function challengeResult() {
@@ -663,6 +668,7 @@
           onDone() { i++; stepFix(); },
           onWeird(res) { weirdSave(r.q, res); i++; stepFix(); },
           onStop: result,
+          onBack: back,
         });
       };
       stepFix();
@@ -699,6 +705,9 @@
       $('#stop').addEventListener('click', result);
     }
 
+    // 소단원 고르기 화면으로 돌아가기
+    function back() { subs(scope.unit); }
+
     function result() {
       onKey = null;
       const rate = run.solved ? Math.round((run.correct / run.solved) * 100) : 0;
@@ -719,10 +728,11 @@
           ${run.passed.length ? `<div class="typelist"><b>🏅 통과한 유형</b><ul>${list(run.passed)}</ul></div>` : ''}
           ${run.retried.length ? `<div class="typelist"><b>🌱 다음에 다시 도전할 유형</b><ul>${list(run.retried)}</ul></div>` : ''}
           <p>지금 난이도 <span class="stars">${stars(lv)}</span> ${M5.LEVELS[lv - 1]} ${lvMsg}</p>
-          <div class="btns"><button id="again" class="btn primary">계속 풀기</button><button class="btn" data-go="home">홈으로</button></div>
+          <div class="btns"><button id="again" class="btn primary">계속 풀기</button><button id="toSubs" class="btn">소단원 고르기</button><button class="btn" data-go="home">홈으로</button></div>
         </section></main>`;
       bindCommon();
       $('#again').addEventListener('click', () => play(scope));
+      $('#toSubs').addEventListener('click', back);
     }
 
     nextNormal();
