@@ -434,3 +434,63 @@ button.mini:hover { border-color: var(--accent); }
 /* 보기가 회전판일 때: 작게, 두 칸씩 */
 .opts.figs:has(.fig-spin) { grid-template-columns: 1fr 1fr; }
 .opts.figs .opt svg.fig-spin { flex: 0 0 120px; width: 120px; max-width: 120px; }
+
+/* ---------- 6단계: 홈 복습 카드·모드·내 기록·설정 ---------- */
+.nav { display: flex; gap: 8px; }
+.navb { background: var(--surface-2); border: 1px solid var(--line); border-radius: 99px; padding: 6px 14px; font-size: 16px; font-weight: 600; }
+.navb:hover { border-color: var(--accent); color: var(--accent-ink); }
+.review-card {
+  display: flex; align-items: center; justify-content: space-between; gap: 18px; flex-wrap: wrap;
+  background: var(--surface); border: 2px solid var(--line); border-radius: 20px; padding: 18px 22px; margin-bottom: 14px; box-shadow: var(--shadow);
+}
+.review-card.has { border-color: var(--star); background: #fffaf0; }
+.review-card h2 { margin: 0 0 4px; font-size: 22px; }
+.review-card h2 b { color: var(--hint-ink); }
+.review-card p { margin: 0; color: var(--ink-2); }
+.review-card .btn.primary { width: auto; padding: 12px 28px; }
+.review-card .btn.primary:disabled { background: var(--surface-2); border-color: var(--line); color: var(--ink-2); filter: none; }
+.minis.three { grid-template-columns: repeat(3, 1fr); }
+.mode-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.mode { display: inline-flex; background: var(--surface-2); border: 1px solid var(--line); border-radius: 99px; padding: 4px; gap: 4px; }
+.modeb { border: 0; background: none; border-radius: 99px; padding: 6px 14px; font-size: 16px; font-weight: 600; color: var(--ink-2); }
+.modeb.on { background: var(--accent); color: #fff; }
+.set10 { margin-left: 8px; font-size: 14px; background: var(--accent-soft); color: var(--accent-ink); border-radius: 99px; padding: 1px 10px; }
+.banner.rev { background: #fff4d6; color: #7a5200; }
+.banner.rev .tag { background: #fff; }
+.warn-box { background: var(--bad-soft); color: var(--bad); border-radius: 12px; padding: 10px 14px; }
+.retry-item { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.btn.small-btn { width: auto; padding: 8px 16px; font-size: 16px; }
+
+.records .rcard { background: var(--surface); border: 1px solid var(--line); border-radius: 18px; padding: 16px 20px; margin-top: 16px; box-shadow: var(--shadow); min-width: 0; }
+.records .rcard h3 { margin: 4px 0 10px; font-size: 19px; }
+.records .rcard h3 + p { margin-top: 0; }
+.rgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.rgrid .rcard { margin-top: 16px; }
+.meter { flex: 1; height: 10px; border-radius: 99px; background: var(--surface-2); overflow: hidden; min-width: 60px; }
+.meter > span { display: block; height: 100%; background: var(--accent); border-radius: 99px; }
+.unit-rate summary, .unit-rate li, .causes li { display: flex; align-items: center; gap: 10px; padding: 4px 0; }
+.unit-rate summary { cursor: pointer; font-weight: 600; }
+.unit-rate ul, .causes { list-style: none; margin: 0; padding: 0 0 6px 18px; }
+.causes { padding-left: 0; }
+.ur-name { width: 190px; flex: none; font-size: 16px; }
+.unit-rate li .ur-name { width: 172px; font-size: 15px; font-weight: 400; }
+.unit-rate b, .causes b { width: 48px; text-align: right; font-variant-numeric: tabular-nums; }
+.top3 { padding-left: 22px; margin: 0 0 8px; }
+.top3 li { margin: 6px 0; }
+.pill { font-size: 13px; background: #fff4d6; color: #7a5200; border-radius: 99px; padding: 1px 8px; }
+.pill.ok { background: var(--good-soft); color: var(--good); }
+.plain { list-style: none; padding: 0; margin: 0 0 8px; }
+.plain li { padding: 3px 0; }
+.stamps { display: flex; flex-wrap: wrap; gap: 8px; }
+.mini-stamp { font-size: 15px; border: 2px solid #e5a4a0; color: #b5332b; border-radius: 99px; padding: 3px 12px; background: #fff7f6; }
+.btns.left { justify-content: flex-start; }
+.import-sum { margin-top: 10px; background: var(--surface-2); border-radius: 12px; padding: 10px 14px; }
+.danger-zone { border-color: #f3c9b5; }
+.btn.danger { border-color: var(--bad); color: var(--bad); }
+.btn.primary.danger { background: var(--bad); color: #fff; }
+@media (max-width: 900px) {
+  .rgrid, .minis.three { grid-template-columns: 1fr; }
+  .ur-name, .unit-rate li .ur-name { width: 120px; }
+}
+.records .rcard .btns.left { margin: 6px 0 14px; }
+.records .rcard h3 ~ h3 { margin-top: 18px; }

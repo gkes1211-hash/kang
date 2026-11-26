@@ -86,6 +86,47 @@ console.log('2) 채점 규칙 검사');
   check('grade', G.grade(multi, [2, 0]).ok && !G.grade(multi, [0]).ok, '여러 개 고르기');
 }
 
+// ---------------------------------------------------------------- 2-2. 오늘의 복습·기록 저장
+console.log('2-2) 오늘의 복습(1일·7일·30일)과 백업 검사');
+{
+  const R = M5.review, S = M5.store;
+  check('review', R.addDays('2026-11-26', 7) === '2026-12-03' && R.addDays('2026-12-30', 30) === '2027-01-29' && R.addDays('2027-02-28', 1) === '2027-03-01', '날짜 더하기');
+  const st = S.fresh();
+  const p = { tid: 'u1s4-basic', unit: 1, sub: 'u1s4', level: 2 };
+  R.markWrong(st, p, '2026-11-26');
+  check('review', R.dueList(st, '2026-11-26').length === 0 && R.dueList(st, '2026-11-27').length === 1, '틀린 다음 날 복습');
+  let r = R.answered(st, p.tid, true, '2026-11-27');
+  check('review', r.next === '2026-12-03' && !r.mastered, '1일 복습을 맞히면 틀린 날로부터 7일 뒤');
+  check('review', R.dueList(st, '2026-12-02').length === 0 && R.dueList(st, '2026-12-03').length === 1, '7일 복습 날짜');
+  r = R.answered(st, p.tid, true, '2026-12-05'); // 이틀 늦게 복습
+  check('review', r.next === '2026-12-26' && !r.mastered, '7일 복습을 맞히면 틀린 날로부터 30일 뒤');
+  r = R.answered(st, p.tid, true, '2026-12-26');
+  check('review', r.mastered && !st.review[p.tid] && st.mastered[p.tid] === '2026-12-26', '3번 연속 맞히면 완전히 익힘');
+  R.markWrong(st, p, '2027-01-10');
+  check('review', !st.mastered[p.tid] && st.review[p.tid].due === '2027-01-11', '익힌 유형을 다시 틀리면 다시 복습');
+  r = R.answered(st, p.tid, true, '2027-01-11');
+  r = R.answered(st, p.tid, false, '2027-01-17');
+  check('review', r.next === '2027-01-18' && st.review[p.tid].stage === 0 && st.review[p.tid].wrongDate === '2027-01-17', '복습에서 틀리면 그날부터 다시 1일');
+  // 늦게 복습해도 다음 복습은 적어도 내일
+  const q = { tid: 'u2s1-basic', unit: 2, sub: 'u2s1', level: 1 };
+  R.markWrong(st, q, '2026-01-01');
+  r = R.answered(st, q.tid, true, '2026-03-01');
+  check('review', r.next === '2026-03-02', '아주 늦게 복습하면 다음 복습은 다음 날');
+
+  // 백업 내보내기 → 불러오기
+  st.stats.u1 = { s: 12, c: 9 };
+  st.days['2026-11-26'] = { s: 12, c: 9, p: 1 };
+  const back = S.importText(S.exportText(st));
+  check('backup', JSON.stringify(back.state.review) === JSON.stringify(st.review) && back.state.stats.u1.s === 12 && back.state.days['2026-11-26'].c === 9, '백업 내보내고 불러오면 그대로');
+  check('backup', S.summary(back.state).solved === 12, '백업 요약');
+  let bad = 0;
+  for (const txt of ['{', '{"app":"other","state":{}}', '[]', '{"app":"math5","state":{"v":2}}']) { try { S.importText(txt); } catch (e) { bad++; } }
+  check('backup', bad === 4, '잘못된 백업 파일은 거절');
+  // 예전 형식 기록(복습 칸이 없던 때)도 새 형식으로 채워지는지
+  const old = S.normalize({ v: 1, stats: { u1: { s: 3, c: 1 } }, today: { date: '2026-01-01', solved: 3 } });
+  check('backup', old.review && old.mastered && old.days && old.settings.mode === 'endless' && old.stats.u1.s === 3, '예전 기록 불러오기');
+}
+
 // ---------------------------------------------------------------- 3. 문제 틀 (틀마다 1000문제)
 console.log(`3) 문제 틀 검사 — 틀 ${M5.templates.length}개 × ${PER}문제`);
 const rng = M5.rand.seeded(SEED);

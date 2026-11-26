@@ -187,6 +187,9 @@
         let w = 1 / (1 + (tplCount[t.id] || 0));
         if (!scope.sub) w *= 1 / (1 + (subCount[t.sub] || 0) / 4);
         if (t.weak && t.weak.length) w *= 1.5;
+        // 약점 자동 갱신 (기획서 7번): 이 아이가 자주 틀린 유형일수록 조금 더 자주 (최대 1.5배)
+        const wr = (state.wrong && state.wrong[t.id]) || 0;
+        w *= 1 + Math.min(wr, 5) * 0.1;
         return w;
       });
       return rng.weighted(group, weights);

@@ -70,14 +70,48 @@
   function header(extra = '') {
     return `<header class="top"><button class="brand" data-go="home">🧮 5학년 2학기 수학</button>${extra}</header>`;
   }
+  const NAV = '<nav class="nav"><button class="navb" data-go="records">📊 내 기록</button><button class="navb" data-go="settings">⚙️ 설정</button></nav>';
   function bindCommon() {
     $$('[data-go]').forEach((b) => b.addEventListener('click', () => {
       const go = b.dataset.go;
       if (go === 'home') home();
       else if (go === 'reports') reports();
       else if (go === 'retry') retryList();
+      else if (go === 'records') records();
+      else if (go === 'settings') settings();
+      else if (go === 'review') reviewSession();
     }));
   }
+
+  // 처음 낸 답을 기록한다 (sign = -1이면 "문제가 이상해요"로 되돌리기)
+  //   오늘 기록, 날짜별 기록, 소단원·단원 정답률, 틀린 유형 횟수, 복습 일정
+  function recordFirst(p, ok, sign = 1) {
+    S.ensureToday(state);
+    const t = state.today;
+    t.solved += sign;
+    if (ok) t.correct += sign;
+    if (sign > 0) {
+      if (ok) { t.streak++; t.best = Math.max(t.best, t.streak); } else t.streak = 0;
+    }
+    S.bumpDay(state, 's', sign);
+    if (ok) S.bumpDay(state, 'c', sign);
+    S.bump(state, p.sub, ok, sign);
+    S.bump(state, 'u' + p.unit, ok, sign);
+    if (!ok) {
+      state.wrong[p.tid] = Math.max(0, (state.wrong[p.tid] || 0) + sign);
+      // 틀린 유형은 1일·7일·30일 뒤에 다시 (기획서 7번)
+      if (sign > 0) M5.review.markWrong(state, p, S.todayStr());
+    }
+    save();
+    const st = $('.stats');
+    if (st) st.outerHTML = statsHtml();
+  }
+  function reportProblem(p) {
+    state.reports.push({ at: new Date().toISOString(), tid: p.tid, level: p.level, text: p.text, answer: G.answerText(p), key: p.key });
+    save();
+    toast('알려 줘서 고마워요! 이 문제는 채점에서 빼고 저장해 둘게요.');
+  }
+  const fmtDate = (d) => { const [, m, dd] = d.split('-'); return `${Number(m)}월 ${Number(dd)}일`; };
   function statsHtml() {
     const t = state.today;
     return `<div class="stats">
@@ -93,21 +127,38 @@
     S.ensureToday(state);
     onKey = null;
     const t = state.today;
+    const today = S.todayStr();
     const rate = t.solved ? Math.round((t.correct / t.solved) * 100) : 0;
-    const stampCount = Object.keys(state.stamps).length;
-    app.innerHTML = `${header()}
+    const due = M5.review.dueList(state, today);
+    const upcoming = Object.values(state.review).map((x) => x.due).filter((d) => d > today).sort()[0];
+    const mode = state.settings.mode;
+    app.innerHTML = `${header(NAV)}
       <main class="home">
+        <section class="review-card ${due.length ? 'has' : ''}">
+          <div>
+            <h2>📅 오늘의 복습 <b>${due.length}개</b></h2>
+            <p>${due.length ? '예전에 틀렸던 유형을 다시 풀어 봐요. 3번 연속 맞히면 완전히 익힌 거예요!' : upcoming ? `오늘은 복습할 유형이 없어요. 다음 복습은 ${fmtDate(upcoming)}이에요.` : '틀린 유형이 생기면 1일, 7일, 30일 뒤에 여기서 다시 풀어요.'}</p>
+          </div>
+          <button class="btn primary" data-go="review" ${due.length ? '' : 'disabled'}>복습 시작</button>
+        </section>
         <section class="today">
           <div><span class="k">오늘 푼 문제</span><b>${t.solved}</b></div>
           <div><span class="k">처음에 맞힌 문제</span><b>${t.correct}</b></div>
           <div><span class="k">정답률</span><b>${rate}%</b></div>
           <div><span class="k">오늘 통과한 유형</span><b>🏅 ${t.passed}</b></div>
         </section>
-        <section class="minis">
+        <section class="minis three">
           <button class="mini" data-go="retry"><span class="k">다음에 다시 도전</span><b>${state.retry.length}개</b></button>
-          <div class="mini"><span class="k">지금까지 받은 도장</span><b>🏅 ${stampCount}개 유형</b></div>
+          <button class="mini" data-go="records"><span class="k">받은 도장</span><b>🏅 ${Object.keys(state.stamps).length}개 유형</b></button>
+          <button class="mini" data-go="records"><span class="k">완전히 익힌 유형</span><b>⭐ ${Object.keys(state.mastered).length}개</b></button>
         </section>
-        <h2>단원을 골라요</h2>
+        <div class="mode-row">
+          <h2>단원을 골라요</h2>
+          <div class="mode" role="group" aria-label="모드 선택">
+            <button class="modeb ${mode === 'endless' ? 'on' : ''}" data-mode="endless">♾️ 무한 모드</button>
+            <button class="modeb ${mode === 'set10' ? 'on' : ''}" data-mode="set10">🔟 10문제 모드</button>
+          </div>
+        </div>
         <div class="units">
           ${UNITS.map((u) => {
             const ready = M5.units.some((x) => x.id === u.id);
@@ -119,10 +170,16 @@
             </button>`;
           }).join('')}
         </div>
-        <p class="foot"><button class="link" data-go="reports">🚩 '문제가 이상해요'로 저장한 문제 (${state.reports.length})</button></p>
+        ${S.saveOk() ? '' : '<p class="warn-box">⚠️ 기록을 저장하지 못하고 있어요. 설정에서 백업 파일을 내보내 두세요.</p>'}
       </main>`;
     bindCommon();
     $$('.unit:not([disabled])').forEach((b) => b.addEventListener('click', () => subs(Number(b.dataset.unit))));
+    $$('.modeb').forEach((b) => b.addEventListener('click', () => {
+      state.settings.mode = b.dataset.mode;
+      save();
+      $$('.modeb').forEach((x) => x.classList.toggle('on', x === b));
+      toast(b.dataset.mode === 'set10' ? '10문제를 풀면 결과를 보여 줘요.' : '그만 풀 때까지 문제가 계속 나와요.');
+    }));
   }
 
   // ------------------------------------------------------------------ 소단원 고르기
@@ -208,7 +265,7 @@
       const lvBox = opts.levelText ? `<div class="level">${opts.levelText}</div>` : '';
       app.innerHTML = `${header(statsHtml())}
         <main class="play">
-          <button id="back" class="back playback">← 소단원 고르기</button>
+          <button id="back" class="back playback">${esc(opts.backLabel || '← 소단원 고르기')}</button>
           <section class="qcard">
             ${opts.banner || ''}
             <div class="tags">
@@ -576,46 +633,39 @@
   }
 
   // ------------------------------------------------------------------ 무한 모드
-  function play(scope) {
+  // opts.retryTid: "다음에 다시 도전"에서 그 유형의 비슷한 문제 도전부터 시작
+  function play(scope, opts = {}) {
     const sess = M5.createSession({ scope, state, rng });
-    const run = { solved: 0, correct: 0, streak: 0, best: 0, lastBreak: 0, startLevel: sess.level, passed: [], retried: [] };
-    const levelText = () => `난이도 <span class="stars">${stars(sess.level)}</span> <span class="lvname">${M5.LEVELS[sess.level - 1]}</span>`;
+    const set10 = state.settings.mode === 'set10';
+    const run = { solved: 0, correct: 0, streak: 0, best: 0, lastBreak: 0, startLevel: sess.level, passed: [], retried: [], normal: 0 };
+    const levelText = () => `난이도 <span class="stars">${stars(sess.level)}</span> <span class="lvname">${M5.LEVELS[sess.level - 1]}</span>${set10 ? ` <span class="set10">🔟 ${run.normal + 1} / 10번째</span>` : ''}`;
 
     // 처음 낸 답 기록 (sign = -1이면 "문제가 이상해요"로 되돌리기)
     function count(p, ok, sign = 1) {
-      S.ensureToday(state);
-      const t = state.today;
-      t.solved += sign;
       run.solved += sign;
-      if (ok) { t.correct += sign; run.correct += sign; }
+      if (ok) run.correct += sign;
       if (sign > 0) {
-        if (ok) { t.streak++; t.best = Math.max(t.best, t.streak); run.streak++; run.best = Math.max(run.best, run.streak); }
-        else { t.streak = 0; run.streak = 0; }
+        if (ok) { run.streak++; run.best = Math.max(run.best, run.streak); } else run.streak = 0;
       }
-      S.bump(state, p.sub, ok, sign);
-      S.bump(state, 'u' + p.unit, ok, sign);
-      save();
-      const st = $('.stats');
-      if (st) st.outerHTML = statsHtml();
+      recordFirst(p, ok, sign);
     }
     function weirdSave(p, result) {
-      state.reports.push({ at: new Date().toISOString(), tid: p.tid, level: p.level, text: p.text, answer: G.answerText(p), key: p.key });
+      reportProblem(p);
       if (result.firstOk != null) count(p, result.firstOk, -1); // 채점에서 빼기
-      save();
-      toast('알려 줘서 고마워요! 이 문제는 채점에서 빼고 저장해 둘게요.');
     }
 
     // ---- 무한 모드 한 문제
     function nextNormal() {
-      if (run.solved >= run.lastBreak + 20) { run.lastBreak = run.solved; rest(); return; }
+      if (set10 && run.normal >= 10) { result(true); return; }
+      if (!set10 && run.solved >= run.lastBreak + 20) { run.lastBreak = run.solved; rest(); return; }
       const p = sess.next();
       solve(p, {
         fix: true,
         levelText: levelText(),
         onFirst(ok) {
           count(p, ok);
+          run.normal++;
           const change = sess.record(ok);
-          if (!ok) { state.wrong[p.tid] = (state.wrong[p.tid] || 0) + 1; save(); }
           if (change > 0) toast('⭐ 잘하고 있어요! 다음 문제부터 한 단계 어려워져요.');
           if (change < 0) toast('다음 문제부터 한 단계 쉽게 해 볼게요. 천천히 해요!');
         },
@@ -757,6 +807,7 @@
       s.n++;
       s.last = S.todayStr();
       state.today.passed++;
+      S.bumpDay(state, 'p', 1);
       state.retry = state.retry.filter((x) => x.tid !== orig.tid);
       run.passed.push(orig.tid);
       save();
@@ -787,7 +838,7 @@
     function back() { subs(scope.unit); }
 
     // "그만 풀기": 오늘의 결과를 요약해서 소단원 고르기 페이지 맨 위에 보여 준다
-    function result() {
+    function result(finished10) {
       if (!run.solved) { subs(scope.unit); return; }
       const rate = Math.round((run.correct / run.solved) * 100);
       const lv = sess.level;
@@ -795,7 +846,7 @@
       const list = (ids) => [...new Set(ids)].map((id) => esc(typeName(id))).join(', ');
       const where = scope.sub ? M5.findSub(scope.sub).sub.name : '전체 섞기';
       const summary = `<section class="summary" aria-label="오늘의 결과">
-          <div class="sum-head"><span class="big-emoji">${rate >= 80 ? '🏆' : rate >= 50 ? '🌟' : '🌱'}</span><div><h3>오늘의 결과</h3><p class="muted small">방금 푼 소단원: ${esc(where)}</p></div></div>
+          <div class="sum-head"><span class="big-emoji">${rate >= 80 ? '🏆' : rate >= 50 ? '🌟' : '🌱'}</span><div><h3>${finished10 ? '10문제 완료! 오늘의 결과' : '오늘의 결과'}</h3><p class="muted small">방금 푼 소단원: ${esc(where)}</p></div></div>
           <div class="result">
             <div><span class="k">푼 문제</span><b>${run.solved}</b></div>
             <div><span class="k">맞힌 문제</span><b>${run.correct}</b></div>
@@ -809,7 +860,83 @@
       subs(scope.unit, summary);
     }
 
+    if (opts.retryTid) {
+      // "다음에 다시 도전"에서 왔으면 그 유형의 비슷한 문제 도전부터
+      const tpl = M5.templates.find((t) => t.id === opts.retryTid);
+      const item = state.retry.find((x) => x.tid === opts.retryTid);
+      if (tpl) { challengeIntro(M5.makeProblem(tpl, (item && item.level) || tpl.levels[0], rng, null), null); return; }
+    }
     nextNormal();
+  }
+
+  // ------------------------------------------------------------------ 오늘의 복습 (기획서 7번)
+  function reviewSession() {
+    const today = S.todayStr();
+    const list = M5.review.dueList(state, today);
+    if (!list.length) { home(); return; }
+    const results = [];
+    const avoid = new Set(state.recent.map((x) => x.key));
+    let i = 0;
+    step();
+
+    function step() {
+      if (i >= list.length) { done(); return; }
+      const it = list[i];
+      const tpl = M5.templates.find((t) => t.id === it.tid);
+      if (!tpl) { delete state.review[it.tid]; save(); i++; step(); return; }
+      const p = M5.makeProblem(tpl, Math.max(tpl.levels[0], Math.min(it.level || 1, tpl.levels[1])), rng, avoid);
+      avoid.add(p.key);
+      state.recent.push({ key: p.key, tid: p.tid, sub: p.sub, styleName: p.styleName, style: p.style });
+      if (state.recent.length > 50) state.recent.splice(0, state.recent.length - 50);
+      let before = null;
+      solve(p, {
+        fix: true,
+        banner: `<div class="banner rev"><span>📅 오늘의 복습 <b>${i + 1} / ${list.length}</b></span><span class="tag">${M5.review.stageName(it.stage)}</span><span class="goal">${esc(typeName(it.tid))}</span></div>`,
+        nextLabel: i === list.length - 1 ? '복습 결과 보기 →' : '다음 복습 →',
+        onFirst(ok) {
+          before = { review: state.review[p.tid] ? Object.assign({}, state.review[p.tid]) : null, mastered: state.mastered[p.tid] };
+          recordFirst(p, ok);
+          const res = M5.review.answered(state, p.tid, ok, today);
+          results.push({ tid: p.tid, ok, res });
+          save();
+          if (res.mastered) toast('⭐ 3번 연속 맞혔어요! 이 유형은 완전히 익혔어요.');
+        },
+        onDone() { i++; step(); },
+        onWeird(r) {
+          reportProblem(p);
+          if (r.firstOk != null) {
+            // 채점에서 빼고, 복습 일정도 풀기 전으로 되돌린다 (다음에 다시 나온다)
+            recordFirst(p, r.firstOk, -1);
+            results.pop();
+            if (before) { if (before.review) state.review[p.tid] = before.review; else delete state.review[p.tid]; if (before.mastered) state.mastered[p.tid] = before.mastered; else delete state.mastered[p.tid]; }
+            save();
+          }
+          i++; step();
+        },
+        onStop: done,
+        onBack: home,
+        backLabel: '← 홈',
+      });
+    }
+
+    function done() {
+      onKey = (ev) => { if (ev.key === 'Enter') { ev.preventDefault(); home(); } };
+      const ok = results.filter((r) => r.ok);
+      const mastered = results.filter((r) => r.res.mastered);
+      const again = results.filter((r) => !r.ok);
+      const li = (arr, f) => arr.map((r) => `<li>${esc(typeName(r.tid))}${f ? ` <span class="muted small">${f(r)}</span>` : ''}</li>`).join('');
+      app.innerHTML = `${header(statsHtml())}
+        <main class="center"><section class="panel">
+          <div class="big-emoji">${again.length ? '📅' : '🎉'}</div>
+          <h2>오늘의 복습 끝!</h2>
+          <p>${results.length}개 중 <b>${ok.length}개</b>를 처음에 맞혔어요.</p>
+          ${mastered.length ? `<div class="typelist"><b>⭐ 완전히 익힌 유형</b><ul>${li(mastered)}</ul></div>` : ''}
+          ${ok.length - mastered.length > 0 ? `<div class="typelist"><b>👍 맞힌 유형 (다음 복습)</b><ul>${li(ok.filter((r) => !r.res.mastered), (r) => fmtDate(r.res.next))}</ul></div>` : ''}
+          ${again.length ? `<div class="typelist"><b>🌱 내일 다시 복습할 유형</b><ul>${li(again)}</ul></div>` : ''}
+          <div class="btns"><button class="btn primary" data-go="home">홈으로 <kbd>Enter</kbd></button></div>
+        </section></main>`;
+      bindCommon();
+    }
   }
 
   // ------------------------------------------------------------------ "다음에 다시 도전" 목록
@@ -819,12 +946,17 @@
       <main class="subs">
         <button class="back" data-go="home">← 홈</button>
         <h2>🌱 다음에 다시 도전</h2>
-        <p class="lead">비슷한 문제 도전을 두 번 해도 어려웠던 유형이에요. 나중에 무한 모드에서 다시 도전해서 통과하면 목록에서 빠져요.</p>
+        <p class="lead">비슷한 문제 도전을 두 번 해도 어려웠던 유형이에요. '도전하기'를 눌러 비슷한 문제 5개에 다시 도전해 봐요. 통과하면 목록에서 빠져요.</p>
         ${state.retry.length
-          ? `<ol class="reports">${state.retry.map((r) => `<li><b>${esc(typeName(r.tid))}</b><div class="when">${esc(r.at)}에 넣음 · 난이도 ${r.level}</div></li>`).join('')}</ol>`
+          ? `<ol class="reports">${state.retry.map((r) => `<li class="retry-item"><div><b>${esc(typeName(r.tid))}</b><div class="when">${esc(fmtDate(r.at))}에 넣음 · 난이도 ${r.level}</div></div><button class="btn primary small-btn" data-retry="${esc(r.tid)}">도전하기</button></li>`).join('')}</ol>`
           : '<p class="muted">아직 없어요. 잘하고 있어요! 👍</p>'}
       </main>`;
     bindCommon();
+    $$('[data-retry]').forEach((b) => b.addEventListener('click', () => {
+      const r = state.retry.find((x) => x.tid === b.dataset.retry);
+      const t = M5.templates.find((x) => x.id === b.dataset.retry);
+      if (r && t) play({ unit: t.unit, sub: t.sub }, { retryTid: t.id });
+    }));
   }
 
   // ------------------------------------------------------------------ "문제가 이상해요" 목록
@@ -833,7 +965,7 @@
     const list = state.reports.slice().reverse();
     app.innerHTML = `${header()}
       <main class="subs">
-        <button class="back" data-go="home">← 홈</button>
+        <button class="back" data-go="settings">← 설정</button>
         <h2>🚩 '문제가 이상해요'로 저장한 문제</h2>
         <p class="lead">어른이 확인할 수 있게 저장해 둔 문제예요. 이 문제들은 채점에서 빠졌어요.</p>
         ${list.length ? `<ol class="reports">${list.map((r) => `<li><div class="when">${esc(new Date(r.at).toLocaleString('ko-KR'))} · ${esc(r.tid)} · 난이도 ${r.level}</div><p>${txt(r.text)}</p><p class="muted">앱이 생각한 정답: ${txt(r.answer)}</p></li>`).join('')}</ol>
@@ -850,5 +982,159 @@
     });
   }
 
+  // ------------------------------------------------------------------ 내 기록 (기획서 13번 7)
+  function records() {
+    onKey = null;
+    const unitStats = UNITS.filter((u) => M5.units.some((x) => x.id === u.id)).map((u) => ({ u, s: state.stats['u' + u.id] || { s: 0, c: 0 } }));
+    const total = unitStats.reduce((a, x) => a + x.s.s, 0), totalC = unitStats.reduce((a, x) => a + x.s.c, 0);
+    const pct = (c, n2) => (n2 ? Math.round((c / n2) * 100) : 0);
+    // 최근 14일
+    const today = S.todayStr();
+    const days = Array.from({ length: 14 }, (_, k) => M5.review.addDays(today, k - 13));
+    const vals = days.map((d) => (state.days[d] ? state.days[d].s : 0));
+    const peak = Math.max(...vals, 1);
+    const step = [1, 2, 5, 10, 20, 50, 100].find((x) => peak / x <= 8) || 100;
+    const chart = vals.some((v) => v > 0)
+      ? F.render({ type: 'bars', title: `최근 14일 동안 푼 문제 (${fmtDate(days[0])} ~ ${fmtDate(days[13])})`, unit: '문제', labels: days.map((d) => String(Number(d.slice(8)))), values: vals, step, max: Math.ceil(peak / step) * step, labelEvery: 1 })
+      : '<p class="muted">아직 기록이 없어요. 문제를 풀면 여기에 날마다 쌓여요.</p>';
+    // 자주 틀리는 유형 TOP 3
+    const top = Object.entries(state.wrong).filter(([, c]) => c > 0).sort((a, b) => b[1] - a[1]).slice(0, 3);
+    // 틀린 원인 비율
+    const causeKeys = ['condition', 'concept', 'calc', 'form'];
+    const causeTotal = causeKeys.reduce((a, k) => a + (state.causes.actual[k] || 0), 0);
+    const c = state.causes;
+    const meter = (v) => `<span class="meter"><span style="width:${v}%"></span></span>`;
+    const stamps = Object.entries(state.stamps).sort((a, b) => (a[1].last < b[1].last ? 1 : -1));
+    const mastered = Object.entries(state.mastered).sort((a, b) => (a[1] < b[1] ? 1 : -1));
+    const reviewList = Object.values(state.review).sort((a, b) => (a.due < b.due ? -1 : 1));
+    app.innerHTML = `${header(NAV)}
+      <main class="records">
+        <button class="back" data-go="home">← 홈</button>
+        <h2>📊 내 기록</h2>
+        <section class="today">
+          <div><span class="k">지금까지 푼 문제</span><b>${total}</b></div>
+          <div><span class="k">처음에 맞힌 비율</span><b>${pct(totalC, total)}%</b></div>
+          <div><span class="k">받은 도장</span><b>🏅 ${stamps.length}</b></div>
+          <div><span class="k">완전히 익힌 유형</span><b>⭐ ${mastered.length}</b></div>
+        </section>
+        <section class="rcard"><h3>날마다 푼 문제</h3><div class="figure">${chart}</div></section>
+        <div class="rgrid">
+          <section class="rcard">
+            <h3>단원별 정답률</h3>
+            ${unitStats.map(({ u, s: st }) => {
+              const sub = M5.units.find((x) => x.id === u.id).subs;
+              return `<details class="unit-rate"><summary><span class="ur-name">${u.id}. ${esc(u.name)}</span>${meter(pct(st.c, st.s))}<b>${st.s ? pct(st.c, st.s) + '%' : '-'}</b><span class="muted small">${st.s}문제</span></summary>
+                <ul>${sub.map((x) => { const v = state.stats[x.id] || { s: 0, c: 0 }; return `<li><span class="ur-name">${esc(x.name)}</span>${meter(pct(v.c, v.s))}<b>${v.s ? pct(v.c, v.s) + '%' : '-'}</b><span class="muted small">${v.s}문제</span></li>`; }).join('')}</ul></details>`;
+            }).join('')}
+            <p class="muted small">단원 이름을 누르면 소단원별 정답률이 나와요. 정답률은 처음 낸 답으로 세어요.</p>
+          </section>
+          <section class="rcard">
+            <h3>자주 틀리는 유형 TOP 3</h3>
+            ${top.length ? `<ol class="top3">${top.map(([tid, n2]) => `<li><b>${esc(typeName(tid))}</b> <span class="muted">${n2}번 틀림</span>${state.review[tid] ? ` <span class="pill">복습 ${fmtDate(state.review[tid].due)}</span>` : state.mastered[tid] ? ' <span class="pill ok">완전히 익힘</span>' : ''}</li>`).join('')}</ol>` : '<p class="muted">아직 틀린 유형이 없어요.</p>'}
+            <h3>틀린 원인</h3>
+            ${causeTotal ? `<ul class="causes">${causeKeys.map((k) => `<li><span class="ur-name">${CAUSE[k]}</span>${meter(pct(c.actual[k] || 0, causeTotal))}<b>${pct(c.actual[k] || 0, causeTotal)}%</b><span class="muted small">${c.actual[k] || 0}번</span></li>`).join('')}</ul>` : '<p class="muted">아직 기록이 없어요.</p>'}
+            ${c.compared ? `<p class="small">🔍 "어디서 틀렸을까?"에서 원인을 스스로 맞힌 비율: <b>${pct(c.matched, c.compared)}%</b> (${c.compared}번 중 ${c.matched}번)</p>` : ''}
+            <p class="muted small">'약분·표현 미완성'은 값은 맞았는데 약분이나 대분수 표현을 덜 한 횟수예요.</p>
+          </section>
+        </div>
+        <div class="rgrid">
+          <section class="rcard">
+            <h3>📅 복습 예정 (${reviewList.length})</h3>
+            ${reviewList.length ? `<ul class="plain">${reviewList.slice(0, 8).map((x) => `<li>${esc(fmtDate(x.due))} · ${esc(typeName(x.tid))} <span class="muted small">(${M5.review.stageName(x.stage)})</span></li>`).join('')}</ul>${reviewList.length > 8 ? `<p class="muted small">외 ${reviewList.length - 8}개</p>` : ''}` : '<p class="muted">복습할 유형이 없어요.</p>'}
+            <h3>⭐ 완전히 익힌 유형 (${mastered.length})</h3>
+            ${mastered.length ? `<ul class="plain">${mastered.map(([tid, d]) => `<li>${esc(typeName(tid))} <span class="muted small">${esc(fmtDate(d))}</span></li>`).join('')}</ul>` : '<p class="muted">복습에서 3번 연속 맞히면 여기에 들어와요.</p>'}
+          </section>
+          <section class="rcard">
+            <h3>🏅 받은 도장 (${stamps.length})</h3>
+            ${stamps.length ? `<div class="stamps">${stamps.map(([tid, v]) => `<span class="mini-stamp" title="${esc(fmtDate(v.last))}">🏅 ${esc(typeName(tid))}${v.n > 1 ? ` ×${v.n}` : ''}</span>`).join('')}</div>` : '<p class="muted">비슷한 문제 5개 중 4개 이상 맞히면 도장을 받아요.</p>'}
+          </section>
+        </div>
+      </main>`;
+    bindCommon();
+  }
+
+  // ------------------------------------------------------------------ 설정 (기획서 13번 8)
+  let persisted = null;
+  function settings() {
+    onKey = null;
+    const last = state.settings.lastBackup;
+    app.innerHTML = `${header(NAV)}
+      <main class="records">
+        <button class="back" data-go="home">← 홈</button>
+        <h2>⚙️ 설정</h2>
+        <section class="rcard">
+          <h3>💾 백업</h3>
+          <p>기록은 이 노트북의 이 브라우저 안에만 저장돼요. 브라우저 기록을 지우거나 다른 노트북으로 옮길 때를 대비해 가끔 백업 파일을 내보내 두세요.</p>
+          <p class="muted small">마지막 백업: ${last ? esc(new Date(last).toLocaleString('ko-KR')) : '아직 없어요'}${persisted === true ? ' · 브라우저에 계속 보관하도록 요청했어요' : ''}</p>
+          <div class="btns left"><button id="export" class="btn primary">백업 파일 내보내기</button></div>
+          <h3>📂 백업 불러오기</h3>
+          <p class="small">내보낸 백업 파일(.json)을 골라요. 불러오면 지금 기록이 그 파일의 기록으로 바뀌어요.</p>
+          <input id="importFile" type="file" accept=".json,application/json">
+          <div id="importBox"></div>
+        </section>
+        <section class="rcard">
+          <h3>🚩 '문제가 이상해요'로 저장한 문제</h3>
+          <p class="small">저장한 문제 ${state.reports.length}개. 어른이 확인할 수 있게 모아 두었어요.</p>
+          <div class="btns left"><button class="btn" data-go="reports">목록 보기</button></div>
+        </section>
+        <section class="rcard danger-zone">
+          <h3>🗑️ 기록 모두 지우기</h3>
+          <p class="small">푼 문제, 정답률, 도장, 복습 일정이 모두 지워져요. 지우기 전에 백업 파일을 내보내 두세요.</p>
+          <div class="btns left"><button id="wipe" class="btn">기록 모두 지우기</button></div>
+        </section>
+      </main>`;
+    bindCommon();
+    $('#export').addEventListener('click', () => {
+      state.settings.lastBackup = new Date().toISOString();
+      save();
+      const blob = new Blob([S.exportText(state)], { type: 'application/json' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `math5-backup-${S.todayStr()}.json`; // 한글 이름은 브라우저에 따라 "download"로 바뀌어서 영어로
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+      toast(`백업 파일(math5-backup-${S.todayStr()}.json)을 내보냈어요. 다운로드 폴더를 확인해 보세요.`);
+      settings();
+    });
+    $('#importFile').addEventListener('change', (ev) => {
+      const f = ev.target.files && ev.target.files[0];
+      const box = $('#importBox');
+      if (!f) return;
+      const rd = new FileReader();
+      rd.onload = () => {
+        let got;
+        try { got = S.importText(String(rd.result)); } catch (e) { box.innerHTML = `<p class="warn-box">${esc(e.message)}</p>`; return; }
+        const sm = S.summary(got.state);
+        box.innerHTML = `<div class="import-sum"><p><b>${esc(f.name)}</b>${got.exportedAt ? ` (${esc(new Date(got.exportedAt).toLocaleString('ko-KR'))}에 내보냄)` : ''}</p>
+          <p class="small">푼 문제 ${sm.solved}개 · 공부한 날 ${sm.days}일 · 도장 ${sm.stamps}개 · 완전히 익힌 유형 ${sm.mastered}개 · 복습 예정 ${sm.review}개</p>
+          <button id="doImport" class="btn primary">이 기록으로 바꾸기</button></div>`;
+        const b = $('#doImport');
+        b.addEventListener('click', () => {
+          if (!b.dataset.sure) { b.dataset.sure = '1'; b.textContent = '지금 기록이 바뀌어요. 한 번 더 누르면 불러와요'; b.classList.add('danger'); return; }
+          for (const k of Object.keys(state)) delete state[k];
+          Object.assign(state, got.state);
+          save();
+          toast('백업을 불러왔어요.');
+          home();
+        });
+      };
+      rd.readAsText(f);
+    });
+    const w = $('#wipe');
+    w.addEventListener('click', () => {
+      if (!w.dataset.sure) { w.dataset.sure = '1'; w.textContent = '정말 지울까요? 한 번 더 누르면 모두 지워져요'; w.classList.add('danger'); return; }
+      const keepMode = state.settings.mode;
+      for (const k of Object.keys(state)) delete state[k];
+      Object.assign(state, S.fresh());
+      state.settings.mode = keepMode;
+      S.ensureToday(state);
+      save();
+      toast('기록을 모두 지웠어요.');
+      home();
+    });
+  }
+
+  S.askPersist().then((v) => { persisted = v === true; });
   home();
 })();
