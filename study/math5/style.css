@@ -502,3 +502,44 @@ button.mini:hover { border-color: var(--accent); }
 .ok-box { background: var(--good-soft); color: var(--good); border-radius: 12px; padding: 10px 14px; }
 .tips { margin: 0; padding-left: 20px; line-height: 1.7; }
 .tips li + li { margin-top: 4px; }
+
+/* 3단원 도형 그림 */
+.fig-geo { width: 100%; height: auto; display: block; overflow: visible; }
+.fig-geo .gl { stroke: #e1e7f0; stroke-width: 1; }
+.fig-geo .pg { stroke: #2b3447; stroke-width: 2; stroke-linejoin: round; }
+.fig-geo .pg.shape-a { fill: #cfe0fb; }
+.fig-geo .pg.shape-b { fill: #fde3b8; }
+.fig-geo .pg.shape-c { fill: #d7f0de; }
+.fig-geo .pg.line { fill: none; }
+.fig-geo .pg.dash { fill: none; stroke: #8a94a8; stroke-dasharray: 5 4; stroke-width: 1.5; }
+.fig-geo .pg.ghost { display: none; fill: #d7f0de; stroke: var(--good); stroke-dasharray: 6 4; }
+.reveal .fig-geo .pg.ghost { display: inline; }
+.fig-geo .sg { stroke: #2b3447; stroke-width: 2; }
+.fig-geo .sg.axis { stroke: #d14a4a; stroke-width: 2; stroke-dasharray: 8 5; }
+.fig-geo .sg.dash { stroke: #6f7a90; stroke-width: 1.5; stroke-dasharray: 5 4; }
+.fig-geo .sg.thin { stroke: #6f7a90; stroke-width: 1.5; }
+.fig-geo .ang { fill: none; stroke: #c2410c; stroke-width: 1.6; }
+.fig-geo .cdot { fill: #d14a4a; }
+.fig-geo text { font-family: var(--font); }
+.fig-geo .vl { font-weight: 700; fill: var(--ink); }
+.fig-geo .st { font-weight: 600; fill: #1d4fae; }
+.fig-geo .at { font-weight: 700; fill: #c2410c; }
+.fig-geo .tx { font-weight: 700; fill: var(--ink); }
+.fig-geo .gp { fill: rgba(47, 111, 222, .1); cursor: pointer; }
+.fig-geo .gp:hover { fill: rgba(47, 111, 222, .25); }
+.fig-geo .gp.on { fill: var(--accent); }
+.fig-geo .gp.right { fill: var(--good); }
+.fig-geo .gp.on.right { fill: var(--good); stroke: #fff; stroke-width: 2; }
+.figure .fig-geo { max-height: 420px; }
+.opts.figs .opt svg.fig-geo { max-height: 170px; }
+.pcount { font-weight: 600; margin-right: 12px; }
+
+/* 디지털 숫자 */
+.fig-digits { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; }
+.dg-row { display: flex; flex-wrap: wrap; gap: 8px; }
+.dg-box { background: #1d2433; border-radius: 10px; padding: 8px 10px; display: inline-flex; }
+.dg { width: 34px; height: 60px; transition: transform .6s ease; }
+.dg path { stroke-width: 5; stroke-linecap: round; fill: none; }
+.dg .on { stroke: #7cf29a; }
+.dg .off { stroke: #2c3548; }
+.turned .dg { transform: rotate(180deg); }

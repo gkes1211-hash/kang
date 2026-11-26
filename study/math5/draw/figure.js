@@ -138,7 +138,91 @@
     return `<div class="fig-bag" role="img" aria-label="주머니 속 구슬: ${legend}"><div class="bag-body">${dots.join('')}</div><p class="bag-legend">${esc(legend)}</p></div>`;
   }
 
-  const KINDS = { numberline, cards, chips, table, grid, rect, arrows, bars, spinner, bag };
+
+  // 도형 (3단원): 좌표는 칸 단위, 아래로 갈수록 y가 커진다.
+  //   { grid: { w, h } 모눈, polys: [{ pts, cls: 'shape-a'|'shape-b'|'shape-c'|'dash'|'ghost'|'line' }], segs: [{ a, b, cls: 'axis'|'dash'|'thin' }],
+  //     labels: [{ p, t, c }] 꼭짓점 이름 (c에서 멀어지는 쪽에), sides: [{ a, b, t, c }] 변의 길이, angles: [{ v, a, b, t, right }] 각,
+  //     dots: [{ p, t, c }] 점 (대칭의 중심 등), texts: [{ p, t }], pick: true (모눈 점을 눌러 찍는 문제), scale, title }
+  function geo(f) {
+    const u = f.scale || 34;
+    const all = [];
+    if (f.grid) all.push([0, 0], [f.grid.w, f.grid.h]);
+    for (const q of f.polys || []) all.push(...q.pts);
+    for (const q of f.segs || []) all.push(q.a, q.b);
+    for (const q of f.dots || []) all.push(q.p);
+    for (const q of f.texts || []) all.push(q.p);
+    const xs = all.map((p) => p[0]), ys = all.map((p) => p[1]);
+    const pad = f.pad != null ? f.pad : 0.9;
+    const x0 = Math.min(...xs) - pad, y0 = Math.min(...ys) - pad, x1 = Math.max(...xs) + pad, y1 = Math.max(...ys) + pad;
+    const X = (v) => +((v - x0) * u).toFixed(1), Y = (v) => +((v - y0) * u).toFixed(1);
+    const P = (p) => `${X(p[0])},${Y(p[1])}`;
+    const fs = Math.max(12, Math.min(18, u * 0.5));
+    const away = (p, c, d) => {
+      if (!c) return [p[0], p[1] - d];
+      let dx = p[0] - c[0], dy = p[1] - c[1];
+      const L = Math.hypot(dx, dy) || 1;
+      return [p[0] + (dx / L) * d, p[1] + (dy / L) * d];
+    };
+    const txt = (p, t, cls) => `<text class="${cls}" x="${X(p[0])}" y="${(Y(p[1]) + fs * 0.36).toFixed(1)}" text-anchor="middle" font-size="${fs}">${esc(t)}</text>`;
+    const out = [`<svg class="fig-geo${f.pick ? ' pickable' : ''}" viewBox="0 0 ${X(x1)} ${Y(y1)}" style="max-width:${Math.round(X(x1))}px" role="img" aria-label="${esc(f.title || '도형 그림')}">`];
+    if (f.grid) {
+      for (let i = 0; i <= f.grid.w; i++) out.push(`<line class="gl" x1="${X(i)}" y1="${Y(0)}" x2="${X(i)}" y2="${Y(f.grid.h)}"/>`);
+      for (let i = 0; i <= f.grid.h; i++) out.push(`<line class="gl" x1="${X(0)}" y1="${Y(i)}" x2="${X(f.grid.w)}" y2="${Y(i)}"/>`);
+    }
+    for (const q of f.polys || []) out.push(`<polygon class="pg ${q.cls || 'fa'}" points="${q.pts.map(P).join(' ')}"/>`);
+    for (const q of f.segs || []) out.push(`<line class="sg ${q.cls || ''}" x1="${X(q.a[0])}" y1="${Y(q.a[1])}" x2="${X(q.b[0])}" y2="${Y(q.b[1])}"/>`);
+    for (const q of f.angles || []) {
+      const ta = Math.atan2(q.a[1] - q.v[1], q.a[0] - q.v[0]), tb = Math.atan2(q.b[1] - q.v[1], q.b[0] - q.v[0]);
+      let d = tb - ta;
+      while (d <= -Math.PI) d += 2 * Math.PI;
+      while (d > Math.PI) d -= 2 * Math.PI;
+      const r = q.r || 0.55;
+      const pt = (t, rr) => [q.v[0] + rr * Math.cos(t), q.v[1] + rr * Math.sin(t)];
+      if (q.right) {
+        const s1 = pt(ta, 0.38), s2 = pt(tb, 0.38), s3 = [s1[0] + s2[0] - q.v[0], s1[1] + s2[1] - q.v[1]];
+        out.push(`<polyline class="ang" points="${P(s1)} ${P(s3)} ${P(s2)}"/>`);
+      } else {
+        const p1 = pt(ta, r), p2 = pt(ta + d, r);
+        out.push(`<path class="ang" d="M${P(p1)} A${(r * u).toFixed(1)} ${(r * u).toFixed(1)} 0 0 ${d > 0 ? 1 : 0} ${P(p2)}"/>`);
+      }
+      if (q.t) out.push(txt(pt(ta + d / 2, q.tr || (Math.abs(d) < 0.8 ? 1.35 : 0.95)), q.t, 'at'));
+    }
+    for (const q of f.sides || []) {
+      const m = [(q.a[0] + q.b[0]) / 2, (q.a[1] + q.b[1]) / 2];
+      let nx = -(q.b[1] - q.a[1]), ny = q.b[0] - q.a[0];
+      const L = Math.hypot(nx, ny) || 1;
+      nx /= L; ny /= L;
+      if (q.c && (m[0] - q.c[0]) * nx + (m[1] - q.c[1]) * ny < 0) { nx = -nx; ny = -ny; }
+      const d = q.d || 0.48;
+      out.push(txt([m[0] + nx * d, m[1] + ny * d], q.t, 'st'));
+    }
+    for (const q of f.dots || []) {
+      out.push(`<circle class="cdot" cx="${X(q.p[0])}" cy="${Y(q.p[1])}" r="4"/>`);
+      if (q.t) out.push(txt(away(q.p, q.c, 0.5), q.t, 'vl'));
+    }
+    for (const q of f.labels || []) out.push(txt(away(q.p, q.c, q.d || 0.5), q.t, 'vl'));
+    for (const q of f.texts || []) out.push(txt(q.p, q.t, q.cls || 'tx'));
+    if (f.pick && f.grid) {
+      for (let y = 0; y <= f.grid.h; y++) for (let x = 0; x <= f.grid.w; x++) {
+        out.push(`<circle class="gp" data-p="${x},${y}" cx="${X(x)}" cy="${Y(y)}" r="${(u * 0.26).toFixed(1)}"><title>(${x}, ${y})</title></circle>`);
+      }
+    }
+    out.push('</svg>');
+    return out.join('');
+  }
+
+  // 디지털 숫자: { nums: ['2', '5', '6'], rot: true(180° 돌려 보기 단추) }
+  const SEG = { 0: 'abcdef', 1: 'bc', 2: 'abged', 3: 'abgcd', 4: 'fgbc', 5: 'afgcd', 6: 'afgedc', 7: 'abc', 8: 'abcdefg', 9: 'abcdfg' };
+  const SEGP = { a: 'M9 5h22', b: 'M33 8v24', c: 'M33 38v24', d: 'M9 65h22', e: 'M7 38v24', f: 'M7 8v24', g: 'M9 35h22' };
+  function digit(ch) {
+    const on = SEG[ch] || '';
+    return `<svg class="dg" viewBox="0 0 40 70" aria-hidden="true">${Object.keys(SEGP).map((k) => `<path class="${on.includes(k) ? 'on' : 'off'}" d="${SEGP[k]}"/>`).join('')}</svg>`;
+  }
+  function digits(f) {
+    return `<div class="fig-digits" role="img" aria-label="디지털 숫자 ${f.nums.join(', ')}"><div class="dg-row">${f.nums.map((c) => `<span class="dg-box">${digit(c)}</span>`).join('')}</div>${f.rot ? '<button type="button" class="btn ghost small-btn rot-btn">↻ 숫자를 하나씩 180° 돌려 보기</button>' : ''}</div>`;
+  }
+
+  const KINDS = { numberline, cards, chips, table, grid, rect, arrows, bars, spinner, bag, geo, digits };
   function render(fig) {
     if (!fig) return '';
     const fn = KINDS[fig.type];

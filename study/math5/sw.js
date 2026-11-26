@@ -2,7 +2,7 @@
 // 파일을 새로 만들면 아래 FILES 에도 넣어 주세요. (tests/run.js 가 빠진 파일이 없는지 확인해요)
 // 학습 기록은 여기가 아니라 브라우저의 localStorage('math5-v1')에 따로 저장돼요.
 const PREFIX = 'math5-';
-const CACHE = `${PREFIX}v1`;
+const CACHE = `${PREFIX}v2`;
 const FILES = [
   './',
   './index.html',
@@ -21,6 +21,9 @@ const FILES = [
   './templates/u1-range.js',
   './templates/u1-round.js',
   './templates/u2-frac.js',
+  './templates/u3-geo.js',
+  './templates/u3-cong.js',
+  './templates/u3-sym.js',
   './templates/u4-dec.js',
   './templates/u6-avg.js',
   './templates/b-extra.js',

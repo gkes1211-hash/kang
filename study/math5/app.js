@@ -85,7 +85,7 @@
   const UNITS = [
     { id: 1, name: '수의 범위와 어림하기' },
     { id: 2, name: '분수의 곱셈', note: '곧 만들어요' },
-    { id: 3, name: '합동과 대칭', note: '2차 개발' },
+    { id: 3, name: '합동과 대칭' },
     { id: 4, name: '소수의 곱셈', note: '곧 만들어요' },
     { id: 5, name: '직육면체와 정육면체', note: '2차 개발' },
     { id: 6, name: '평균과 가능성', note: '곧 만들어요' },
@@ -272,7 +272,7 @@
     // phase: answer(처음 풀기) → diagnose(어디서 틀렸을까) → explained(원인 보기) → retry(다시 풀기) → copy(정답 보고 따라 풀기) → done
     let phase = 'answer';
     let hintLv = 0;
-    let sel = p.answer.type === 'multi' ? new Set() : null;
+    let sel = p.answer.type === 'multi' || p.answer.type === 'points' ? new Set() : null;
     const result = { firstOk: null, firstInput: null, firstRes: null, actual: null, self: null };
     let pendingRes = null;
     let formNoted = false; // 약분·대분수 안내를 기록했는지
@@ -297,6 +297,8 @@
             <p class="help">칸 이동: Tab (분자 칸에서 / 를 누르면 분모 칸으로)</p>`;
         }
         case 'ineq': return `<p class="lab">(가) ○ (나): 알맞은 것을 골라요 (키보드 &lt; = &gt;)</p><div class="ineq">${['>', '=', '<'].map((v) => `<button class="opt sym" data-v="${esc(v)}">${esc(v)}</button>`).join('')}</div>`;
+        case 'points': return `<p class="lab">그림의 모눈 점을 눌러서 찍어요. 다시 누르면 지워져요.</p>
+            <div class="row"><span class="pcount">찍은 점 <b id="pcount">0</b>개</span><button type="button" id="pclear" class="btn ghost small-btn">모두 지우기</button></div>`;
         case 'ox': return `<p class="lab">맞으면 O, 틀리면 X (키보드 O, X)</p><div class="ox"><button class="opt big o" data-v="true">O</button><button class="opt big x" data-v="false">X</button></div>`;
         case 'choice':
         case 'multi':
@@ -344,6 +346,9 @@
       $('#stop').addEventListener('click', () => opts.onStop());
       $('#back').addEventListener('click', () => opts.onBack());
       $$('.opt').forEach((b) => b.addEventListener('click', () => choose(b)));
+      $$('.figure .gp').forEach((c) => c.addEventListener('click', () => pickPoint(c.dataset.p)));
+      if ($('#pclear')) $('#pclear').addEventListener('click', () => { if (canInput()) { sel.clear(); paintPoints(); } });
+      $$('.rot-btn').forEach((b) => b.addEventListener('click', () => b.parentElement.classList.toggle('turned')));
       onKey = keyHandler;
       if (opts.startWith) {
         // 도전에서 틀린 문제를 고치러 왔을 때: 처음 낸 답을 보여 주고 바로 "어디서 틀렸을까?"
@@ -366,6 +371,17 @@
     function firstField() { return p.essay ? $('#essay') : ($('#in0') || $('#fw')); }
 
     // ----- 입력
+    const canInput = () => phase === 'answer' || phase === 'retry' || phase === 'copy';
+    // 모눈 점 찍기 (3단원 도형 완성하기)
+    function pickPoint(key) {
+      if (!canInput()) return;
+      if (sel.has(key)) sel.delete(key); else sel.add(key);
+      paintPoints();
+    }
+    function paintPoints() {
+      $$('.figure .gp').forEach((c) => c.classList.toggle('on', sel.has(c.dataset.p)));
+      if ($('#pcount')) $('#pcount').textContent = sel.size;
+    }
     function choose(b) {
       if (b.disabled || !(phase === 'answer' || phase === 'retry' || phase === 'copy')) return;
       if (a.type === 'multi') {
@@ -385,7 +401,7 @@
         case 'num': case 'nums': return $('#in0').value;
         case 'pair': return [$('#in0').value, $('#in1').value];
         case 'frac': return { w: $('#fw').value, n: $('#fn').value, d: $('#fd').value };
-        case 'multi': return [...sel];
+        case 'multi': case 'points': return [...sel];
         default: return sel;
       }
     }
@@ -404,6 +420,7 @@
         case 'ox': return input ? 'O' : 'X';
         case 'choice': return a.options[input].text || `${NUMS[input]}번`;
         case 'multi': return input.map((i) => a.options[i].text).join(', ');
+        case 'points': return `점 ${input.length}개`;
         default: return '';
       }
     }
@@ -425,6 +442,9 @@
       } else if (a.type === 'multi') {
         sel = new Set(input);
         $$('.opt').forEach((b) => b.classList.toggle('sel', sel.has(Number(b.dataset.i))));
+      } else if (a.type === 'points') {
+        sel = new Set(input);
+        paintPoints();
       }
     }
     function markAnswer() {
@@ -432,6 +452,13 @@
       if (a.type === 'choice') { const b = $(`.opt[data-i="${a.value}"]`); if (b) b.classList.add('right'); }
       if (a.type === 'multi') a.values.forEach((i) => { const b = $(`.opt[data-i="${i}"]`); if (b) b.classList.add('right'); });
       if (a.type === 'ox' || a.type === 'ineq') { const b = $(`.opt[data-v="${String(a.value)}"]`); if (b) b.classList.add('right'); }
+      if (a.type === 'points') revealPoints();
+    }
+    // 점 찍기 문제의 정답: 완성된 도형과 찍어야 할 점을 보여 준다
+    function revealPoints() {
+      const fig = $('.figure');
+      if (fig) fig.classList.add('reveal');
+      $$('.figure .gp').forEach((c) => c.classList.toggle('right', a.values.includes(c.dataset.p)));
     }
 
     function keyHandler(ev) {
@@ -513,6 +540,7 @@
         if (hintLv >= 3) {
           // 힌트를 다 썼는데도 틀리면: 정답과 풀이를 보여 주고 따라 풀게 한다
           phase = 'copy';
+          if (a.type === 'points') revealPoints();
           const ansT = G.answerText(p);
           parts.push(`<p class="reveal">정답은 <b>${txt(ansT)}</b>${T.j(ansT, '이에요/예요').slice(ansT.length)}. 풀이를 천천히 읽고, 정답을 직접 입력(선택)해 봐요.</p>${solutionHtml(true)}`);
           fb.innerHTML = parts.join('');
@@ -642,8 +670,8 @@
     }
     function detailText(res) {
       const bits = [];
-      if (a.type === 'nums' || a.type === 'multi') {
-        const what = a.type === 'nums' ? '수' : '것';
+      if (a.type === 'nums' || a.type === 'multi' || a.type === 'points') {
+        const what = a.type === 'nums' ? '수' : a.type === 'points' ? '점' : '것';
         if (res.missing) bits.push(`${T.j('빠진 ' + what, '이/가')} ${res.missing}개 있어요.`);
         if (res.extra) bits.push(`${T.j('넣지 않아야 할 ' + what, '이/가')} ${res.extra}개 있어요.`);
       }

@@ -1,5 +1,6 @@
 // 채점 (기획서 8번)
 // 답 형식: num(수 하나) · nums(여러 개) · pair(두 칸) · ineq(부등호) · choice(객관식) · multi(여러 개 고르기) · ox
+//          points(모눈 위의 점 찍기, 값은 'x,y' 글자 목록)
 (function () {
   'use strict';
   const M5 = (globalThis.M5 = globalThis.M5 || {});
@@ -13,6 +14,7 @@
   // 수 목록을 순서와 상관없이 비교할 수 있게 (0.50과 0.5는 같은 값)
   const numSetKey = (list) => [...new Set(list.map((v) => D.str(D.parse(v))))].sort().join('|');
   const idxSetKey = (list) => [...new Set(list)].sort((a, b) => a - b).join('|');
+  const ptSetKey = (list) => [...new Set(list.map(String))].sort().join('|');
   const splitList = (s) => String(s).split(/[,，、\s]+/).filter(Boolean);
 
   // 두 답이 같은 값인지 (오답 패턴 비교, 테스트에 쓴다)
@@ -22,6 +24,7 @@
       case 'nums': return numSetKey(a) === numSetKey(b);
       case 'pair': return numEq(a[0], b[0]) && numEq(a[1], b[1]);
       case 'multi': return idxSetKey(a) === idxSetKey(b);
+      case 'points': return ptSetKey(a) === ptSetKey(b);
       case 'frac': return M5.frac.eq(a, b);
       case 'choice': case 'ineq': case 'ox': return a === b;
       default: throw new Error('모르는 답 형식: ' + type);
@@ -29,7 +32,7 @@
   }
 
   function answerValue(a) {
-    return a.type === 'nums' || a.type === 'pair' || a.type === 'multi' ? a.values : a.value;
+    return a.type === 'nums' || a.type === 'pair' || a.type === 'multi' || a.type === 'points' ? a.values : a.value;
   }
 
   const findPattern = (p, test) => (p.patterns || []).find((pt) => test(pt.value)) || null;
@@ -110,6 +113,17 @@
         const key = idxSetKey([...got]);
         return { ok: false, missing, extra, pattern: findPattern(p, (v) => idxSetKey(v) === key) };
       }
+      case 'points': {
+        const arr = Array.isArray(input) ? input.map(String) : [];
+        if (!arr.length) return { empty: true };
+        const got = new Set(arr);
+        const want = new Set(a.values.map(String));
+        const missing = [...want].filter((x) => !got.has(x)).length;
+        const extra = [...got].filter((x) => !want.has(x)).length;
+        if (!missing && !extra) return { ok: true };
+        const key = ptSetKey([...got]);
+        return { ok: false, missing, extra, pattern: findPattern(p, (v) => ptSetKey(v) === key) };
+      }
       case 'ox': {
         if (input !== true && input !== false) return { empty: true };
         if (input === a.value) return { ok: true };
@@ -134,6 +148,7 @@
       case 'choice': return a.options[a.value].text || `${a.value + 1}번`;
       case 'multi': return a.values.map((i) => a.options[i].text).join(', ');
       case 'ox': return a.value ? 'O' : 'X';
+      case 'points': return `그림에 표시한 점 ${a.values.length}개`;
       default: return '';
     }
   }

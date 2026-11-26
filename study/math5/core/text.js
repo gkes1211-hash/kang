@@ -11,6 +11,11 @@
     const s = String(word).replace(/[\s'"’”)\]}.,!?…]+$/, '');
     const c = s.charAt(s.length - 1);
     const code = c.charCodeAt(0);
+    if (c === '°') return { bat: false, rieul: false }; // 40°(사십 도)
+    // 점·변·각 이름 ㄱ, ㄴ … (기역, 니은 …)과 ㉠, ㉡ …: 이름이 모두 받침으로 끝나고, ㄹ(리을)만 ㄹ 받침
+    const JAMO = 'ㄱㄴㄷㄹㅁㅂㅅㅇㅈㅊㅋㅌㅍㅎ';
+    const ji = JAMO.indexOf(c) >= 0 ? JAMO.indexOf(c) : (code >= 0x3260 && code <= 0x326d ? code - 0x3260 : -1);
+    if (ji >= 0) return { bat: true, rieul: ji === 3 };
     if (code >= 0xac00 && code <= 0xd7a3) {
       const jong = (code - 0xac00) % 28;
       return { bat: jong !== 0, rieul: jong === 8 };
