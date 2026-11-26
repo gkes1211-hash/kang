@@ -216,6 +216,68 @@ h2 { font-size: 24px; margin: 28px 0 14px; }
 .btns .btn.primary { width: auto; padding: 12px 26px; }
 
 .small { font-size: 15px; }
+
+/* ---------- 홈: 다시 도전·도장 ---------- */
+.minis { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 14px; }
+.mini {
+  display: flex; align-items: baseline; justify-content: space-between; text-align: left;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 12px 18px; box-shadow: var(--shadow);
+}
+button.mini:hover { border-color: var(--accent); }
+.mini .k { color: var(--ink-2); font-size: 16px; }
+.mini b { font-size: 22px; }
+
+/* ---------- 틀렸을 때: 어디서 틀렸을까 ---------- */
+.diag { margin-top: 14px; padding: 14px 16px; border-radius: 14px; background: #fff; border: 2px solid var(--accent); }
+.diag.done { border-color: var(--line); background: var(--surface-2); }
+.diag p { margin: 4px 0; }
+.diag .q { font-weight: 800; font-size: 20px; margin-bottom: 10px; }
+.selfs { display: grid; gap: 8px; }
+.self {
+  display: flex; align-items: center; gap: 8px; text-align: left;
+  background: #fff; border: 2px solid var(--line); border-radius: 12px; padding: 10px 12px; font-size: 17px; font-weight: 600;
+}
+.self:hover { border-color: var(--accent); background: var(--accent-soft); }
+.self .n { font-size: 13px; color: var(--ink-2); border: 1px solid var(--line); border-radius: 6px; padding: 0 6px; }
+.diag .mine { color: var(--ink-2); }
+.diag .match { color: var(--good); font-weight: 800; }
+.diag .mismatch { color: var(--hint-ink); }
+.diag .cause .badge, .fb .cause .badge {
+  display: inline-block; font-size: 14px; font-weight: 700; color: #fff; background: var(--bad);
+  border-radius: 99px; padding: 1px 10px; margin-right: 6px;
+}
+.prev { font-size: 16px; color: var(--ink-2); margin: 0 0 10px; }
+.prev b { color: var(--bad); }
+
+/* ---------- 비슷한 문제 도전 ---------- */
+.banner {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px;
+  margin: -6px -8px 16px; padding: 10px 14px; border-radius: 14px; font-size: 17px;
+}
+.banner.chal { background: #fff4d6; color: #7a5200; }
+.banner.fix { background: var(--bad-soft); color: var(--bad); }
+.banner .goal { font-size: 15px; margin-left: auto; }
+.dots { display: inline-flex; gap: 6px; }
+.dot {
+  width: 30px; height: 30px; border-radius: 50%; display: inline-grid; place-items: center;
+  font-size: 14px; font-weight: 800; background: #fff; border: 2px solid #e2c77a; color: #a3842f;
+}
+.dot.now { border-color: #7a5200; color: #7a5200; }
+.dot.ok { background: var(--good); border-color: var(--good); color: #fff; }
+.dot.bad { background: var(--bad); border-color: var(--bad); color: #fff; }
+.dots.big { justify-content: center; display: flex; }
+.dots.big .dot { width: 40px; height: 40px; font-size: 18px; }
+.stamp {
+  margin: 10px auto 4px; width: 150px; height: 150px; border-radius: 50%;
+  border: 6px double #d6332b; color: #d6332b; transform: rotate(-12deg);
+  display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1.2;
+  animation: stamp .45s cubic-bezier(.2, 1.6, .4, 1) both;
+}
+.stamp b { font-size: 40px; letter-spacing: 4px; }
+.stamp span { font-size: 18px; font-weight: 700; }
+@keyframes stamp { from { transform: scale(2.2) rotate(-12deg); opacity: 0; } to { transform: scale(1) rotate(-12deg); opacity: 1; } }
+.typelist { text-align: left; background: var(--surface-2); border-radius: 12px; padding: 10px 16px; margin: 10px 0; }
+.typelist ul { margin: 4px 0 0; padding-left: 20px; }
 .reports { padding-left: 22px; }
 .reports li { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 10px 16px; margin-bottom: 10px; }
 .reports .when { font-size: 14px; color: var(--ink-2); }

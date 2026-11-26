@@ -9,9 +9,13 @@
       v: 1,
       levels: {},   // 소단원(또는 단원 전체)별 난이도 1~4
       recent: [],   // 최근에 낸 문제 50개
-      today: { date: '', solved: 0, correct: 0, streak: 0, best: 0 },
+      today: { date: '', solved: 0, correct: 0, streak: 0, best: 0, passed: 0 },
       stats: {},    // 소단원·단원별 { s: 푼 문제, c: 처음에 맞힌 문제 }
       reports: [],  // "문제가 이상해요"로 저장한 문제
+      stamps: {},   // 유형(틀)별 받은 "이 유형 통과" 도장 { 틀 이름: { n: 받은 수, last: 날짜 } }
+      retry: [],    // "다음에 다시 도전" 목록 [{ tid, sub, styleName, level, at }]
+      wrong: {},    // 유형(틀)별 틀린 횟수 (자주 틀리는 유형, 복습에 쓴다)
+      causes: { actual: {}, self: {}, compared: 0, matched: 0 }, // 틀린 원인과 "어디서 틀렸을까" 고른 결과
     };
   }
 
@@ -40,7 +44,8 @@
 
   function ensureToday(state) {
     const t = todayStr();
-    if (state.today.date !== t) state.today = { date: t, solved: 0, correct: 0, streak: 0, best: 0 };
+    if (state.today.date !== t) state.today = { date: t, solved: 0, correct: 0, streak: 0, best: 0, passed: 0 };
+    if (state.today.passed == null) state.today.passed = 0;
   }
 
   function bump(state, key, ok, sign = 1) {

@@ -89,6 +89,39 @@
   }
   M5.makeProblem = makeProblem;
 
+  // 이 문제에 원인(cause)이 같은 오답 패턴이 있는지 (객관식은 보기에 붙은 패턴까지 본다)
+  function hasCause(p, cause) {
+    return p.patterns.some((pt) => pt.cause === cause)
+      || (p.answer.options || []).some((o) => o.pattern && o.pattern.cause === cause);
+  }
+
+  // 비슷한 문제 도전 (기획서 3번 6): 같은 틀로 숫자·상황을 바꾼 문제 + 같은 원인의 오답 패턴을 가진 같은 소단원의 다른 틀
+  // cause가 없으면(어떤 오답 패턴과도 맞지 않았으면) 모두 같은 틀에서 낸다.
+  M5.similarProblems = function (orig, cause, rng, avoidKeys, n = 5) {
+    const tpl = M5.templates.find((t) => t.id === orig.tid);
+    const sibs = M5.templates.filter((t) => t.sub === orig.sub && t.id !== tpl.id && t.levels[0] <= orig.level);
+    const avoid = new Set(avoidKeys || []);
+    avoid.add(orig.key);
+    const out = [];
+    for (let i = 0; i < n; i++) {
+      let p = null;
+      if (cause && i >= n - 2) {
+        for (const t of rng.shuffle(sibs)) {
+          for (let k = 0; k < 4 && !p; k++) {
+            const q = makeProblem(t, orig.level, rng, avoid);
+            if (hasCause(q, cause) && !avoid.has(q.key)) p = q;
+          }
+          if (p) break;
+        }
+      }
+      if (!p) p = makeProblem(tpl, orig.level, rng, avoid);
+      avoid.add(p.key);
+      out.push(p);
+    }
+    return rng.shuffle(out);
+  };
+  M5.hasCause = hasCause;
+
   // 무한 모드 진행
   // scope: { unit: 1, sub: 'u1s4' } (sub가 없으면 단원 전체 섞기)
   M5.createSession = function ({ scope, state, rng }) {
@@ -139,6 +172,12 @@
       return rng.weighted(group, weights);
     }
 
+    // 최근에 낸 문제로 기억하기 (무한 모드가 같은 문제를 다시 내지 않게)
+    function remember(p) {
+      state.recent.push({ key: p.key, tid: p.tid, sub: p.sub, styleName: p.styleName, style: p.style });
+      if (state.recent.length > 50) state.recent.splice(0, state.recent.length - 50);
+    }
+
     return {
       scope,
       get level() { return state.levels[lvKey]; },
@@ -146,9 +185,21 @@
         const tpl = pickTemplate();
         const avoid = new Set(state.recent.map((x) => x.key));
         const p = makeProblem(tpl, state.levels[lvKey], rng, avoid);
-        state.recent.push({ key: p.key, tid: p.tid, sub: p.sub, styleName: p.styleName, style: p.style });
-        if (state.recent.length > 50) state.recent.splice(0, state.recent.length - 50);
+        remember(p);
         last = p;
+        return p;
+      },
+      // 비슷한 문제 5개 (난이도는 바꾸지 않는다)
+      similar(orig, cause) {
+        const set = M5.similarProblems(orig, cause, rng, state.recent.map((x) => x.key));
+        set.forEach(remember);
+        return set;
+      },
+      // 같은 틀로 문제 하나 더 ("문제가 이상해요"로 뺀 도전 문제를 바꿀 때)
+      another(orig) {
+        const tpl = M5.templates.find((t) => t.id === orig.tid);
+        const p = makeProblem(tpl, orig.level, rng, new Set(state.recent.map((x) => x.key)));
+        remember(p);
         return p;
       },
       // 처음 낸 답이 맞았는지 기록하고 난이도를 조절한다. 바뀌면 +1 / -1
