@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#2f6fde">
+<title>5학년 2학기 수학</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="app"><p class="loading">불러오는 중…</p></div>
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+<!-- 계산·채점·진행 (순서가 중요해요) -->
+<script src="core/rand.js"></script>
+<script src="core/dec.js"></script>
+<script src="core/text.js"></script>
+<script src="core/grade.js"></script>
+<script src="core/engine.js"></script>
+<script src="core/store.js"></script>
+<!-- 문제 틀 (단원별 파일) -->
+<script src="templates/words.js"></script>
+<script src="templates/u1-range.js"></script>
+<script src="templates/u1-round.js"></script>
+<!-- 그림과 화면 -->
+<script src="draw/figure.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
