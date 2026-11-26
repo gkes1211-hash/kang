@@ -126,7 +126,7 @@
   }
 
   // ------------------------------------------------------------------ 소단원 고르기
-  function subs(unitId) {
+  function subs(unitId, summary = '') {
     onKey = null;
     const u = M5.units.find((x) => x.id === unitId);
     const lvOf = (k) => state.levels[k] || 1;
@@ -141,6 +141,7 @@
     app.innerHTML = `${header()}
       <main class="subs">
         <button class="back" data-go="home">← 단원 목록</button>
+        ${summary}
         <h2>${u.id}단원 ${esc(u.name)}</h2>
         <p class="lead">소단원을 고르면 문제가 끝없이 나와요. 그만 풀고 싶을 때 '그만 풀기'를 눌러요.</p>
         <div class="sublist">
@@ -708,31 +709,27 @@
     // 소단원 고르기 화면으로 돌아가기
     function back() { subs(scope.unit); }
 
+    // "그만 풀기": 오늘의 결과를 요약해서 소단원 고르기 페이지 맨 위에 보여 준다
     function result() {
-      onKey = null;
-      const rate = run.solved ? Math.round((run.correct / run.solved) * 100) : 0;
+      if (!run.solved) { subs(scope.unit); return; }
+      const rate = Math.round((run.correct / run.solved) * 100);
       const lv = sess.level;
-      const lvMsg = lv > run.startLevel ? '난이도가 올라갔어요! 🎉' : lv < run.startLevel ? '다음에는 조금 쉬운 문제부터 다시 올라가요.' : '';
-      const list = (ids) => [...new Set(ids)].map((id) => `<li>${esc(typeName(id))}</li>`).join('');
-      app.innerHTML = `${header()}
-        <main class="center"><section class="panel">
-          <div class="big-emoji">${rate >= 80 ? '🏆' : rate >= 50 ? '🌟' : '🌱'}</div>
-          <h2>오늘의 결과</h2>
+      const lvMsg = lv > run.startLevel ? ' 난이도가 올라갔어요! 🎉' : lv < run.startLevel ? ' 다음에는 조금 쉬운 문제부터 다시 올라가요.' : '';
+      const list = (ids) => [...new Set(ids)].map((id) => esc(typeName(id))).join(', ');
+      const where = scope.sub ? M5.findSub(scope.sub).sub.name : '전체 섞기';
+      const summary = `<section class="summary" aria-label="오늘의 결과">
+          <div class="sum-head"><span class="big-emoji">${rate >= 80 ? '🏆' : rate >= 50 ? '🌟' : '🌱'}</span><div><h3>오늘의 결과</h3><p class="muted small">방금 푼 소단원: ${esc(where)}</p></div></div>
           <div class="result">
             <div><span class="k">푼 문제</span><b>${run.solved}</b></div>
             <div><span class="k">맞힌 문제</span><b>${run.correct}</b></div>
             <div><span class="k">정답률</span><b>${rate}%</b></div>
             <div><span class="k">통과한 유형</span><b>🏅 ${new Set(run.passed).size}</b></div>
           </div>
-          <p class="muted small">맞힌 문제는 처음 낸 답으로 세어요. 최고 연속 정답 ${run.best}개.</p>
-          ${run.passed.length ? `<div class="typelist"><b>🏅 통과한 유형</b><ul>${list(run.passed)}</ul></div>` : ''}
-          ${run.retried.length ? `<div class="typelist"><b>🌱 다음에 다시 도전할 유형</b><ul>${list(run.retried)}</ul></div>` : ''}
-          <p>지금 난이도 <span class="stars">${stars(lv)}</span> ${M5.LEVELS[lv - 1]} ${lvMsg}</p>
-          <div class="btns"><button id="again" class="btn primary">계속 풀기</button><button id="toSubs" class="btn">소단원 고르기</button><button class="btn" data-go="home">홈으로</button></div>
-        </section></main>`;
-      bindCommon();
-      $('#again').addEventListener('click', () => play(scope));
-      $('#toSubs').addEventListener('click', back);
+          ${run.passed.length ? `<p class="small">🏅 통과한 유형: ${list(run.passed)}</p>` : ''}
+          ${run.retried.length ? `<p class="small">🌱 다음에 다시 도전할 유형: ${list(run.retried)}</p>` : ''}
+          <p class="small">지금 난이도 <span class="stars">${stars(lv)}</span> ${M5.LEVELS[lv - 1]}.${lvMsg} 맞힌 문제는 처음 낸 답으로 세어요.</p>
+        </section>`;
+      subs(scope.unit, summary);
     }
 
     nextNormal();

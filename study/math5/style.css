@@ -320,3 +320,12 @@ button.mini:hover { border-color: var(--accent); }
 /* 문제 풀기 화면의 "← 소단원 고르기" (두 칸 위에 한 줄로) */
 .playback { grid-column: 1 / -1; justify-self: start; margin-bottom: -10px; padding: 4px 0; }
 .playback:hover { color: var(--accent-ink); }
+
+/* 소단원 고르기 페이지 맨 위의 "오늘의 결과" 요약 */
+.summary { background: var(--surface); border: 2px solid var(--accent-soft); border-radius: 20px; padding: 18px 22px; margin-top: 14px; box-shadow: var(--shadow); }
+.summary .sum-head { display: flex; align-items: center; gap: 14px; }
+.summary .big-emoji { font-size: 44px; }
+.summary h3 { margin: 0; font-size: 22px; }
+.summary .sum-head p { margin: 0; }
+.summary .result { margin: 12px 0 6px; }
+.summary p.small { margin: 6px 0 0; }
