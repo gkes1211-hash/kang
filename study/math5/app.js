@@ -19,6 +19,48 @@
   const $ = (sel) => app.querySelector(sel);
   const $$ = (sel) => [...app.querySelectorAll(sel)];
 
+  // ------------------------------------------------------------------ 바탕화면 앱 (설치 · 인터넷 없이 열기)
+  // 인터넷 주소(https)로 열었을 때만: 앱 파일을 노트북에 담아 두어 인터넷이 없어도 열리게 한다 (sw.js)
+  if ('serviceWorker' in navigator && window.isSecureContext && location.protocol !== 'file:') {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  }
+  const SITE = 'https://gkes1211-hash.github.io/kang/study/math5/';
+  const KIT = 'desktop-shortcut/math5-desktop-shortcut.zip';
+  const isWin = /Windows/.test(navigator.userAgent);
+  let installed = matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+  let installEvt = null; // 크롬·엣지가 "설치할 수 있어요" 하고 알려 줄 때 받아 둔다
+  window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); installEvt = e; paintInstall(); });
+  window.addEventListener('appinstalled', () => { installed = true; installEvt = null; paintInstall(); toast('바탕화면에 앱을 설치했어요! 이제 아이콘을 두 번 눌러 열면 돼요.'); });
+  // 홈·설정에 있는 설치 자리(.install-slot)를 지금 상태에 맞게 다시 그린다
+  function installHtml(where) {
+    if (installed) return where === 'settings' ? '<p class="ok-box">✅ 지금 앱 창으로 열려 있어요. 바탕화면(또는 시작 메뉴)의 아이콘으로 열면 돼요.</p>' : '';
+    if (where === 'home') return installEvt ? '<div class="install-bar"><span>💻 바탕화면 아이콘을 두 번 눌러 바로 열 수 있게 할까요?</span><button class="btn primary small-btn" data-install>바탕화면에 앱 설치</button></div>' : '';
+    const fileNote = location.protocol === 'file:' ? `<p class="warn-box small">지금은 노트북 안의 파일로 열려 있어서 설치할 수 없어요. 인터넷 주소 <b>${esc(SITE)}</b> 로 열어서 설치해 주세요.</p>` : '';
+    return `${fileNote}
+      ${installEvt ? '<div class="btns left"><button class="btn primary" data-install>💻 바탕화면에 앱 설치</button></div>' : `<p class="small">설치 버튼이 안 보이면: 크롬은 오른쪽 위 <b>⋮</b> → <b>전송, 저장, 공유</b> → <b>앱 설치</b>(또는 <b>바로가기 만들기</b> → "창으로 열기" 체크), 엣지는 <b>…</b> → <b>앱</b> → <b>이 사이트를 앱으로 설치</b>.</p>`}
+      ${isWin ? `<p class="small">설치가 잘 안 되면 윈도우용 아이콘 만들기 파일을 써도 돼요: <a href="${KIT}" download>⬇️ 바탕화면 아이콘 만들기 파일 받기</a> → 압축을 풀고 <b>make-shortcut.bat</b> 을 두 번 누르기.</p>` : ''}`;
+  }
+  function paintInstall() {
+    document.querySelectorAll('.install-slot').forEach((el) => {
+      el.innerHTML = installHtml(el.dataset.where);
+      el.querySelectorAll('[data-install]').forEach((b) => b.addEventListener('click', async () => {
+        if (!installEvt) return;
+        const e = installEvt;
+        e.prompt();
+        try { await e.userChoice; } catch (_) { /* 무시 */ }
+        installEvt = null;
+        paintInstall();
+      }));
+    });
+  }
+  // 백업한 지 오래됐는지 (기록이 어느 정도 쌓였는데 백업이 없거나 30일이 지났으면 알려 준다)
+  function backupDue() {
+    const sm = S.summary(state);
+    if (sm.solved < 20) return false;
+    const last = state.settings.lastBackup;
+    return !last || Date.now() - new Date(last).getTime() > 30 * 86400000;
+  }
+
   const PRAISE = ['정답이에요! 👏', '잘했어요! 🌟', '맞았어요, 멋져요! 😊', '훌륭해요! 💯', '정확해요! 👍', '척척 풀었네요! ✨'];
   const PRAISE_FIXED = ['다시 풀어서 맞혔어요! 👏', '끝까지 해냈어요! 🌟', '스스로 고쳐서 맞혔어요! 💪'];
   const AGAIN = ['거의 다 왔어요.', '여기만 다시 볼까요?', '괜찮아요, 한 번 더 해 봐요!', '조금만 더 생각해 봐요.'];
@@ -171,8 +213,11 @@
           }).join('')}
         </div>
         ${S.saveOk() ? '' : '<p class="warn-box">⚠️ 기록을 저장하지 못하고 있어요. 설정에서 백업 파일을 내보내 두세요.</p>'}
+        ${backupDue() ? `<div class="backup-nudge"><span>💾 ${state.settings.lastBackup ? '백업한 지 30일이 지났어요.' : '아직 백업 파일이 없어요.'} 기록을 지키려면 백업 파일을 내보내 두세요.</span><button class="btn small-btn" data-go="settings">백업하러 가기</button></div>` : ''}
+        <div class="install-slot" data-where="home"></div>
       </main>`;
     bindCommon();
+    paintInstall();
     $$('.unit:not([disabled])').forEach((b) => b.addEventListener('click', () => subs(Number(b.dataset.unit))));
     $$('.modeb').forEach((b) => b.addEventListener('click', () => {
       state.settings.mode = b.dataset.mode;
@@ -1073,6 +1118,20 @@
           <div id="importBox"></div>
         </section>
         <section class="rcard">
+          <h3>💻 바탕화면 아이콘</h3>
+          <p class="small">한 번 설치하면 바탕화면 아이콘을 두 번 눌러 주소창 없는 앱 창으로 바로 열려요. 인터넷이 없어도 열려요.</p>
+          <div class="install-slot" data-where="settings"></div>
+        </section>
+        <section class="rcard">
+          <h3>🛡️ 기록이 사라지지 않게</h3>
+          <ul class="tips small">
+            <li>항상 <b>같은 노트북, 같은 브라우저, 같은 아이콘(주소)</b>으로 열어요. 크롬에서 푼 기록은 엣지에서 보이지 않아요.</li>
+            <li><b>시크릿 창(InPrivate)</b>에서는 창을 닫으면 기록이 지워져요.</li>
+            <li>브라우저의 "인터넷 사용 기록 삭제"를 할 때 <b>"쿠키 및 기타 사이트 데이터"</b>의 체크를 꼭 빼요.</li>
+            <li>한 달에 한 번 위의 <b>백업 파일 내보내기</b>를 눌러 파일을 USB나 클라우드(구글 드라이브 등)에 옮겨 두면 가장 안전해요.</li>
+          </ul>
+        </section>
+        <section class="rcard">
           <h3>🚩 '문제가 이상해요'로 저장한 문제</h3>
           <p class="small">저장한 문제 ${state.reports.length}개. 어른이 확인할 수 있게 모아 두었어요.</p>
           <div class="btns left"><button class="btn" data-go="reports">목록 보기</button></div>
@@ -1084,6 +1143,7 @@
         </section>
       </main>`;
     bindCommon();
+    paintInstall();
     $('#export').addEventListener('click', () => {
       state.settings.lastBackup = new Date().toISOString();
       save();

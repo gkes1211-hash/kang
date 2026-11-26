@@ -316,6 +316,20 @@ for (const tpl of M5.templates) {
 // 문제 종류가 아주 적은 틀(예: 수직선 한쪽)은 가끔 같은 문제가 겹칠 수 있다. 전체의 2% 아래면 통과.
 check('비슷한 문제', simRows.dupSets / simRows.sets < 0.02, `같은 문제가 겹친 세트가 ${simRows.dupSets}개예요`);
 
+// ---------------------------------------------------------------- 인터넷 없이 열기 (sw.js)
+{
+  const sw = fs.readFileSync(path.join(ROOT, 'sw.js'), 'utf8');
+  const need = [...files, 'app.js', 'index.html', 'style.css', 'manifest.webmanifest'];
+  const man = JSON.parse(fs.readFileSync(path.join(ROOT, 'manifest.webmanifest'), 'utf8'));
+  for (const ic of man.icons) need.push(ic.src);
+  for (const f of need) {
+    check('sw.js', sw.includes(`'./${f}'`), `sw.js 의 FILES 에 ${f} 가 빠졌어요`);
+    check('sw.js', fs.existsSync(path.join(ROOT, f)), `${f} 파일이 없어요`);
+  }
+  for (const m of sw.matchAll(/'\.\/([^']+)'/g)) check('sw.js', fs.existsSync(path.join(ROOT, m[1])), `sw.js 에 적힌 ${m[1]} 파일이 없어요`);
+  console.log(`\n[인터넷 없이 열기] sw.js 가 담아 두는 파일 ${need.length}개 확인`);
+}
+
 // ---------------------------------------------------------------- 결과
 console.log('\n================ 결과 ================');
 const subName = (id) => M5.findSub(id).sub.name;
