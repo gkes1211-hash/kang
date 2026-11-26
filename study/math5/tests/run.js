@@ -155,7 +155,7 @@ for (const tpl of M5.templates) {
       check(where, !!d, `수가 아닌 값: ${v}`, p);
       if (!d) continue;
       check(where, d.n >= 0, `음수가 나왔어요: ${v}`, p);
-      check(where, d.s <= 3, `소수 자리가 너무 길어요: ${v}`, p);
+      check(where, d.s <= (tpl.unit === 4 ? 4 : 3), `소수 자리가 너무 길어요: ${v}`, p);
       check(where, D.cmp(d, 10000000) <= 0, `수가 너무 커요: ${v}`, p);
     }
     if (a.type === 'num' || a.type === 'pair') {
@@ -244,7 +244,7 @@ const engineRows = [];
 
 // ---------------------------------------------------------------- 5. 비슷한 문제 도전
 console.log('5) 비슷한 문제 5개 검사 (틀마다 원인별로 40세트)');
-const simRows = { sets: 0, sibling: 0, dupSets: 0 };
+const simRows = { sets: 0, sibling: 0, dupSets: 0, fallback: 0 };
 for (const tpl of M5.templates) {
   for (let i = 0; i < 40; i++) {
     const level = tpl.levels[0] + (i % (tpl.levels[1] - tpl.levels[0] + 1));
@@ -261,13 +261,15 @@ for (const tpl of M5.templates) {
     for (const q of set) {
       check(where, q.sub === orig.sub, '다른 소단원 문제가 섞였어요', q);
       check(where, q.level === Math.max(M5.templates.find((t) => t.id === q.tid).levels[0], Math.min(orig.level, M5.templates.find((t) => t.id === q.tid).levels[1])), '난이도가 달라요', q);
-      if (q.tid !== orig.tid) {
+      if (q.simFallback) simRows.fallback++;
+      else if (q.tid !== orig.tid) {
         simRows.sibling++;
         check(where, !!cause && M5.hasCause(q, cause), '다른 틀인데 같은 원인의 오답 패턴이 없어요', q);
       }
       check(where, M5.templates.find((t) => t.id === q.tid).verify(q) === true, '정답이 조건을 만족하지 않아요', q);
     }
-    check(where, set.filter((q) => q.tid === orig.tid).length >= 3, '같은 틀 문제가 3개보다 적어요');
+    // 같은 틀로 새 문제를 만들 수 있으면 같은 틀이 3개 이상이어야 한다 (문장 종류가 적은 틀은 같은 소단원의 다른 틀로 채운다)
+    if (!set.some((q) => q.simFallback)) check(where, set.filter((q) => q.tid === orig.tid).length >= 3, '같은 틀 문제가 3개보다 적어요');
   }
 }
 // 문제 종류가 아주 적은 틀(예: 수직선 한쪽)은 가끔 같은 문제가 겹칠 수 있다. 전체의 2% 아래면 통과.
@@ -285,7 +287,7 @@ console.log('\n[무한 모드]');
 for (const e of engineRows) {
   console.log(`  ${e.triple || e.levelBad ? '✗' : '✓'} ${e.name.padEnd(28)} 문제집 형식 ${Math.round(e.ratioA * 100)}%  최근 문제 반복 ${e.repeat}번  같은 스타일 3연속 ${e.triple}번  난이도 규칙 어김 ${e.levelBad}번`);
 }
-console.log(`\n[비슷한 문제 도전]\n  ${simRows.dupSets / simRows.sets < 0.02 ? '✓' : '✗'} ${simRows.sets}세트 × 5문제, 같은 원인의 다른 틀에서 가져온 문제 ${simRows.sibling}개, 겹친 문제가 있던 세트 ${simRows.dupSets}개`);
+console.log(`\n[비슷한 문제 도전]\n  ${simRows.dupSets / simRows.sets < 0.02 ? '✓' : '✗'} ${simRows.sets}세트 × 5문제, 같은 원인의 다른 틀에서 가져온 문제 ${simRows.sibling}개, 종류가 적은 틀이라 같은 소단원 다른 틀로 채운 문제 ${simRows.fallback}개, 겹친 문제가 있던 세트 ${simRows.dupSets}개`);
 const subCount = {};
 for (const t of M5.templates) subCount[t.sub] = (subCount[t.sub] || 0) + 1;
 console.log('\n[소단원별 문제 틀 수]');

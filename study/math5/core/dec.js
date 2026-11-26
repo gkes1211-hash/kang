@@ -44,6 +44,17 @@
   function add(a, b) { a = parse(a); b = parse(b); const [x, y, S] = align(a, b); return make(x + y, S); }
   function sub(a, b) { a = parse(a); b = parse(b); const [x, y, S] = align(a, b); return make(x - y, S); }
   function mulInt(a, k) { a = parse(a); return make(a.n * k, a.s); }
+  // 소수 × 소수: 자연수처럼 곱하고 소수점 아래 자리 수를 더한다
+  function mul(a, b) { a = parse(a); b = parse(b); return make(a.n * b.n, a.s + b.s); }
+  // 나누어떨어질 때만 (평균): 아니면 null
+  function divInt(a, k) {
+    a = parse(a);
+    for (let s = a.s; s <= a.s + 3; s++) {
+      const N = a.n * P[s - a.s];
+      if (N % k === 0) return make(N / k, s);
+    }
+    return null;
+  }
 
   // 10의 e제곱 (e = 2 → 100, e = -1 → 0.1)
   function pow10(e) { return e >= 0 ? make(P[e], 0) : make(1, -e); }
@@ -91,5 +102,5 @@
   const isInt = (d) => parse(d).s === 0;
   const toNumber = (d) => { d = parse(d); return d.n / P[d.s]; };
 
-  M5.dec = { make, parse, cmp, eq, add, sub, mulInt, pow10, str, fmt, round, digitAt, isInt, toNumber };
+  M5.dec = { make, parse, cmp, eq, add, sub, mulInt, mul, divInt, pow10, str, fmt, round, digitAt, isInt, toNumber };
 })();

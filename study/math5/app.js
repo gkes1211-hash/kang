@@ -223,7 +223,7 @@
           <section class="acard">
             ${lvBox}
             ${p.essay ? '<label class="lab" for="essay">✏️ 풀이 과정을 써요</label><textarea id="essay" class="essay-in" rows="4" placeholder="예) 대분수를 가분수로 바꾸면 …"></textarea>' : ''}
-            ${figOpts ? '<p class="lab">왼쪽에서 알맞은 수직선을 골라요.</p>' : `<div id="inputs">${inputHtml()}</div>`}
+            ${figOpts ? '<p class="lab">왼쪽에서 알맞은 그림을 골라요.</p>' : `<div id="inputs">${inputHtml()}</div>`}
             <div id="prev"></div>
             <button id="submit" class="btn primary">채점하기 <kbd>Enter</kbd></button>
             <div id="fb" class="fb" aria-live="polite"></div>

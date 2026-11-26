@@ -85,7 +85,7 @@
       if (avoid && avoid.has(p.key)) { if (!fallback) fallback = p; continue; }
       return p;
     }
-    if (fallback) return fallback;
+    if (fallback) { fallback.repeat = true; return fallback; } // 최근에 낸 문제밖에 만들 수 없었다
     throw new Error('문제를 만들지 못했어요: ' + tpl.id);
   }
   M5.makeProblem = makeProblem;
@@ -116,12 +116,26 @@
         }
       }
       if (!p) p = makeProblem(tpl, orig.level, rng, avoid);
+      if (avoid.has(p.key)) {
+        // 같은 틀로는 새 문제를 더 만들 수 없을 때(문장 종류가 적은 틀): 같은 소단원의 다른 틀에서
+        // 같은 원인의 오답 패턴이 있는 틀을 먼저 찾고, 없으면 아무 틀이나
+        const order = [...rng.shuffle(sibs.filter((t) => cause && hasCauseTpl(t, cause, orig.level, rng))), ...rng.shuffle(sibs)];
+        for (const t of order) {
+          const q = makeProblem(t, orig.level, rng, avoid);
+          if (!avoid.has(q.key)) { q.simFallback = true; p = q; break; }
+        }
+      }
       avoid.add(p.key);
       out.push(p);
     }
     return rng.shuffle(out);
   };
   M5.hasCause = hasCause;
+  // 이 틀로 만든 문제에 같은 원인의 오답 패턴이 있는지 몇 번 만들어 보고 확인
+  function hasCauseTpl(t, cause, level, rng) {
+    for (let i = 0; i < 3; i++) if (hasCause(makeProblem(t, level, rng, null), cause)) return true;
+    return false;
+  }
 
   // 무한 모드 진행
   // scope: { unit: 1, sub: 'u1s4' } (sub가 없으면 단원 전체 섞기)
@@ -134,10 +148,15 @@
     let badRun = 0;
     let last = null;
 
-    function pickTemplate() {
+    function pickTemplate(skip) {
       const level = state.levels[lvKey];
       let cand = pool.filter((t) => t.levels[0] <= level);
       if (!cand.length) cand = pool;
+      // 최근에 낸 문제밖에 만들 수 없었던 틀은 이번에는 빼기
+      if (skip && skip.size) {
+        const c = cand.filter((t) => !skip.has(t.id));
+        if (c.length) cand = c;
+      }
 
       const recent = state.recent;
       const prev2 = recent.slice(-2);
@@ -183,9 +202,17 @@
       scope,
       get level() { return state.levels[lvKey]; },
       next() {
-        const tpl = pickTemplate();
         const avoid = new Set(state.recent.map((x) => x.key));
-        const p = makeProblem(tpl, state.levels[lvKey], rng, avoid);
+        const skip = new Set();
+        let p = null;
+        // 최근 50문제와 같은 문제만 나오는 틀(문장 종류가 적은 O/X 등)이면 다른 틀로 바꿔 본다
+        for (let i = 0; i < 6; i++) {
+          const tpl = pickTemplate(skip);
+          const q = makeProblem(tpl, state.levels[lvKey], rng, avoid);
+          if (!p || !q.repeat) p = q;
+          if (!q.repeat) break;
+          skip.add(tpl.id);
+        }
         remember(p);
         last = p;
         return p;

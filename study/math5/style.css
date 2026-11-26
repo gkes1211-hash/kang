@@ -393,3 +393,44 @@ button.mini:hover { border-color: var(--accent); }
 .diag.essay .q2 { font-weight: 700; margin-top: 10px; }
 .chk { display: flex; align-items: center; gap: 8px; padding: 4px 0; font-size: 17px; }
 .chk input { width: 20px; height: 20px; }
+
+/* ---------- 막대그래프·회전판·구슬 주머니 (4·6단원) ---------- */
+.fig-bars { width: 100%; max-width: 560px; height: auto; display: block; }
+.fig-bars .ttl { font: 700 16px var(--font); fill: var(--ink); }
+.fig-bars .gl { stroke: #dfe5ef; stroke-width: 1; }
+.fig-bars .gl.major { stroke: #c3ccdb; }
+.fig-bars .axis { stroke: #4a5468; stroke-width: 2; }
+.fig-bars .yl { font: 600 13px var(--font); fill: var(--ink-2); }
+.fig-bars .xl { font: 600 15px var(--font); fill: var(--ink); }
+.fig-bars .bar { fill: var(--accent); }
+.fig-bars .q { font: 800 30px var(--font); fill: #a3842f; }
+
+.fig-spin { width: 190px; height: auto; display: block; }
+.opts.figs .fig-spin { width: 130px; flex: none; }
+.fig-spin path, .fig-spin circle { stroke: #4a5468; stroke-width: 2; }
+.fig-spin .sp-red { fill: #f2827a; }
+.fig-spin .sp-blue { fill: #7fb0f5; }
+.fig-spin .sp-yellow { fill: #f7d96b; }
+.fig-spin .sp-green { fill: #8fd19e; }
+.fig-spin .sp-white { fill: #ffffff; }
+.fig-spin .sp-rim { fill: none; stroke-width: 3; }
+.fig-spin .sl { font: 700 13px var(--font); fill: #1d2433; }
+.fig-spin .sp-arrow { fill: #1d2433; stroke: none; }
+.fig-spin .sp-arrow-l { stroke: #1d2433; stroke-width: 3; }
+.fig-spin .sp-pin { fill: #fff; }
+
+.fig-bag { display: inline-flex; flex-direction: column; align-items: center; gap: 6px; }
+.bag-body {
+  width: 220px; min-height: 120px; padding: 18px 14px 14px; display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; align-content: center;
+  border: 3px solid #8a6b45; border-radius: 30px 30px 60px 60px; background: #f6ead8;
+}
+.ball { width: 26px; height: 26px; border-radius: 50%; border: 2px solid rgba(0, 0, 0, .25); }
+.ball.b-red { background: #ef5a4f; }
+.ball.b-blue { background: #4a8ef0; }
+.ball.b-yellow { background: #f5cf3c; }
+.ball.b-green { background: #4fbf6b; }
+.ball.b-white { background: #fff; }
+.bag-legend { margin: 0; font-size: 15px; color: var(--ink-2); }
+/* 보기가 회전판일 때: 작게, 두 칸씩 */
+.opts.figs:has(.fig-spin) { grid-template-columns: 1fr 1fr; }
+.opts.figs .opt svg.fig-spin { flex: 0 0 120px; width: 120px; max-width: 120px; }

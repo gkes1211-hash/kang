@@ -83,7 +83,62 @@
     return `<div class="fig-arrows" role="img" aria-label="화살표 규칙대로 계산하는 그림">${parts.join('')}</div>`;
   }
 
-  const KINDS = { numberline, cards, chips, table, grid, rect, arrows };
+  // 막대그래프: { title, unit, labels: [...], values: [수 또는 null(?)], step: 눈금 한 칸, max }
+  function bars(f) {
+    const W = 560, Hh = 280, L = 56, R = 16, T = 34, B = 46;
+    const n = f.labels.length;
+    const plotW = W - L - R, plotH = Hh - T - B;
+    const y = (v) => T + plotH - (v / f.max) * plotH;
+    const bw = Math.min(56, (plotW / n) * 0.55);
+    const cx = (i) => L + (plotW / n) * (i + 0.5);
+    const out = [`<svg class="fig-bars" viewBox="0 0 ${W} ${Hh}" role="img" aria-label="${esc(f.title || '막대그래프')}">`];
+    if (f.title) out.push(`<text class="ttl" x="${W / 2}" y="20" text-anchor="middle">${esc(f.title)}</text>`);
+    const lblEvery = f.labelEvery || 1;
+    for (let v = 0, k = 0; v <= f.max + 1e-9; v += f.step, k++) {
+      out.push(`<line class="${k % lblEvery === 0 ? 'gl major' : 'gl'}" x1="${L}" y1="${y(v)}" x2="${W - R}" y2="${y(v)}"/>`);
+      if (k % lblEvery === 0) out.push(`<text class="yl" x="${L - 8}" y="${y(v) + 5}" text-anchor="end">${esc(+v.toFixed(3))}</text>`);
+    }
+    if (f.unit) out.push(`<text class="yl unit" x="${L - 8}" y="${T - 10}" text-anchor="end">(${esc(f.unit)})</text>`);
+    f.labels.forEach((lab, i) => {
+      const v = f.values[i];
+      if (v == null) out.push(`<text class="q" x="${cx(i)}" y="${y(f.max * 0.45)}" text-anchor="middle">?</text>`);
+      else out.push(`<rect class="bar" x="${cx(i) - bw / 2}" y="${y(v)}" width="${bw}" height="${y(0) - y(v)}"/>`);
+      out.push(`<text class="xl" x="${cx(i)}" y="${Hh - B + 22}" text-anchor="middle">${esc(lab)}</text>`);
+    });
+    out.push(`<line class="axis" x1="${L}" y1="${y(0)}" x2="${W - R}" y2="${y(0)}"/><line class="axis" x1="${L}" y1="${T - 4}" x2="${L}" y2="${y(0)}"/>`);
+    out.push('</svg>');
+    return out.join('');
+  }
+
+  const COLOR_NAME = { red: '빨강', blue: '파랑', yellow: '노랑', green: '초록', white: '흰색' };
+  // 회전판: { sectors: ['red', 'blue', ...] } 똑같은 크기로 나눈 칸
+  function spinner(f) {
+    const n = f.sectors.length, r = 84, c = 96;
+    const out = [`<svg class="fig-spin" viewBox="0 0 192 196" role="img" aria-label="회전판: ${f.sectors.map((s) => COLOR_NAME[s]).join(', ')}">`];
+    if (n === 1) {
+      out.push(`<circle class="sp-${f.sectors[0]}" cx="${c}" cy="${c}" r="${r}"/>`);
+      out.push(`<text class="sl" x="${c}" y="${c - 30}" text-anchor="middle">${COLOR_NAME[f.sectors[0]]}</text>`);
+    } else {
+      f.sectors.forEach((col, i) => {
+        const a0 = (i / n) * 2 * Math.PI - Math.PI / 2, a1 = ((i + 1) / n) * 2 * Math.PI - Math.PI / 2, am = (a0 + a1) / 2;
+        const p = (a) => `${(c + r * Math.cos(a)).toFixed(2)} ${(c + r * Math.sin(a)).toFixed(2)}`;
+        out.push(`<path class="sp-${col}" d="M${c} ${c} L${p(a0)} A${r} ${r} 0 ${a1 - a0 > Math.PI ? 1 : 0} 1 ${p(a1)} Z"/>`);
+        out.push(`<text class="sl" x="${(c + r * 0.62 * Math.cos(am)).toFixed(1)}" y="${(c + r * 0.62 * Math.sin(am) + 5).toFixed(1)}" text-anchor="middle">${COLOR_NAME[col]}</text>`);
+      });
+    }
+    out.push(`<circle class="sp-rim" cx="${c}" cy="${c}" r="${r}"/><path class="sp-arrow" d="M${c} ${c - 52} L${c - 7} ${c - 34} L${c + 7} ${c - 34} Z"/><line class="sp-arrow-l" x1="${c}" y1="${c}" x2="${c}" y2="${c - 36}"/><circle class="sp-pin" cx="${c}" cy="${c}" r="6"/>`);
+    out.push('</svg>');
+    return out.join('');
+  }
+
+  // 구슬 주머니: { balls: [{ color, n }] }
+  function bag(f) {
+    const dots = f.balls.flatMap((b) => Array.from({ length: b.n }, () => `<span class="ball b-${b.color}"></span>`));
+    const legend = f.balls.map((b) => `${COLOR_NAME[b.color]} ${b.n}개`).join(', ');
+    return `<div class="fig-bag" role="img" aria-label="주머니 속 구슬: ${legend}"><div class="bag-body">${dots.join('')}</div><p class="bag-legend">${esc(legend)}</p></div>`;
+  }
+
+  const KINDS = { numberline, cards, chips, table, grid, rect, arrows, bars, spinner, bag };
   function render(fig) {
     if (!fig) return '';
     const fn = KINDS[fig.type];
