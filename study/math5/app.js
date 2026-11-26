@@ -757,8 +757,12 @@
       </main>`;
     bindCommon();
     const c = $('#clear');
+    // 확인 창(confirm) 대신 두 번 누르게 한다 (링크로 연 페이지에서는 확인 창이 뜨지 않는다)
     if (c) c.addEventListener('click', () => {
-      if (confirm('저장한 문제를 모두 지울까요?')) { state.reports = []; save(); reports(); }
+      if (c.dataset.sure) { state.reports = []; save(); reports(); return; }
+      c.dataset.sure = '1';
+      c.textContent = '정말 지울까요? 한 번 더 누르면 지워져요';
+      c.classList.add('danger');
     });
   }
 
