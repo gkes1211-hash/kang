@@ -557,3 +557,37 @@ button.mini:hover { border-color: var(--accent); }
 .lvchange { font-size: 14px; margin-left: 6px; }
 .lvpop { margin-top: 8px; padding: 8px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface-2); }
 .lvpop p { margin: 6px 4px 0; }
+
+/* 문제집 오답 연습 */
+.hw-card { display: flex; align-items: center; justify-content: space-between; gap: 16px; background: var(--surface); border: 2px solid var(--line); border-radius: 18px; padding: 16px 22px; margin-top: 14px; box-shadow: var(--shadow); }
+.hw-card.has { border-color: #f0b35a; background: #fff8ec; }
+.hw-card h2 { margin: 0 0 4px; font-size: 20px; }
+.hw-card p { margin: 0; color: var(--ink-2); }
+.hwlist { list-style: none; padding: 0; display: grid; gap: 12px; }
+.hw-item { display: flex; align-items: center; justify-content: space-between; gap: 14px; background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 14px 18px; box-shadow: var(--shadow); }
+.hw-main { min-width: 0; }
+.hw-main b { font-size: 18px; }
+.hw-main p { margin: 4px 0 0; }
+.hw-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 6px; }
+.tag.k-wrong { background: var(--bad-soft); color: var(--bad); }
+.tag.k-unknown { background: var(--b-soft); color: var(--b-tag); }
+.hw-st { font-size: 14px; font-weight: 700; padding: 2px 10px; border-radius: 99px; background: var(--surface-2); color: var(--ink-2); }
+.hw-st.new { background: #fff1d6; color: #8a5a00; }
+.hw-st.prog { background: var(--accent-soft); color: var(--accent-ink); }
+.hw-st.due { background: #fff4d6; color: #7a5200; }
+.hw-st.done, .hw-st.mast { background: var(--good-soft); color: var(--good); }
+.concept.parent { margin-top: 20px; }
+.banner.hw { background: #fff1e0; color: #8a4b00; }
+.hw-explain { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 20px; align-items: start; max-width: 1180px; margin: 0 auto; padding: 16px 24px 40px; }
+.hw-explain > .back { grid-column: 1 / -1; justify-self: start; }
+.hw-ans { display: flex; flex-wrap: wrap; gap: 18px; font-size: 18px; margin: 14px 0 0; }
+.hw-ans .bad { color: var(--bad); text-decoration: line-through; }
+.hw-ans .good { color: var(--good); }
+.hw-why { background: var(--surface-2); border-radius: 14px; padding: 12px 16px; margin-bottom: 12px; }
+.hw-why .q { font-weight: 800; font-size: 19px; margin: 0 0 6px; }
+.hw-why .cause .badge { display: inline-block; background: var(--bad-soft); color: var(--bad); font-size: 14px; font-weight: 700; padding: 2px 10px; border-radius: 99px; }
+.hw-steps { padding-left: 22px; line-height: 1.7; font-size: 18px; }
+.hw-steps li { margin: 6px 0; }
+.hw-steps li.hid { display: none; }
+.good-box { background: var(--good-soft); color: var(--good); border-radius: 12px; padding: 10px 14px; font-weight: 700; }
+@media (max-width: 900px) { .hw-explain { grid-template-columns: 1fr; } .hw-card { flex-direction: column; align-items: flex-start; } }

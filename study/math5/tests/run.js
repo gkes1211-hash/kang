@@ -316,6 +316,27 @@ for (const tpl of M5.templates) {
 // 문제 종류가 아주 적은 틀(예: 수직선 한쪽)은 가끔 같은 문제가 겹칠 수 있다. 전체의 2% 아래면 통과.
 check('비슷한 문제', simRows.dupSets / simRows.sets < 0.02, `같은 문제가 겹친 세트가 ${simRows.dupSets}개예요`);
 
+// ---------------------------------------------------------------- 문제집 오답 세트
+{
+  for (const h of M5.homework) {
+    const where = '오답 세트 ' + h.id;
+    const p = M5.hw.original(h);
+    check(where, typeof h.check === 'function' && h.check() === true, '정답 검산(check)이 없거나 맞지 않아요');
+    check(where, G.grade(p, G.inputFor(p.answer.type, G.answerValue(p.answer))).ok === true, '정답을 넣었는데 틀렸다고 해요', p);
+    if (h.kind === 'wrong' && h.childValue != null) {
+      const res = G.grade(p, G.inputFor(p.answer.type, h.childValue));
+      check(where, res.ok === false && !!res.pattern, '아이가 쓴 답을 넣으면 틀림 + 원인이 나와야 해요', p);
+    }
+    try { M5.figure.render(p.figure); } catch (e) { fail(where, '그림 오류: ' + e.message); }
+    check(where, h.solution.length >= 2 && h.hints.every((x) => x.length > 5), '풀이·힌트가 부족해요');
+    const mk = M5.hw.practiceMaker(h, rng, []);
+    for (let i = 0; i < 30; i++) {
+      const q = mk.next();
+      check(where, G.grade(q, G.inputFor(q.answer.type, G.answerValue(q.answer))).ok === true && Array.isArray(q.hints) && q.hints.length === 3 && !!M5.findSub(q.sub), '연습 문제가 이상해요', q);
+    }
+  }
+  console.log(`\n[문제집 오답 세트] ${M5.homework.length}개 확인 (정답 검산, 아이 답 진단, 연습 문제 30개씩)`);
+}
 // ---------------------------------------------------------------- 난이도 직접 고르기
 {
   const st = M5.store.fresh();

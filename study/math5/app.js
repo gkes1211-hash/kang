@@ -122,6 +122,7 @@
       else if (go === 'records') records();
       else if (go === 'settings') settings();
       else if (go === 'review') reviewSession();
+      else if (go === 'hw') hwList();
     }));
   }
 
@@ -139,7 +140,7 @@
     if (ok) S.bumpDay(state, 'c', sign);
     S.bump(state, p.sub, ok, sign);
     S.bump(state, 'u' + p.unit, ok, sign);
-    if (!ok) {
+    if (!ok && !String(p.tid).startsWith('hw:')) {
       state.wrong[p.tid] = Math.max(0, (state.wrong[p.tid] || 0) + sign);
       // 틀린 유형은 1일·7일·30일 뒤에 다시 (기획서 7번)
       if (sign > 0) M5.review.markWrong(state, p, S.todayStr());
@@ -183,6 +184,7 @@
           </div>
           <button class="btn primary" data-go="review" ${due.length ? '' : 'disabled'}>복습 시작</button>
         </section>
+        ${hwCard()}
         <section class="today">
           <div><span class="k">오늘 푼 문제</span><b>${t.solved}</b></div>
           <div><span class="k">처음에 맞힌 문제</span><b>${t.correct}</b></div>
@@ -542,7 +544,7 @@
         if (res.ok) return finish(`<p class="good">${rng.pick(PRAISE)}</p>${solutionHtml(false)}`);
         if (!opts.fix) {
           // 비슷한 문제 도전 중: 정답은 아직 보여 주지 않고, 도전이 끝난 뒤 같이 고친다
-          return finish('<p class="no">아쉬워요. 이 문제는 도전이 끝난 뒤에 같이 고쳐 봐요.</p>', false);
+          return finish(opts.wrongMsg || '<p class="no">아쉬워요. 이 문제는 도전이 끝난 뒤에 같이 고쳐 봐요.</p>', false);
         }
         startDiagnose(res);
         return;
@@ -1252,6 +1254,251 @@
       toast('기록을 모두 지웠어요.');
       home();
     });
+  }
+
+  // ------------------------------------------------------------------ 문제집 오답 연습 (사진으로 받은 문제)
+  const HW = M5.hw;
+  function hwCount() {
+    const today = S.todayStr();
+    const due = HW.dueSets(state, today).length;
+    let fresh = 0, prog = 0;
+    for (const h of M5.homework) {
+      const s = state.hw && state.hw[h.id];
+      if (!s || s.status === 'new') fresh++;
+      else if (s.status === 'practice') prog++;
+    }
+    return { fresh, prog, due, all: M5.homework.length };
+  }
+  function hwCard() {
+    if (!M5.homework.length) return '';
+    const c = hwCount();
+    const bits = [c.fresh ? `새 문제 <b>${c.fresh}개</b>` : '', c.prog ? `연습 중 <b>${c.prog}개</b>` : '', c.due ? `오늘 다시 확인 <b>${c.due}개</b>` : ''].filter(Boolean);
+    const busy = c.fresh || c.prog || c.due;
+    return `<section class="hw-card ${busy ? 'has' : ''}">
+      <div><h2>📸 문제집 오답 연습</h2><p>${busy ? bits.join(' · ') : '보낸 문제를 모두 알고 넘어갔어요! 👏'}</p></div>
+      <button class="btn ${busy ? 'primary' : ''}" data-go="hw">${busy ? '연습하러 가기' : '목록 보기'}</button>
+    </section>`;
+  }
+  const hwBack = () => hwList();
+  function hwStatus(h, dueIds) {
+    const s = state.hw && state.hw[h.id];
+    if (dueIds.has(h.id)) return { cls: 'due', text: '📅 오늘 다시 확인해요', btn: '다시 확인하기' };
+    if (!s || s.status === 'new') return { cls: 'new', text: '새 문제', btn: '시작하기' };
+    if (s.status === 'practice') return { cls: 'prog', text: `연습 중 · 연속 정답 ${s.streak} / ${HW.GOAL}`, btn: '이어서 연습' };
+    if (s.mastered) return { cls: 'mast', text: '⭐ 완전히 알아요', btn: '다시 보기' };
+    return { cls: 'done', text: `✅ 알고 넘어감${s.due ? ` · ${fmtDate(s.due)}에 다시 확인` : ''}`, btn: '다시 보기' };
+  }
+  function hwList() {
+    onKey = null;
+    const today = S.todayStr();
+    const dueIds = new Set(HW.dueSets(state, today).map((h) => h.id));
+    const rank = { due: 0, prog: 1, new: 2, done: 3, mast: 4 };
+    const list = M5.homework.map((h) => ({ h, st: hwStatus(h, dueIds) }))
+      .sort((a, b) => rank[a.st.cls] - rank[b.st.cls] || (a.h.date < b.h.date ? 1 : a.h.date > b.h.date ? -1 : 0));
+    app.innerHTML = `${header(NAV)}
+      <main class="subs">
+        <button class="back" data-go="home">← 홈</button>
+        <h2>📸 문제집 오답 연습</h2>
+        <p class="lead">문제집에서 틀렸거나 모르는 문제를 사진으로 보내면 여기에 생겨요.<br>왜 틀렸는지 알아보고, 같은 유형 문제를 <b>${HW.GOAL}번 연속</b> 맞힐 때까지 연습해요. 그 뒤에도 1일·7일·30일 뒤에 다시 확인해요.</p>
+        ${list.length ? `<ol class="hwlist">${list.map(({ h, st }) => `<li class="hw-item">
+            <div class="hw-main">
+              <div class="hw-tags"><span class="tag k-${h.kind}">${HW.KINDS[h.kind]}</span><span class="tag">${esc(M5.findSub(h.sub).sub.name)}</span><span class="hw-st ${st.cls}">${st.text}</span></div>
+              <b>${esc(h.source)}</b>
+              ${h.title ? `<p class="small muted">${esc(h.title)}</p>` : ''}
+            </div>
+            <button class="btn ${st.cls === 'done' || st.cls === 'mast' ? '' : 'primary'} small-btn" data-hw="${esc(h.id)}">${st.btn}</button>
+          </li>`).join('')}</ol>` : '<p class="muted">아직 없어요. 문제집 사진을 보내면 여기에 생겨요.</p>'}
+        <details class="concept parent"><summary>👪 부모님께: 사진 보내는 방법</summary><p>1. 아이가 틀렸거나 모르는 문제를 사진으로 찍어요. 문제 번호, 그림, 아이가 쓴 답(또는 풀이 흔적)이 보이게 찍어 주세요.<br>2. 이 앱을 만든 Claude Code 대화에 사진을 올리고 "오답 세트 만들어 줘"라고 써 주세요. 틀린 문제인지 모르는 문제인지, 아이가 쓴 답이 무엇인지 적어 주면 더 정확해요.<br>3. Claude가 문제를 읽고, 왜 틀렸는지·풀이·같은 유형 연습 문제를 앱에 넣어요. 몇 분 뒤 인터넷이 연결된 상태로 앱을 다시 열면 여기에 생겨요.<br>사진 자체는 앱에 올라가지 않아요. 문제를 글과 그림으로 옮겨 적어요.</p></details>
+      </main>`;
+    bindCommon();
+    $$('[data-hw]').forEach((b) => b.addEventListener('click', () => hwOpen(M5.homework.find((h) => h.id === b.dataset.hw))));
+  }
+  function hwOpen(h) {
+    const today = S.todayStr();
+    const s = HW.stateOf(state, h.id);
+    if (HW.dueSets(state, today).some((x) => x.id === h.id)) { hwCheck(h); return; }
+    if (s.status === 'practice') { hwExplain(h, null, true); return; }
+    hwIntro(h);
+  }
+  const hwBanner = (h, right) => `<div class="banner hw"><span>📸 ${esc(h.source)}</span>${right ? `<span class="goal">${right}</span>` : ''}</div>`;
+  function hwProblemHtml(h) {
+    return `<div class="hw-prob"><p class="qtext">${txt(h.problem.text)}</p>${h.problem.figure ? `<div class="figure">${F.render(h.problem.figure)}</div>` : ''}</div>`;
+  }
+  // 1) 틀린 문제: 먼저 한 번 더 풀어 보기 / 모르는 문제: 바로 풀이
+  function hwIntro(h) {
+    if (h.kind === 'unknown') { hwExplain(h, null); return; }
+    onKey = (ev) => { if (ev.key === 'Enter') { ev.preventDefault(); go(); } };
+    app.innerHTML = `${header(statsHtml())}
+      <main class="center"><section class="panel hw-panel">
+        <div class="big-emoji">📸</div>
+        <h2>${esc(h.source)}</h2>
+        <p>문제집에서 틀렸던 문제예요. ${h.childAnswer ? `그때 쓴 답은 <b>${txt(h.childAnswer)}</b>였어요.` : ''}<br>먼저 <b>한 번 더 풀어 볼까요?</b> 그다음에 왜 틀렸는지 같이 봐요.</p>
+        <div class="btns"><button class="btn" data-go="hw">← 오답 목록</button><button id="go" class="btn primary">다시 풀어 보기 <kbd>Enter</kbd></button></div>
+      </section></main>`;
+    bindCommon();
+    $('#go').addEventListener('click', go);
+    function go() {
+      const p = HW.original(h);
+      solve(p, {
+        fix: false,
+        banner: hwBanner(h, '다시 풀어 보기'),
+        backLabel: '← 오답 목록',
+        nextLabel: '왜 틀렸는지 보기 →',
+        wrongMsg: '<p class="no">이번에도 정답과 달라요. 괜찮아요! 왜 틀렸는지 같이 봐요.</p>',
+        onFirst() {},
+        onDone(r) { hwExplain(h, r.firstOk); },
+        onWeird() { reportProblem(p); hwExplain(h, null); },
+        onStop: hwBack,
+        onBack: hwBack,
+      });
+    }
+  }
+  // 2) 왜 틀렸는지 + 풀이 (한 단계씩)
+  function hwExplain(h, retryOk, resume) {
+    const info = M5.findSub(h.sub);
+    const steps = h.solution;
+    let shown = resume ? steps.length : 1;
+    const d = h.diagnosis;
+    const ansText = G.answerText(HW.original(h));
+    app.innerHTML = `${header(statsHtml())}
+      <main class="hw-explain">
+        <button class="back" data-go="hw">← 오답 목록</button>
+        <section class="qcard">
+          ${hwBanner(h, HW.KINDS[h.kind])}
+          ${hwProblemHtml(h)}
+          <p class="hw-ans">${h.kind === 'wrong' && h.childAnswer ? `<span>그때 쓴 답 <b class="bad">${txt(h.childAnswer)}</b></span>` : ''}<span>정답 <b class="good">${txt(ansText)}</b></span></p>
+        </section>
+        <section class="acard">
+          ${retryOk === true ? '<p class="good-box">다시 풀 때는 맞혔어요! 👍 같은 유형을 연습해서 확실히 알고 넘어가요.</p>' : ''}
+          ${h.kind === 'wrong' ? `<div class="hw-why"><p class="q">🔍 왜 틀렸을까?</p><p class="cause"><span class="badge">${esc(CAUSE[d.cause])}</span> <b>${txt(d.title)}</b></p><p>${txt(d.msg)}</p></div>` : '<div class="hw-why"><p class="q">📘 같이 풀어 봐요</p><p>한 단계씩 읽어 보고, 이해가 되면 다음 단계를 열어요.</p></div>'}
+          <ol class="hw-steps">${steps.map((x, i) => `<li class="${i < shown ? '' : 'hid'}">${txt(x)}</li>`).join('')}</ol>
+          <div class="btns left"><button id="more" class="btn" ${shown >= steps.length ? 'hidden' : ''}>다음 단계 보기 ▶</button><button id="go" class="btn primary" ${shown >= steps.length ? '' : 'hidden'}>${resume ? '이어서 연습하기' : '같은 유형 문제 연습하기'} <kbd>Enter</kbd></button></div>
+          <details class="concept"><summary>📘 개념 다시 보기</summary><p>${txt(info.sub.concept)}</p></details>
+        </section>
+      </main>`;
+    bindCommon();
+    const more = () => {
+      shown++;
+      $$('.hw-steps li').forEach((li, i) => li.classList.toggle('hid', i >= shown));
+      if (shown >= steps.length) { $('#more').hidden = true; $('#go').hidden = false; $('#go').focus(); }
+    };
+    $('#more').addEventListener('click', more);
+    $('#go').addEventListener('click', () => hwPractice(h));
+    onKey = (ev) => {
+      if (ev.key !== 'Enter' || (ev.target && ev.target.tagName === 'SUMMARY')) return;
+      ev.preventDefault();
+      if (shown < steps.length) more(); else hwPractice(h);
+    };
+  }
+  // 3) 같은 유형 연습: 처음에 맞힌 문제가 GOAL번 연속이면 완료
+  function hwPractice(h) {
+    const s = HW.stateOf(state, h.id);
+    if (s.status !== 'practice') { s.status = 'practice'; s.streak = 0; }
+    save();
+    const maker = HW.practiceMaker(h, rng, state.recent.map((x) => x.key));
+    next();
+    function next() {
+      const p = maker.next();
+      if (!String(p.tid).startsWith('hw:')) {
+        state.recent.push({ key: p.key, tid: p.tid, sub: p.sub, styleName: p.styleName, style: p.style });
+        if (state.recent.length > 50) state.recent.splice(0, state.recent.length - 50);
+      }
+      let first = null;
+      solve(p, {
+        fix: true,
+        banner: hwBanner(h, `연속 정답 <b>${s.streak} / ${HW.GOAL}</b>`),
+        backLabel: '← 오답 목록',
+        onFirst(ok) {
+          first = ok;
+          s.solved++;
+          if (ok) { s.correct++; s.streak++; s.best = Math.max(s.best || 0, s.streak); } else s.streak = 0;
+          recordFirst(p, ok);
+          save();
+          if (ok && s.streak < HW.GOAL) toast(`연속 정답 ${s.streak} / ${HW.GOAL}! ${s.streak === HW.GOAL - 1 ? '하나만 더!' : ''}`);
+        },
+        onDone() { if (s.streak >= HW.GOAL) done(); else next(); },
+        onWeird(r) {
+          reportProblem(p);
+          if (r.firstOk != null && first != null) {
+            recordFirst(p, r.firstOk, -1);
+            s.solved--; if (r.firstOk) { s.correct--; s.streak = Math.max(0, s.streak - 1); }
+            save();
+          }
+          next();
+        },
+        onStop: hwBack,
+        onBack: hwBack,
+      });
+    }
+    function done() {
+      const today = S.todayStr();
+      Object.assign(s, { status: 'done', doneAt: today, stage: 0, due: M5.review.addDays(today, M5.review.DAYS[0]), streak: 0 });
+      S.ensureToday(state);
+      state.today.passed++;
+      S.bumpDay(state, 'p');
+      save();
+      onKey = (ev) => { if (ev.key === 'Enter') { ev.preventDefault(); hwList(); } };
+      app.innerHTML = `${header(statsHtml())}
+        <main class="center"><section class="panel">
+          <div class="big-emoji">🎉</div>
+          <h2>알고 넘어갔어요!</h2>
+          <p><b>${esc(h.source)}</b>와 같은 유형을 ${HW.GOAL}번 연속 맞혔어요.</p>
+          <p class="muted">잊지 않게 내일, 7일 뒤, 30일 뒤에 문제 2개씩 다시 확인해요.</p>
+          <div class="btns"><button class="btn" data-go="home">홈으로</button><button class="btn primary" data-go="hw">오답 목록 <kbd>Enter</kbd></button></div>
+        </section></main>`;
+      bindCommon();
+    }
+  }
+  // 4) 다시 확인 (1일·7일·30일): 2문제 모두 처음에 맞히면 다음 단계, 하나라도 틀리면 다시 연습
+  function hwCheck(h) {
+    const s = HW.stateOf(state, h.id);
+    const maker = HW.practiceMaker(h, rng, state.recent.map((x) => x.key));
+    const N = 2;
+    const res = [];
+    step();
+    function step() {
+      if (res.length >= N) { finish(); return; }
+      const p = maker.next();
+      solve(p, {
+        fix: true,
+        banner: hwBanner(h, `📅 다시 확인 <b>${res.length + 1} / ${N}</b>`),
+        backLabel: '← 오답 목록',
+        nextLabel: res.length === N - 1 ? '결과 보기 →' : '다음 문제 →',
+        onFirst(ok) { res.push(ok); recordFirst(p, ok); },
+        onDone() { step(); },
+        onWeird(r) { reportProblem(p); if (r.firstOk != null) { res.pop(); recordFirst(p, r.firstOk, -1); } step(); },
+        onStop: hwBack,
+        onBack: hwBack,
+      });
+    }
+    function finish() {
+      const today = S.todayStr();
+      const ok = res.every(Boolean);
+      let msg;
+      if (ok) {
+        s.stage++;
+        if (s.stage >= M5.review.DAYS.length) { s.mastered = today; s.due = ''; msg = '⭐ 30일 뒤까지 잊지 않았어요. 이제 완전히 알아요!'; }
+        else {
+          const want = M5.review.addDays(s.doneAt || today, M5.review.DAYS[s.stage]);
+          const tomorrow = M5.review.addDays(today, 1);
+          s.due = want > tomorrow ? want : tomorrow;
+          msg = `잘 기억하고 있어요! 다음 확인은 ${fmtDate(s.due)}이에요.`;
+        }
+      } else {
+        Object.assign(s, { status: 'practice', streak: 0, due: '', stage: 0 });
+        msg = '조금 헷갈렸네요. 같은 유형을 다시 연습해서 확실히 알아 봐요.';
+      }
+      save();
+      app.innerHTML = `${header(statsHtml())}
+        <main class="center"><section class="panel">
+          <div class="big-emoji">${ok ? '👏' : '🌱'}</div>
+          <h2>${esc(h.source)} 다시 확인</h2>
+          <p>${res.filter(Boolean).length} / ${N} 맞혔어요. ${msg}</p>
+          <div class="btns"><button class="btn" data-go="hw">오답 목록</button>${ok ? '' : '<button id="go" class="btn primary">다시 연습하기</button>'}</div>
+        </section></main>`;
+      bindCommon();
+      if (!ok) $('#go').addEventListener('click', () => hwExplain(h, null, true));
+    }
   }
 
   S.askPersist().then((v) => { persisted = v === true; });
