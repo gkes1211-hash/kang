@@ -8,7 +8,7 @@ const ROOT = path.join(__dirname, '..');
 const ctx = { window: {} };
 ctx.H = undefined;
 vm.createContext(ctx);
-for (const f of ['eras', 'people', 'events', 'stories', 'adventures', 'words']) {
+for (const f of ['eras', 'people', 'events', 'stories', 'adventures', 'adventures-2', 'words']) {
   vm.runInContext(fs.readFileSync(path.join(ROOT, 'data', `${f}.js`), 'utf8').replace('window.H = window.H || {};', 'var H = window.H = window.H || {};'), ctx, { filename: `data/${f}.js` });
 }
 const H = ctx.window.H;
@@ -75,19 +75,20 @@ for (const s of H.stories) {
 
 // 모험 편
 uniq(H.adventures, '모험');
-const BGS = new Set(['land', 'camp', 'river', 'castle', 'night']);
+const BGS = new Set(['land', 'camp', 'river', 'castle', 'night', 'sea', 'cave']);
 for (const A of H.adventures) {
   const w = `모험 ${A.id}`;
   check(w, eraIds.has(A.era), `era "${A.era}" 가 eras.js 에 없어요`);
   check(w, H.people.some((p) => p.id === A.person), `person "${A.person}" 가 people.js 에 없어요`);
   for (const k of ['emoji', 'title', 'hook', 'think']) check(w, filled(A[k]), `${k} 가 비었어요`);
   const c = A.card || {};
-  for (const k of ['title', 'when', 'who', 'vs', 'how']) check(w, filled(c[k]), `진짜 역사 카드의 ${k} 가 비었어요`);
+  for (const k of ['title', 'when', 'who', 'how']) check(w, filled(c[k]), `진짜 역사 카드의 ${k} 가 비었어요`);
+  check(w, Number.isInteger(A.year), 'year(정수)가 있어야 순서대로 놓여요');
   check(w, Array.isArray(c.words) && c.words.length >= 3, '카드의 핵심 단어(words)는 3개 이상');
   check(w, Array.isArray(A.scenes) && A.scenes.length >= 3, '장면이 3개 이상 있어야 해요');
   (A.scenes || []).forEach((sc, k) => {
     const ws = `${w} 장면 ${k + 1}`;
-    check(ws, ['talk', 'choice', 'retreat', 'timing'].includes(sc.type), `type "${sc.type}" 을 몰라요`);
+    check(ws, ['talk', 'choice', 'repeat', 'timing', 'match'].includes(sc.type), `type "${sc.type}" 을 몰라요`);
     check(ws, sc.who === 'me' || (A.cast && A.cast[sc.who]), `말하는 사람 "${sc.who}" 가 cast 에 없어요`);
     check(ws, filled(sc.say), '말풍선(say)이 비었어요');
     // 말풍선은 짧게: 아이가 읽기 부담 없도록 (이름 자리 {name} 은 빼고 셈)
@@ -103,7 +104,22 @@ for (const A of H.adventures) {
       }
       check(ws, filled(sc.after), '맞힌 뒤 한마디(after)가 없어요');
     }
-    if (sc.type === 'retreat') check(ws, Number.isInteger(sc.times) && sc.times > 1 && filled(sc.done), 'times(2 이상)와 done 이 있어야 해요');
+    if (sc.type === 'repeat') {
+      check(ws, Number.isInteger(sc.times) && sc.times > 1 && filled(sc.done) && filled(sc.button), 'times(2 이상), button, done 이 있어야 해요');
+      for (const v of sc.movers || []) check(ws, filled(v.e) && Array.isArray(v.x) && v.x.length === 2 && typeof v.y === 'number', `mover "${v.e}" 의 x:[시작,끝], y 를 확인해요`);
+      if (sc.meter) check(ws, filled(sc.meter.label) && typeof sc.meter.from === 'number' && typeof sc.meter.to === 'number', 'meter 에 label, from, to 가 있어야 해요');
+    }
+    if (sc.type === 'timing') {
+      const z = sc.zone || {};
+      check(ws, filled(sc.hit) && sc.mover && filled(sc.mover.e), 'hit 와 mover 가 있어야 해요');
+      check(ws, ['river', 'band'].includes(z.kind) && z.from >= 0 && z.to <= 100 && z.to - z.from >= 16, 'zone 은 river/band, 폭 16% 이상이어야 맞히기 쉬워요');
+    }
+    if (sc.type === 'match') {
+      const ps = sc.pairs || [];
+      check(ws, ps.length >= 2 && ps.length <= 6 && filled(sc.done), '짝은 2~6개, done 이 있어야 해요');
+      check(ws, new Set(ps.map((x) => x.a)).size === ps.length && new Set(ps.map((x) => x.b)).size === ps.length, '짝 카드 글이 서로 달라야 해요');
+      for (const x of ps) check(ws, filled(x.a) && filled(x.b) && x.b.length <= 40, `짝 "${x.a}" 의 글이 비었거나 너무 길어요 (40자까지)`);
+    }
     if (sc.type === 'timing') check(ws, filled(sc.hint), 'hint 가 있어야 해요');
   });
   check(w, Array.isArray(A.review) && A.review.length >= 2, '기억 퀴즈(review)는 2개 이상');

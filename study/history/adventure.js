@@ -6,6 +6,7 @@ H.makeAdventure = (api) => {
   const { S, save, addStars, toast, esc, gloss, speak, hush, canSpeak, header, go, $app, personById } = api;
   const AVATARS = ['🧒', '👧', '👦', '🧑‍🚀', '🦊', '🐯', '🐰', '🐼'];
   const REVIEW_DAYS = [3, 7, 30];
+  H.adventures.sort((a, b) => a.year - b.year); // 옛날 → 요즘
   const byId = Object.fromEntries(H.adventures.map((a) => [a.id, a]));
   S.adv = S.adv || {};
 
@@ -65,7 +66,7 @@ H.makeAdventure = (api) => {
           <span class="txt"><b>${esc(a.title)} ${r ? `<span class="done">${'⭐'.repeat(r.stars)}</span>` : '<span class="new">NEW</span>'}</b><i>${esc(a.hook)}</i></span>
           ${api.eraTag(a.era)}</button>`;
       }).join('')}
-        <div class="row soon"><span class="em">🐢</span><span class="txt"><b>다음 모험은 준비 중이에요</b><i>명량 해전, 한글 만들기, 수원 화성 … 하나씩 열려요!</i></span></div>
+        <div class="row soon"><span class="em">🐢</span><span class="txt"><b>다음 모험도 준비 중이에요</b><i>새 모험이 하나씩 더 열려요!</i></span></div>
       </div>`;
   };
   views.advSetup = () => setup(() => go('advList'));
@@ -113,8 +114,9 @@ H.makeAdventure = (api) => {
         $app.innerHTML = frame(sc, { stage: stageHTML(sc.stage), act: nextBtn(i === A.scenes.length - 1 ? '🎁 진짜 역사 카드 받기' : '다음 ▶') });
         bindCommon(sc); bindNext();
       } else if (sc.type === 'choice') choice(sc);
-      else if (sc.type === 'retreat') retreat(sc);
+      else if (sc.type === 'repeat') repeat(sc);
       else if (sc.type === 'timing') timing(sc);
+      else if (sc.type === 'match') match(sc);
       window.scrollTo(0, 0);
     }
 
@@ -146,69 +148,116 @@ H.makeAdventure = (api) => {
       });
     }
 
-    // 지는 척 후퇴 놀이: 누를 때마다 적은 더 깊이 따라오고, 식량은 줄어요
-    function retreat(sc) {
+    // 연타 놀이: 버튼을 times 번 누르면 막대가 차거나 줄고, 움직이는 그림(movers)이 x[0] → x[1] 로 가요
+    //   { type: 'repeat', button, times, meter: { label, from, to }, movers: [{ e, x: [시작, 끝], y, s }], end, mid, done }
+    function repeat(sc) {
       const N = sc.times;
+      const m = sc.meter || { label: '', from: 0, to: 100 };
+      const movers = sc.movers || [];
       let n = 0;
-      const extra = `<span class="sp" style="left:10%;top:52%;font-size:64px">🏯</span>
-        <span class="sp" id="us" style="left:30%;top:60%;font-size:44px">🏃</span>
-        <span class="sp army" id="them" style="left:82%;top:58%">💂💂💂</span>
-        <div class="food"><span>수나라 식량 🍚</span><div class="meter"><i id="food" style="width:100%"></i></div></div>`;
-      $app.innerHTML = frame(sc, { stage: stageHTML(sc.stage, extra), act: `<button class="main wide big" id="run">🏃 지는 척 후퇴! <small id="cnt">0 / ${N}</small></button>` });
+      const extra = movers.map((v, k) => `<span class="sp ${v.s ? '' : 'army'}" id="mv${k}" style="left:${v.x[0]}%;top:${v.y}%;${v.s ? `font-size:${v.s}px;transition:left .35s ease-out` : ''}">${v.e}</span>`).join('')
+        + (m.label ? `<div class="food"><span>${esc(m.label)}</span><div class="meter"><i id="meter" style="width:${m.from}%"></i></div></div>` : '');
+      $app.innerHTML = frame(sc, { stage: stageHTML(sc.stage, extra), act: `<button class="main wide big" id="run">${esc(sc.button)} <small id="cnt">0 / ${N}</small></button>` });
       bindCommon(sc);
       document.getElementById('run').onclick = () => {
         if (n >= N) return;
         n++;
         const t = n / N;
-        document.getElementById('food').style.width = `${Math.round((1 - t) * 100)}%`;
-        document.getElementById('them').style.left = `${82 - t * 42}%`;
-        document.getElementById('us').style.left = `${30 - t * 12}%`;
+        const bar = document.getElementById('meter');
+        if (bar) bar.style.width = `${Math.round(m.from + (m.to - m.from) * t)}%`;
+        movers.forEach((v, k) => {
+          const el = document.getElementById(`mv${k}`);
+          el.style.left = `${v.x[0] + (v.x[1] - v.x[0]) * t}%`;
+          el.classList.remove('hop'); void el.offsetWidth; el.classList.add('hop');
+        });
         document.getElementById('cnt').textContent = `${n} / ${N}`;
-        const them = document.getElementById('them');
-        them.classList.remove('hop'); void them.offsetWidth; them.classList.add('hop');
         if (n === N) {
-          document.getElementById('them').textContent = '😫😫😫';
+          if (sc.end && movers.length) document.getElementById('mv0').textContent = sc.end;
           showAfter(sc.done);
           document.getElementById('act').innerHTML = nextBtn();
           bindNext();
-        } else if (n === Math.ceil(N / 2)) toast('적의 배에서 꼬르륵 소리가 나요! 🍚');
+        } else if (sc.mid && n === Math.ceil(N / 2)) toast(sc.mid);
       };
     }
 
-    // 반쯤 건넜을 때 공격 놀이: 적이 오른쪽에서 왼쪽으로 강을 건너요. 강 한가운데서 누르면 성공
+    // 타이밍 놀이: mover 가 오른쪽 → 왼쪽으로 지나가요. 과녁(zone) 안에 있을 때 누르면 성공
+    //   { type: 'timing', button, hint, zone: { kind: 'river' | 'band', from, to, label }, mover: { e, y }, hit, hitE, boom, early, late, actor: [{ e, x, y, s }] }
     function timing(sc) {
-      const extra = `<div class="river"></div>
-        <span class="sp" style="left:8%;top:30%;font-size:44px">🧔</span><span class="sp" style="left:8%;top:62%;font-size:40px">🏹</span>
-        <span class="sp army" id="them" style="left:100%;top:50%">💂💂💂</span>
-        <span class="sp" id="boom" style="left:50%;top:48%;font-size:72px" hidden>💦</span>`;
-      $app.innerHTML = frame(sc, { stage: stageHTML(sc.stage, extra), act: `<button class="main wide big" id="hit">⚔️ 지금 공격!</button><p class="tip">${esc(sc.hint)}</p>` });
+      const z = sc.zone || { kind: 'river', from: 36, to: 64 };
+      const zoneEl = z.kind === 'river'
+        ? `<div class="river" style="left:${z.from}%;width:${z.to - z.from}%"></div>`
+        : `<div class="band" style="left:${z.from}%;width:${z.to - z.from}%">${z.label ? `<span>${esc(z.label)}</span>` : ''}</div>`;
+      const extra = `${zoneEl}${(sc.actors || []).map(sprite).join('')}
+        <span class="sp army" id="them" style="left:104%;top:${(sc.mover && sc.mover.y) || 50}%">${sc.mover ? sc.mover.e : '💂💂💂'}</span>
+        <span class="sp" id="boom" style="left:50%;top:48%;font-size:72px" hidden>${sc.boom || '💥'}</span>`;
+      $app.innerHTML = frame(sc, { stage: stageHTML(sc.stage, extra), act: `<button class="main wide big" id="hit">${esc(sc.button || '⚔️ 지금!')}</button><p class="tip">${esc(sc.hint)}</p>` });
       bindCommon(sc);
       const them = document.getElementById('them');
-      const LAP = 4200;
+      const LAP = sc.lap || 4200;
+      const lo = z.from + 1; const hi = z.to - 1;
       let t0 = performance.now();
       const pos = (now) => 104 - (((now - t0) % LAP) / LAP) * 116; // 104% → -12%
       const loop = (now) => { if (!them.isConnected) { timer = null; return; } them.style.left = `${pos(now)}%`; timer = requestAnimationFrame(loop); };
       timer = requestAnimationFrame(loop);
       document.getElementById('hit').onclick = () => {
         const x = pos(performance.now());
-        if (x >= 36 && x <= 64) {
+        if (x >= lo && x <= hi) {
           stop();
           them.style.left = `${x}%`;
-          them.textContent = '😵😵😵';
+          if (sc.hitE) them.textContent = sc.hitE;
           them.classList.add('shake');
-          document.getElementById('boom').hidden = false;
-          showAfter('적이 강 한가운데서 꼼짝 못 했어! 고구려군이 한꺼번에 공격해서 크게 이겼어요!');
+          const boom = document.getElementById('boom'); boom.style.left = `${x}%`; boom.hidden = false;
+          showAfter(sc.hit);
           document.getElementById('act').innerHTML = nextBtn();
           bindNext();
-        } else if (x > 64) {
-          toast('아직 강에 안 들어왔어요! 조금만 기다려요');
-          say('아직이야! 조금만 기다려');
+        } else if (x > hi) {
+          toast(sc.early || '아직이에요! 조금만 기다려요');
+          say(sc.early || '아직이야');
         } else {
-          toast('벌써 다 건넜어요! 다음에 올 때를 노려요');
-          say('놓쳤다! 다음에 올 때를 노리자');
+          toast(sc.late || '놓쳤어요! 다음에 올 때를 노려요');
+          say(sc.late || '놓쳤다');
           t0 = performance.now() - LAP * 0.05;
         }
       };
+    }
+
+    // 짝 맞추기: 왼쪽 카드를 누르고, 짝이 되는 오른쪽 카드를 눌러요
+    //   { type: 'match', pairs: [{ a, b }], left: '왼쪽 제목', right: '오른쪽 제목', miss, done }
+    function match(sc) {
+      const P = sc.pairs;
+      const order = P.map((_, k) => k).sort(() => Math.random() - 0.5);
+      let picked = null; let got = 0;
+      const short = P.every((p) => p.a.length <= 3);
+      const act = `<div class="match ${short ? 'short' : ''}">
+          <div class="mcol"><div class="mhead">${esc(sc.left || '')}</div>${P.map((p, k) => `<button class="mcard a" data-k="${k}">${esc(p.a)}</button>`).join('')}</div>
+          <div class="mcol"><div class="mhead">${esc(sc.right || '')}</div>${order.map((k) => `<button class="mcard b" data-k="${k}">${esc(P[k].b)}</button>`).join('')}</div>
+        </div>`;
+      $app.innerHTML = frame(sc, { stage: stageHTML(sc.stage), act });
+      bindCommon(sc);
+      $app.querySelectorAll('.mcard.a').forEach((b) => {
+        b.onclick = () => {
+          $app.querySelectorAll('.mcard.a').forEach((x) => x.classList.remove('sel'));
+          picked = b.dataset.k; b.classList.add('sel');
+        };
+      });
+      $app.querySelectorAll('.mcard.b').forEach((b) => {
+        b.onclick = () => {
+          if (picked === null) { toast('왼쪽 카드를 먼저 골라요 👈'); return; }
+          const a = $app.querySelector(`.mcard.a[data-k="${picked}"]`);
+          if (b.dataset.k === picked) {
+            a.classList.remove('sel'); a.classList.add('ok'); b.classList.add('ok'); a.disabled = true; b.disabled = true;
+            picked = null; got++;
+            if (got === P.length) {
+              showAfter(sc.done);
+              document.getElementById('act').insertAdjacentHTML('beforeend', nextBtn());
+              bindNext();
+            }
+          } else {
+            b.classList.remove('wiggle'); void b.offsetWidth; b.classList.add('wiggle');
+            toast(sc.miss || '짝이 아니에요. 다시 생각해 볼까?');
+          }
+        };
+      });
     }
 
     // 끝: 별, 진짜 역사 카드, 인물 카드, 기억 퀴즈 예약
@@ -232,7 +281,7 @@ H.makeAdventure = (api) => {
         <section class="hcard">
           <div class="hcard-top">📜 진짜 역사 카드</div>
           <h2>${A.emoji} ${esc(c.title)}</h2>
-          <dl><dt>언제</dt><dd>${esc(c.when)}</dd><dt>누가</dt><dd>${esc(c.who)}</dd><dt>누구와</dt><dd>${esc(c.vs)}</dd></dl>
+          <dl><dt>언제</dt><dd>${esc(c.when)}</dd><dt>누가</dt><dd>${esc(c.who)}</dd>${c.vs ? `<dt>누구와</dt><dd>${esc(c.vs)}</dd>` : ''}</dl>
           <p>${gloss(c.how)}</p>
           <div class="words">🔑 ${c.words.map((w) => `<span>${esc(w)}</span>`).join('')}</div>
           ${canSpeak ? '<button class="ghost" id="cardsay">🔊 카드 읽어 줘</button>' : ''}
@@ -242,7 +291,7 @@ H.makeAdventure = (api) => {
         <p class="muted center">🧠 ${REVIEW_DAYS[0]}일 뒤에 기억 퀴즈가 찾아와요. 그때 다시 만나요!</p>
         <div class="nav2"><button class="ghost" data-go="adv" data-arg="${A.id}">🔁 다시 하기</button><button class="main" data-go="home">처음으로</button></div>`;
       const cs = document.getElementById('cardsay');
-      if (cs) cs.onclick = () => speak(`${c.title}. ${c.when}. ${c.who}, ${c.vs}. ${c.how}`);
+      if (cs) cs.onclick = () => speak(`${c.title}. ${c.when}. ${c.who}${c.vs ? `, ${c.vs}` : ''}. ${c.how}`);
       window.scrollTo(0, 0);
     }
 

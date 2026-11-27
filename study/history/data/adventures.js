@@ -13,8 +13,11 @@
 // 장면 (말풍선은 1~2줄로 짧게! {name} 은 탐험대원 별명으로 바뀌어요)
 //   { type: 'talk',   stage, who, say }
 //   { type: 'choice', stage, who, say, options: [{ e, t, ok: true } | { e, t, fb: '왜 아닌지 + 힌트' }], after: '맞힌 뒤 한마디' }
-//   { type: 'retreat', stage, who, say, times, done }   // "지는 척 후퇴" 버튼을 times 번 누르는 놀이
-//   { type: 'timing',  stage, who, say, hint }          // 적이 강을 반쯤 건넜을 때 "공격!" 놀이
+//   { type: 'repeat', button, times, meter: { label, from, to }, movers: [{ e, x: [시작, 끝], y, s }], end, mid, done }
+//        버튼을 times 번 누르는 놀이. 막대(meter, %)가 from → to 로 바뀌고 movers 가 움직여요. s 가 없으면 무리(army) 크기
+//   { type: 'timing', button, hint, zone: { kind: 'river' | 'band', from, to, label }, mover: { e, y }, actors: [그림],
+//     hit, hitE, boom, early, late, lap }   // 지나가는 mover 가 zone 안에 있을 때 누르면 성공
+//   { type: 'match', left, right, pairs: [{ a, b }], miss, done }   // 왼쪽 카드와 오른쪽 카드 짝 맞추기
 // stage: { bg: 'land' | 'camp' | 'river' | 'castle' | 'night', sprites: [{ e, x, y, s, a }] }
 //   x, y 는 % 위치(가운데 기준), s 는 크기(px), a 는 움직임 'bob' | 'march' | 'shake' | 'flag' | 'pop'
 window.H = window.H || {};
@@ -68,8 +71,11 @@ H.adventures = [
           { e: '🏃', t: '지는 척 도망쳐서 멀리 끌어들여요', ok: true },
         ],
         after: '훌륭해! 따라올수록 적은 더 배고프고 지칠 거야.' },
-      { type: 'retreat', who: 'eulji', times: 7,
-        stage: { bg: 'land', sprites: [] },
+      { type: 'repeat', who: 'eulji', times: 7, button: '🏃 지는 척 후퇴!',
+        stage: { bg: 'land', sprites: [{ e: '🏯', x: 10, y: 52, s: 64 }] },
+        meter: { label: '수나라 식량 🍚', from: 100, to: 0 },
+        movers: [{ e: '💂💂💂', x: [82, 40], y: 58 }, { e: '🏃', x: [30, 18], y: 60, s: 44 }],
+        end: '😫😫😫', mid: '적의 배에서 꼬르륵 소리가 나요! 🍚',
         say: '싸우는 척하다가 져 주고 후퇴! 적의 식량이 바닥날 때까지!',
         done: '하루에 7번 싸워서 7번 다 져 줬어요! 적은 이긴 줄 알고 신이 나서 따라왔지요.' },
       { type: 'talk', who: 'eulji',
@@ -87,10 +93,15 @@ H.adventures = [
       { type: 'talk', who: 'clock',
         stage: { bg: 'river', sprites: [{ e: '😱', x: 70, y: 40, s: 48, a: 'shake' }, { e: '💂', x: 82, y: 36, s: 38 }, { e: '💂', x: 90, y: 42, s: 38 }] },
         say: '시를 받은 적이 그제야 속은 걸 알았어! 허겁지겁 돌아가다가 살수라는 강에 다다랐어.' },
-      { type: 'timing', who: 'eulji',
+      { type: 'timing', who: 'eulji', button: '⚔️ 지금 공격!',
         stage: { bg: 'river', sprites: [] },
+        zone: { kind: 'river', from: 36, to: 64 }, mover: { e: '💂💂💂', y: 50 },
+        actors: [{ e: '🧔', x: 8, y: 30, s: 44 }, { e: '🏹', x: 8, y: 62, s: 40 }],
         say: '지금이 기회다! 적이 강을 반쯤 건넜을 때 공격하자!',
-        hint: '적이 강 한가운데(파란 물 위)에 오면 공격 버튼을 눌러요.' },
+        hint: '적이 강 한가운데(파란 물 위)에 오면 공격 버튼을 눌러요.',
+        hit: '적이 강 한가운데서 꼼짝 못 했어! 고구려군이 한꺼번에 공격해서 크게 이겼어요!',
+        hitE: '😵😵😵', boom: '💦',
+        early: '아직 강에 안 들어왔어요! 조금만 기다려요', late: '벌써 다 건넜어요! 다음에 올 때를 노려요' },
       { type: 'talk', who: 'eulji',
         stage: { bg: 'land', sprites: [{ e: '🎉', x: 30, y: 36, s: 54, a: 'pop' }, { e: '🧔', x: 50, y: 58, s: 76, a: 'bob' }, { e: '🚩', x: 70, y: 40, s: 44, a: 'flag' }, { e: '🎊', x: 78, y: 30, s: 48, a: 'pop' }] },
         say: '이겼다! 30만 명이 넘던 적 가운데 살아 돌아간 사람은 2,700명뿐이었대. 고맙네, {name} 대원!' },
