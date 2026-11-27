@@ -233,126 +233,44 @@
   function subs(unitId, summary = '') {
     onKey = null;
     const u = M5.units.find((x) => x.id === unitId);
-    const lvOf = (k) => state.levels[k] || 1;
+    const tierOf = (k) => Math.min(3, state.levels[k] || 1);
     const card = (key, name, desc) => {
       const r = rateOf(key);
-      return `<div class="subitem"><button class="sub" data-sub="${key}">
-        <span class="nm">${esc(name)}</span>
-        <span class="meta"><span class="stars" title="난이도">${stars(lvOf(key))}</span> ${M5.LEVELS[lvOf(key) - 1]}${r == null ? '' : ` · 정답률 ${r}%`}</span>
-        ${desc ? `<span class="desc">${esc(desc)}</span>` : ''}
-      </button>${lvPick(key, lvOf(key))}${/^u\d+$/.test(key) ? '' : ladderBtn(key)}</div>`;
+      const scope = /^u\d+$/.test(key) ? { unit: unitId } : { unit: unitId, sub: key };
+      const has = (m) => M5.modePool(scope, m).length > 0;
+      return `<div class="subitem">
+        <div class="subhead"><span class="nm">${esc(name)}</span><span class="meta">${r == null ? '' : `정답률 ${r}%`}</span>${desc ? `<span class="desc">${esc(desc)}</span>` : ''}</div>
+        <div class="mbtns">
+          <button class="sub mb basic" data-sub="${key}" data-mode="basic"><b>📘 기본 → 응용 → 심화</b><span>지금: ${M5.TIERS[tierOf(key) - 1]}</span></button>
+          <button class="mb think" data-sub="${key}" data-mode="think" ${has('think') ? '' : 'disabled'}><b>🧩 사고력</b></button>
+          <button class="mb top" data-sub="${key}" data-mode="top" ${has('top') ? '' : 'disabled'}><b>🏔️ 최상위</b>${has('top') ? '' : '<span>준비 중</span>'}</button>
+        </div>
+      </div>`;
     };
     app.innerHTML = `${header()}
       <main class="subs">
         <button class="back" data-go="home">← 단원 목록</button>
         ${summary}
         <h2>${u.id}단원 ${esc(u.name)}</h2>
-        <p class="lead">소단원을 고르면 문제가 끝없이 나와요. 그만 풀고 싶을 때 '그만 풀기'를 눌러요.<br>난이도는 직접 고를 수 있어요. 풀다 보면 3번 연속 맞힐 때 올라가고 2번 연속 틀릴 때 내려가요.</p>
+        <p class="lead">📘 <b>기본 → 응용 → 심화</b>: 기본부터 시작해서 3번 연속 맞히면 한 단계씩 올라가요.<br>🧩 <b>사고력</b>, 🏔️ <b>최상위</b>는 그 소단원 내용으로 만든 문제예요. 풀고 싶을 때 눌러요.</p>
         <div class="sublist">
           ${card('u' + u.id, '🔀 전체 섞기', '모든 소단원 문제가 골고루 나와요')}
           ${u.subs.map((s, i) => card(s.id, `${i + 1}. ${s.name}`)).join('')}
         </div>
       </main>`;
     bindCommon();
-    $$('.sub').forEach((b) => b.addEventListener('click', () => {
+    $$('.mb').forEach((b) => b.addEventListener('click', () => {
       const k = b.dataset.sub;
-      play(/^u\d+$/.test(k) ? { unit: unitId } : { unit: unitId, sub: k });
-    }));
-    $$('[data-ladder]').forEach((b) => b.addEventListener('click', () => ladder(b.dataset.ladder, { unitId })));
-    $$('.lvb').forEach((b) => b.addEventListener('click', () => {
-      const n = Number(b.dataset.lv);
-      state.levels[b.dataset.key] = n;
-      save();
-      toast(`난이도를 ${stars(n)} ${M5.LEVELS[n - 1]}으로 바꿨어요.`);
-      subs(unitId, summary);
+      play(/^u\d+$/.test(k) ? { unit: unitId } : { unit: unitId, sub: k }, { mode: b.dataset.mode });
     }));
   }
 
-  // ------------------------------------------------------------------ 5단계 도전 (기본 → 응용 → 심화 → 사고력 → 최상위)
-  function ladderBtn(sub) {
-    const L = (state.ladder || {})[sub];
-    const st = !L ? '' : L.done ? ` <b>🏆 ${L.done}번 완주</b>` : L.best >= 0 ? ` · ${M5.TIERS[L.best]}까지` : '';
-    return `<button type="button" class="ladb" data-ladder="${sub}">🪜 5단계 도전${st}</button>`;
+  // 기본·응용·심화 고르기 (문제 화면의 '바꾸기')
+  function tierPick(lv) {
+    return `<div class="lvpick" role="group" aria-label="단계 고르기"><span class="k">단계</span>${M5.TIERS.map((name, i) => `<button type="button" class="lvb ${i + 1 === lv ? 'on' : ''}" data-lv="${i + 1}" aria-pressed="${i + 1 === lv}"><span class="nm">${name}</span></button>`).join('')}</div>`;
   }
-  function ladderSteps(k, passed) {
-    return `<ol class="ladder">${M5.TIERS.map((t, i) => `<li class="${i < k || (i === k && passed) ? 'ok' : i === k ? 'now' : ''}"><span>${i < k || (i === k && passed) ? '✓' : i + 1}</span>${t}</li>`).join('')}</ol>`;
-  }
-  function ladder(sub, from = {}) {
-    const info = M5.findSub(sub);
-    const unitId = info.unit.id;
-    const back = from.back || (() => subs(unitId));
-    if (!state.ladder) state.ladder = {};
-    const L = state.ladder[sub] || (state.ladder[sub] = { best: -1, done: 0, last: '' });
-    const topFallback = M5.tierItems(sub, 4).fallback;
-    let k = 0, tries = 0;
-    const avoid = new Set(state.recent.map((x) => x.key));
-    onKey = (ev) => { if (ev.key === 'Enter') { ev.preventDefault(); step(); } };
-    app.innerHTML = `${header(statsHtml())}
-      <main class="center"><section class="panel">
-        <div class="big-emoji">🪜</div>
-        <h2>5단계 도전: ${esc(info.sub.name)}</h2>
-        <p>같은 소단원 문제를 <b>기본 → 응용 → 심화 → 사고력 → 최상위</b> 순서로 한 칸씩 올라가요.<br>처음 낸 답으로 맞히면 다음 칸으로! 틀리면 고친 뒤 같은 칸의 새 문제에 다시 도전해요.</p>
-        ${ladderSteps(-1)}
-        ${topFallback ? '<p class="muted small">이 단원의 최상위 문제는 아직 준비 중이라, 지금은 가장 어려운 문제가 나와요.</p>' : ''}
-        <div class="btns"><button class="btn" id="lback">← 돌아가기</button><button id="go" class="btn primary">도전 시작 <kbd>Enter</kbd></button></div>
-      </section></main>`;
-    bindCommon();
-    $('#lback').addEventListener('click', back);
-    $('#go').addEventListener('click', step);
-    function step() {
-      const p = M5.tierProblem(sub, k, rng, avoid);
-      avoid.add(p.key);
-      state.recent.push({ key: p.key, tid: p.tid, sub: p.sub, styleName: p.styleName, style: p.style });
-      if (state.recent.length > 50) state.recent.splice(0, state.recent.length - 50);
-      let passed = null;
-      solve(p, {
-        fix: true,
-        banner: `<div class="banner lad"><span>🪜 <b>${M5.TIERS[k]}</b>${tries ? ` · 다시 도전 ${tries}` : ''}</span>${ladderSteps(k)}</div>`,
-        nextLabel: '다음 →',
-        backLabel: '← 소단원 고르기',
-        onFirst(ok) {
-          passed = ok;
-          recordFirst(p, ok);
-          if (ok) {
-            if (k > L.best) { L.best = k; save(); }
-            toast(k < 4 ? `🎉 ${M5.TIERS[k]} 통과! 다음은 ${M5.TIERS[k + 1]}이에요.` : '🏆 최상위까지 통과!');
-          }
-        },
-        onDone() {
-          if (passed) { k++; tries = 0; if (k >= 5) finish(); else step(); } else { tries++; step(); }
-        },
-        onWeird(r) { reportProblem(p); if (r.firstOk != null) recordFirst(p, r.firstOk, -1); step(); },
-        onStop: () => back(),
-        onBack: () => back(),
-      });
-    }
-    function finish() {
-      L.done = (L.done || 0) + 1;
-      L.last = S.todayStr();
-      L.best = 4;
-      S.ensureToday(state);
-      state.today.passed++;
-      S.bumpDay(state, 'p');
-      save();
-      onKey = (ev) => { if (ev.key === 'Enter') { ev.preventDefault(); back(); } };
-      app.innerHTML = `${header(statsHtml())}
-        <main class="center"><section class="panel">
-          <div class="big-emoji">🏆</div>
-          <h2>5단계 완주!</h2>
-          <p><b>${esc(info.sub.name)}</b>${T.j(info.sub.name, '을/를').slice(info.sub.name.length)} 기본부터 최상위까지 모두 통과했어요.</p>
-          ${ladderSteps(5)}
-          <div class="btns"><button class="btn" data-go="home">홈으로</button><button id="again" class="btn">한 번 더</button><button id="lb" class="btn primary">돌아가기 <kbd>Enter</kbd></button></div>
-        </section></main>`;
-      bindCommon();
-      $('#again').addEventListener('click', () => ladder(sub, from));
-      $('#lb').addEventListener('click', back);
-    }
-  }
+  const tierChips = (lv) => `<span class="tiers">${M5.TIERS.map((t, i) => `<span class="tchip ${i + 1 < lv ? 'ok' : i + 1 === lv ? 'now' : ''}">${i + 1 < lv ? '✓ ' : ''}${t}</span>`).join('<span class="tarr">→</span>')}</span>`;
 
-  // 난이도 고르기 단추 4개 (소단원 화면·문제 화면에서 같이 쓴다)
-  function lvPick(key, lv) {
-    return `<div class="lvpick" role="group" aria-label="난이도 고르기"><span class="k">난이도</span>${M5.LEVELS.map((name, i) => `<button type="button" class="lvb ${i + 1 === lv ? 'on' : ''}" data-key="${key}" data-lv="${i + 1}" title="${name}" aria-pressed="${i + 1 === lv}"><span class="st">${'★'.repeat(i + 1)}</span><span class="nm">${name}</span></button>`).join('')}</div>`;
-  }
 
   // ------------------------------------------------------------------ 문제 하나 풀기
   // 무한 모드·비슷한 문제 도전·틀린 문제 고치기에서 같이 쓴다.
@@ -446,7 +364,7 @@
           const pop = $('.lvpop');
           pop.hidden = !pop.hidden;
           if (pop.hidden) return;
-          pop.innerHTML = lvPick('', opts.levelNow()) + '<p class="small muted">다음 문제부터 바뀌어요.</p>';
+          pop.innerHTML = tierPick(opts.levelNow()) + '<p class="small muted">다음 문제부터 바뀌어요.</p>';
           pop.querySelectorAll('.lvb').forEach((b) => b.addEventListener('click', () => {
             opts.onLevel(Number(b.dataset.lv));
             $('.level').innerHTML = `${opts.levelText2()} <span class="small muted">· 다음 문제부터</span>`;
@@ -824,10 +742,11 @@
   // ------------------------------------------------------------------ 무한 모드
   // opts.retryTid: "다음에 다시 도전"에서 그 유형의 비슷한 문제 도전부터 시작
   function play(scope, opts = {}) {
-    const sess = M5.createSession({ scope, state, rng });
+    const mode = opts.mode || 'basic';
+    const sess = M5.createSession({ scope, state, rng, mode });
     const set10 = state.settings.mode === 'set10';
     const run = { solved: 0, correct: 0, streak: 0, best: 0, lastBreak: 0, startLevel: sess.level, passed: [], retried: [], normal: 0 };
-    const levelText = () => `난이도 <span class="stars">${stars(sess.level)}</span> <span class="lvname">${M5.LEVELS[sess.level - 1]}</span>${set10 ? ` <span class="set10">🔟 ${run.normal + 1} / 10번째</span>` : ''}`;
+    const levelText = () => (mode === 'basic' ? tierChips(sess.level) : mode === 'think' ? `🧩 <b>사고력</b> <span class="stars">${stars(sess.level)}</span>` : '🏔️ <b>최상위</b>') + (set10 ? ` <span class="set10">🔟 ${run.normal + 1} / 10번째</span>` : '');
 
     // 처음 낸 답 기록 (sign = -1이면 "문제가 이상해요"로 되돌리기)
     function count(p, ok, sign = 1) {
@@ -853,17 +772,22 @@
         levelText: levelText(),
         levelText2: levelText,
         levelNow: () => sess.level,
-        onLevel(n) {
+        onLevel: mode === 'basic' ? (n) => {
           sess.setLevel(n);
           save();
-          toast(`다음 문제부터 ${stars(n)} ${M5.LEVELS[n - 1]} 문제가 나와요.`);
-        },
+          toast(`다음 문제부터 ${M5.TIERS[n - 1]} 문제가 나와요.`);
+        } : null,
         onFirst(ok) {
           count(p, ok);
           run.normal++;
           const change = sess.record(ok);
-          if (change > 0) toast('⭐ 잘하고 있어요! 다음 문제부터 한 단계 어려워져요.');
-          if (change < 0) toast('다음 문제부터 한 단계 쉽게 해 볼게요. 천천히 해요!');
+          if (mode === 'basic') {
+            if (change > 0) toast(`🎉 3번 연속 맞혔어요! ${M5.TIERS[sess.level - 1]} 단계로 올라가요.`);
+            if (change < 0) toast(`${M5.TIERS[sess.level - 1]} 문제로 다시 다져 볼게요. 천천히 해요!`);
+          } else {
+            if (change > 0) toast('⭐ 잘하고 있어요! 다음 문제부터 조금 더 어려워져요.');
+            if (change < 0) toast('다음 문제부터 조금 쉽게 해 볼게요. 천천히 해요!');
+          }
         },
         onDone(r) {
           if (r.firstOk) nextNormal();
@@ -1038,9 +962,9 @@
       if (!run.solved) { subs(scope.unit); return; }
       const rate = Math.round((run.correct / run.solved) * 100);
       const lv = sess.level;
-      const lvMsg = lv > run.startLevel ? ' 난이도가 올라갔어요! 🎉' : lv < run.startLevel ? ' 다음에는 조금 쉬운 문제부터 다시 올라가요.' : '';
+      const lvMsg = lv > run.startLevel ? ' 단계가 올라갔어요! 🎉' : lv < run.startLevel ? ' 다음에는 조금 쉬운 문제부터 다시 올라가요.' : '';
       const list = (ids) => [...new Set(ids)].map((id) => esc(typeName(id))).join(', ');
-      const where = scope.sub ? M5.findSub(scope.sub).sub.name : '전체 섞기';
+      const where = (scope.sub ? M5.findSub(scope.sub).sub.name : '전체 섞기') + (mode === 'think' ? ' · 사고력' : mode === 'top' ? ' · 최상위' : '');
       const summary = `<section class="summary" aria-label="오늘의 결과">
           <div class="sum-head"><span class="big-emoji">${rate >= 80 ? '🏆' : rate >= 50 ? '🌟' : '🌱'}</span><div><h3>${finished10 ? '10문제 완료! 오늘의 결과' : '오늘의 결과'}</h3><p class="muted small">방금 푼 소단원: ${esc(where)}</p></div></div>
           <div class="result">
@@ -1051,7 +975,7 @@
           </div>
           ${run.passed.length ? `<p class="small">🏅 통과한 유형: ${list(run.passed)}</p>` : ''}
           ${run.retried.length ? `<p class="small">🌱 다음에 다시 도전할 유형: ${list(run.retried)}</p>` : ''}
-          <p class="small">지금 난이도 <span class="stars">${stars(lv)}</span> ${M5.LEVELS[lv - 1]}.${lvMsg} 맞힌 문제는 처음 낸 답으로 세어요.</p>
+          <p class="small">${mode === 'basic' ? `지금 단계: <b>${M5.TIERS[lv - 1]}</b>.${lvMsg}` : mode === 'think' ? '🧩 사고력 문제를 풀었어요.' : '🏔️ 최상위 문제를 풀었어요.'} 맞힌 문제는 처음 낸 답으로 세어요.</p>
         </section>`;
       subs(scope.unit, summary);
     }
@@ -1549,12 +1473,13 @@
           <h2>알고 넘어갔어요!</h2>
           <p><b>${esc(h.source)}</b>와 같은 유형을 ${HW.GOAL}번 연속 맞혔어요.</p>
           <p class="muted">잊지 않게 내일, 7일 뒤, 30일 뒤에 문제 2개씩 다시 확인해요.</p>
-          <p>더 단단하게 하고 싶으면 같은 소단원을 <b>🪜 기본부터 최상위까지</b> 올라가 봐요.</p>
-          <div class="btns"><button class="btn" data-go="hw">오답 목록</button><button id="lad" class="btn primary">🪜 5단계 도전 <kbd>Enter</kbd></button></div>
+          <p>더 단단하게 하고 싶으면 같은 소단원을 <b>📘 기본 → 응용 → 심화</b>로 연습해 봐요.</p>
+          <div class="btns"><button class="btn" data-go="hw">오답 목록</button><button id="lad" class="btn primary">📘 이 소단원 연습하기 <kbd>Enter</kbd></button></div>
         </section></main>`;
       bindCommon();
-      onKey = (ev) => { if (ev.key === 'Enter') { ev.preventDefault(); ladder(h.sub, { back: hwList }); } };
-      $('#lad').addEventListener('click', () => ladder(h.sub, { back: hwList }));
+      const goPractice = () => play({ unit: M5.findSub(h.sub).unit.id, sub: h.sub }, { mode: 'basic' });
+      onKey = (ev) => { if (ev.key === 'Enter') { ev.preventDefault(); goPractice(); } };
+      $('#lad').addEventListener('click', goPractice);
     }
   }
   // 4) 다시 확인 (1일·7일·30일): 2문제 모두 처음에 맞히면 다음 단계, 하나라도 틀리면 다시 연습

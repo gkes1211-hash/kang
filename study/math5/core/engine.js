@@ -137,38 +137,32 @@
     return false;
   }
 
-  // 5단계 도전 (기본 · 응용 · 심화 · 사고력 · 최상위)
-  //   기본: 문제집 형식 틀의 쉬운 문제 / 응용: 문제집 형식 보통 / 심화: 문제집 형식 어려움
-  //   사고력: 새로운 유형(O/X와 이유, 틀린 줄 찾기, 퍼즐 …) / 최상위: tier 'top' 틀 (없으면 여러 단계 틀의 가장 어려운 문제)
-  M5.TIERS = ['기본', '응용', '심화', '사고력', '최상위'];
-  M5.tierItems = function (subId, k) {
-    const T = M5.templates.filter((t) => t.sub === subId);
-    const normal = T.filter((t) => t.tier !== 'top');
-    const at = (t, l) => ({ tpl: t, level: Math.max(t.levels[0], Math.min(l, t.levels[1])) });
-    if (k === 0) return { items: normal.filter((t) => t.style === 'A' && t.levels[0] === 1).map((t) => at(t, 1)) };
-    if (k === 1) return { items: normal.filter((t) => t.style === 'A' && t.levels[1] >= 2).map((t) => at(t, 2)) };
-    if (k === 2) return { items: normal.filter((t) => t.style === 'A' && t.levels[1] >= 3).map((t) => at(t, 3)) };
-    if (k === 3) return { items: normal.filter((t) => t.style === 'B').map((t) => at(t, 3)) };
-    const tops = T.filter((t) => t.tier === 'top');
-    if (tops.length) return { items: tops.map((t) => at(t, 4)) };
-    let hard = normal.filter((t) => t.style === 'A' && t.levels[0] >= 2 && t.levels[1] >= 4);
-    if (!hard.length) hard = normal.filter((t) => t.style === 'A' && t.levels[1] >= 4);
-    return { items: hard.map((t) => at(t, 4)), fallback: true };
-  };
-  // 단계 k의 문제 하나 (최근에 낸 문제는 피한다)
-  M5.tierProblem = function (subId, k, rng, avoid) {
-    const { items } = M5.tierItems(subId, k);
-    const it = rng.pick(items);
-    return makeProblem(it.tpl, it.level, rng, avoid);
+  // 소단원 화면의 세 가지 버튼
+  //   basic: 📘 기본 → 응용 → 심화 (문제집 형식 틀, 단계 1~3: 기본=쉬움, 응용=보통, 심화=어려움·도전)
+  //   think: 🧩 사고력 (새로운 유형 틀: O/X와 이유, 틀린 줄 찾기, 퍼즐 …)
+  //   top:   🏔️ 최상위 (tier 'top' 틀)
+  M5.TIERS = ['기본', '응용', '심화'];
+  M5.MODES = { basic: { max: 3 }, think: { max: 4 }, top: { max: 4 } };
+  M5.modePool = function (scope, mode) {
+    const inScope = M5.templates.filter((t) => t.unit === scope.unit && (!scope.sub || t.sub === scope.sub));
+    if (mode === 'basic') return inScope.filter((t) => t.style === 'A' && t.tier !== 'top');
+    if (mode === 'think') return inScope.filter((t) => t.style === 'B' && t.tier !== 'top');
+    if (mode === 'top') return inScope.filter((t) => t.tier === 'top');
+    return inScope;
   };
 
   // 무한 모드 진행
   // scope: { unit: 1, sub: 'u1s4' } (sub가 없으면 단원 전체 섞기)
-  M5.createSession = function ({ scope, state, rng }) {
-    const pool = M5.templates.filter((t) => t.unit === scope.unit && (!scope.sub || t.sub === scope.sub));
+  M5.createSession = function ({ scope, state, rng, mode }) {
+    const pool = M5.modePool(scope, mode);
     if (!pool.length) throw new Error('이 범위에는 아직 문제 틀이 없어요');
-    const lvKey = scope.sub || 'u' + scope.unit;
-    if (!state.levels[lvKey]) state.levels[lvKey] = 1;
+    const base = scope.sub || 'u' + scope.unit;
+    const lvKey = mode === 'think' || mode === 'top' ? `${base}:${mode}` : base;
+    const MAX = mode === 'basic' ? 3 : 4;
+    if (!state.levels[lvKey]) state.levels[lvKey] = mode === 'top' ? 4 : 1;
+    if (state.levels[lvKey] > MAX) state.levels[lvKey] = MAX;
+    // 문제를 만들 때의 난이도: '심화'(3단계)는 어려움·도전을 섞는다
+    const probLevel = () => (mode === 'basic' && state.levels[lvKey] === 3 ? rng.pick([3, 4]) : state.levels[lvKey]);
     let okRun = 0;
     let badRun = 0;
     let last = null;
@@ -236,7 +230,7 @@
         // 최근 50문제와 같은 문제만 나오는 틀(문장 종류가 적은 O/X 등)이면 다른 틀로 바꿔 본다
         for (let i = 0; i < 6; i++) {
           const tpl = pickTemplate(skip);
-          const q = makeProblem(tpl, state.levels[lvKey], rng, avoid);
+          const q = makeProblem(tpl, probLevel(), rng, avoid);
           if (!p || !q.repeat) p = q;
           if (!q.repeat) break;
           skip.add(tpl.id);
@@ -265,13 +259,13 @@
           okRun++; badRun = 0;
           if (okRun >= 3) {
             okRun = 0;
-            if (state.levels[lvKey] < 4) { state.levels[lvKey]++; change = 1; }
+            if (state.levels[lvKey] < MAX && mode !== 'top') { state.levels[lvKey]++; change = 1; }
           }
         } else {
           badRun++; okRun = 0;
           if (badRun >= 2) {
             badRun = 0;
-            if (state.levels[lvKey] > 1) { state.levels[lvKey]--; change = -1; }
+            if (state.levels[lvKey] > 1 && mode !== 'top') { state.levels[lvKey]--; change = -1; }
           }
         }
         return change;
@@ -279,7 +273,7 @@
       get last() { return last; },
       // 아이(어른)가 난이도를 직접 고를 때: 다음 문제부터 이 난이도, 연속 정답·오답 수는 처음부터 다시
       setLevel(n) {
-        state.levels[lvKey] = Math.max(1, Math.min(4, Math.round(n)));
+        state.levels[lvKey] = Math.max(1, Math.min(MAX, Math.round(n)));
         okRun = 0; badRun = 0;
         return state.levels[lvKey];
       },

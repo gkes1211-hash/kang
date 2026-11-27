@@ -355,18 +355,44 @@ check('비슷한 문제', simRows.dupSets / simRows.sets < 0.02, `같은 문제�
   }
   console.log(`\n[전개도 지퍼 설명] 전개도 ${n}개에서 맞닿는 선분·만나는 점이 실제로 접은 결과와 같아요`);
 }
-// ---------------------------------------------------------------- 5단계 도전: 소단원마다 다섯 칸 모두 문제가 있는지
+// ---------------------------------------------------------------- 소단원의 세 가지 버튼 (기본→응용→심화 / 사고력 / 최상위)
 {
-  const top = [];
-  for (const u of M5.units) for (const s of u.subs) {
-    for (let k = 0; k < 5; k++) {
-      const { items, fallback } = M5.tierItems(s.id, k);
-      check('5단계 도전', items.length > 0, `${s.name}의 ${M5.TIERS[k]} 칸에 문제가 없어요`);
-      if (k === 4 && !fallback) top.push(s.name);
-      for (let i = 0; i < 5 && items.length; i++) { const p = M5.tierProblem(s.id, k, rng, null); check('5단계 도전', !!p && p.sub === s.id, `${s.name} ${M5.TIERS[k]} 문제를 만들지 못했어요`); }
+  const tops = [];
+  for (const u of M5.units) for (const scope of [{ unit: u.id }, ...u.subs.map((s) => ({ unit: u.id, sub: s.id }))]) {
+    const name = scope.sub ? M5.findSub(scope.sub).sub.name : `${u.id}단원 전체`;
+    for (const mode of ['basic', 'think', 'top']) {
+      const pool = M5.modePool(scope, mode);
+      if (mode !== 'top') check('세 가지 버튼', pool.length > 0, `${name}: ${mode} 문제가 없어요`);
+      if (!pool.length) continue;
+      if (mode === 'top' && scope.sub) tops.push(name);
+      const state = M5.store.fresh();
+      const sess = M5.createSession({ scope, state, rng, mode });
+      let ok = 0, bad = 0, repeat = 0, maxLv = 0;
+      let okRun = 0, badRun = 0;
+      for (let i = 0; i < 400; i++) {
+        const before = sess.level;
+        const recentKeys = new Set(state.recent.map((x) => x.key));
+        const p = sess.next();
+        if (recentKeys.has(p.key)) repeat++;
+        const right = mode === 'basic' ? p.style === 'A' && M5.templates.find((t) => t.id === p.tid).tier !== 'top'
+          : mode === 'think' ? p.style === 'B' : M5.templates.find((t) => t.id === p.tid).tier === 'top';
+        if (right && (!scope.sub || p.sub === scope.sub) && p.unit === u.id) ok++; else bad++;
+        maxLv = Math.max(maxLv, sess.level);
+        const correct = rng.chance(0.7);
+        const ch = sess.record(correct);
+        if (correct) { okRun++; badRun = 0; } else { badRun++; okRun = 0; }
+        let want = 0;
+        const MAX = mode === 'basic' ? 3 : 4;
+        if (okRun === 3) { okRun = 0; if (before < MAX && mode !== 'top') want = 1; }
+        if (badRun === 2) { badRun = 0; if (before > 1 && mode !== 'top') want = -1; }
+        check('세 가지 버튼', ch === want, `${name} ${mode}: 단계 조절이 규칙과 달라요`);
+      }
+      check('세 가지 버튼', bad === 0, `${name} ${mode}: 다른 종류의 문제가 ${bad}번 나왔어요`);
+      check('세 가지 버튼', mode !== 'basic' || maxLv <= 3, `${name}: 기본→심화가 3단계를 넘었어요`);
+      check('세 가지 버튼', pool.length < 3 || repeat / 400 < 0.05, `${name} ${mode}: 최근 문제가 ${repeat}번 다시 나왔어요`);
     }
   }
-  console.log(`\n[5단계 도전] 소단원 ${M5.units.reduce((n, u) => n + u.subs.length, 0)}개 × 5칸 확인, 최상위 전용 문제가 있는 소단원: ${top.join(', ')}`);
+  console.log(`\n[세 가지 버튼] 모든 소단원에서 기본→심화·사고력 문제 확인, 최상위가 있는 소단원: ${tops.join(', ')}`);
 }
 // ---------------------------------------------------------------- 문제집 오답 세트
 {

@@ -8,7 +8,7 @@
   function fresh() {
     return {
       v: 1,
-      levels: {},   // 소단원(또는 단원 전체)별 난이도 1~4
+      levels: {},   // 소단원(또는 단원 전체)별 단계: 기본→심화 1~3, '소단원:think' 사고력 1~4
       recent: [],   // 최근에 낸 문제 50개
       today: { date: '', solved: 0, correct: 0, streak: 0, best: 0, passed: 0 },
       days: {},     // 날짜별 { s: 푼 문제, c: 처음에 맞힌 문제, p: 통과한 유형 }
@@ -21,7 +21,6 @@
       review: {},   // 오늘의 복습 일정 { 틀 이름: { tid, unit, sub, level, wrongDate, stage, due } }
       mastered: {}, // 완전히 익힌 유형 { 틀 이름: 날짜 }
       settings: { mode: 'endless' }, // endless(무한) | set10(10문제)
-      ladder: {},   // 5단계 도전 { 소단원: { best: 가장 높이 올라간 단계(0~4), done: 완주 횟수, last: 날짜 } }
       hw: {},       // 문제집 오답 연습 세트별 진행 { 세트 이름: { status, streak, best, solved, correct, stage, due, doneAt, mastered } }
     };
   }
