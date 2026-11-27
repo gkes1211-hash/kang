@@ -3,7 +3,7 @@
 window.H = window.H || {};
 H.makeAdventure = (api) => {
   'use strict';
-  const { S, save, addStars, toast, esc, speak, hush, canSpeak, header, go, $app, personById } = api;
+  const { S, save, addStars, toast, esc, gloss, speak, hush, canSpeak, header, go, $app, personById } = api;
   const AVATARS = ['🧒', '👧', '👦', '🧑‍🚀', '🦊', '🐯', '🐰', '🐼'];
   const REVIEW_DAYS = [3, 7, 30];
   const byId = Object.fromEntries(H.adventures.map((a) => [a.id, a]));
@@ -87,7 +87,7 @@ H.makeAdventure = (api) => {
         <div class="adv">
           <div class="dots" aria-label="${i + 1} / ${A.scenes.length} 장면">${dots}</div>
           ${inner.stage}
-          <div class="bubble" id="bubble"><span class="who">${who.e} ${esc(who.name)}</span><p id="say">${esc(fill(sc.say))}</p>
+          <div class="bubble" id="bubble"><span class="who">${who.e} ${esc(who.name)}</span><p id="say">${gloss(fill(sc.say))}</p>
             ${canSpeak ? '<button class="say-btn" id="sayb" aria-label="읽어 줘">🔊</button>' : ''}</div>
           <div id="fb" class="fb" hidden></div>
           <div class="act" id="act">${inner.act}</div>
@@ -102,7 +102,7 @@ H.makeAdventure = (api) => {
     const nextBtn = (label = '다음 ▶') => `<button class="main wide" id="next">${label}</button>`;
     const bindNext = () => { const n = document.getElementById('next'); if (n) n.onclick = next; };
     const showAfter = (text) => {
-      document.getElementById('say').textContent = fill(text);
+      document.getElementById('say').innerHTML = gloss(fill(text));
       document.getElementById('bubble').classList.add('happy');
       say(fill(text));
     };
@@ -138,7 +138,7 @@ H.makeAdventure = (api) => {
             wrongs++;
             b.classList.add('no'); b.disabled = true;
             fb.hidden = false;
-            fb.innerHTML = `<span class="av">${me().av}</span><div><b>🤔 다시 생각해 볼까?</b><p>${esc(fill(o.fb))}</p></div>`;
+            fb.innerHTML = `<span class="av">${me().av}</span><div><b>🤔 다시 생각해 볼까?</b><p>${gloss(fill(o.fb))}</p></div>`;
             fb.classList.remove('wiggle'); void fb.offsetWidth; fb.classList.add('wiggle');
             say('다시 생각해 볼까? ' + fill(o.fb));
           }
@@ -233,7 +233,7 @@ H.makeAdventure = (api) => {
           <div class="hcard-top">📜 진짜 역사 카드</div>
           <h2>${A.emoji} ${esc(c.title)}</h2>
           <dl><dt>언제</dt><dd>${esc(c.when)}</dd><dt>누가</dt><dd>${esc(c.who)}</dd><dt>누구와</dt><dd>${esc(c.vs)}</dd></dl>
-          <p>${esc(c.how)}</p>
+          <p>${gloss(c.how)}</p>
           <div class="words">🔑 ${c.words.map((w) => `<span>${esc(w)}</span>`).join('')}</div>
           ${canSpeak ? '<button class="ghost" id="cardsay">🔊 카드 읽어 줘</button>' : ''}
         </section>
@@ -275,7 +275,7 @@ H.makeAdventure = (api) => {
             if (first) right++;
             b.classList.add('ok');
             $app.querySelectorAll('.choice').forEach((x) => { x.disabled = true; });
-            const w = $app.querySelector('.why'); w.hidden = false; w.textContent = '💡 ' + q.why;
+            const w = $app.querySelector('.why'); w.hidden = false; w.innerHTML = '💡 ' + gloss(q.why);
             $app.querySelector('.quiz').insertAdjacentHTML('beforeend', `<button class="main wide" id="nx">${k + 1 < qs.length ? '다음 ▶' : '끝!'}</button>`);
             document.getElementById('nx').onclick = () => { k++; if (k < qs.length) draw(); else end(); };
           } else { first = false; b.classList.add('no'); b.disabled = true; }

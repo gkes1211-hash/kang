@@ -17,6 +17,18 @@
 
   // ---------------------------------------------------------------- 도우미
   const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  // 낱말 사전 (data/words.js): 글 속의 어려운 낱말을 누르면 뜻이 나와요. 긴 낱말부터 찾아요.
+  const WORDS = H.words || {};
+  const wordRe = Object.keys(WORDS).length
+    ? new RegExp(Object.keys(WORDS).sort((a, b) => b.length - a.length).map((w) => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|'), 'g')
+    : null;
+  const gloss = (text) => {
+    text = String(text);
+    if (!wordRe) return esc(text);
+    let out = ''; let last = 0;
+    text.replace(wordRe, (m, off) => { out += `${esc(text.slice(last, off))}<button type="button" class="w" data-w="${esc(m)}">${esc(m)}</button>`; last = off + m.length; return m; });
+    return out + esc(text.slice(last));
+  };
   const shuffle = (a) => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
   const pick = (a) => a[Math.floor(Math.random() * a.length)];
   const eraTag = (id) => { const e = eraById[id]; return `<span class="tag" style="--c:${e.color}">${e.emoji} ${esc(e.name)}</span>`; };
@@ -38,6 +50,27 @@
     speechSynthesis.speak(u);
   };
   const hush = () => { speakId++; if (canSpeak) speechSynthesis.cancel(); };
+
+  // 낱말 뜻 카드 (아래에서 올라와요. 바깥을 누르거나 '알았어요'를 누르면 닫혀요)
+  const pop = document.createElement('div');
+  pop.id = 'wordpop'; pop.hidden = true;
+  pop.innerHTML = '<div class="wp-card" role="dialog" aria-labelledby="wp-t"><div class="wp-top">📖 낱말 뜻</div><b id="wp-t"></b><p id="wp-m"></p><div class="wp-btns"><button type="button" class="ghost" id="wp-say">🔊 읽어 줘</button><button type="button" class="main" id="wp-x">알았어요 👍</button></div></div>';
+  document.body.appendChild(pop);
+  const closeWord = () => { pop.hidden = true; hush(); };
+  const showWord = (w) => {
+    document.getElementById('wp-t').textContent = w;
+    document.getElementById('wp-m').textContent = WORDS[w] || '';
+    document.getElementById('wp-say').hidden = !canSpeak;
+    pop.hidden = false;
+    document.getElementById('wp-x').focus();
+  };
+  pop.addEventListener('click', (ev) => { if (ev.target === pop || ev.target.id === 'wp-x') closeWord(); });
+  document.getElementById('wp-say').onclick = () => speak(`${document.getElementById('wp-t').textContent}. ${document.getElementById('wp-m').textContent}`);
+  document.addEventListener('keydown', (ev) => { if (ev.key === 'Escape' && !pop.hidden) closeWord(); });
+  document.addEventListener('click', (ev) => {
+    const w = ev.target.closest && ev.target.closest('button.w');
+    if (w) { ev.preventDefault(); ev.stopPropagation(); showWord(w.dataset.w); }
+  }, true);
 
   // ---------------------------------------------------------------- 화면 바꾸기
   const views = {};
@@ -113,12 +146,12 @@
     $app.innerHTML = `${header(`${e.emoji} ${esc(e.name)}`)}
       <section class="era-card" style="--c:${e.color}">
         <div class="span">${esc(e.span)}</div>
-        <p class="one">${esc(e.one)}</p>
+        <p class="one">${gloss(e.one)}</p>
         <button class="ghost" data-say="${esc(e.name + '. ' + e.one)}">🔊 읽어 줘</button>
       </section>
       ${stories.length ? `<h2>📖 이 시대 이야기</h2><div class="list">${stories.map(storyRow).join('')}</div>` : ''}
       <h2>📅 이 시대에 있었던 일</h2>
-      <ol class="mini-line">${events.map((v) => `<li><b>${esc(v.when)}</b> ${v.emoji} ${esc(v.title)}</li>`).join('')}</ol>
+      <ol class="mini-line">${events.map((v) => `<li><b>${esc(v.when)}</b> ${v.emoji} ${gloss(v.title)}<br><small>${gloss(v.why)}</small></li>`).join('')}</ol>
       <h2>🧑 이 시대 사람들</h2>
       <div class="cards">${people.map(personCard).join('')}</div>
       <div class="nav2">
@@ -155,7 +188,7 @@
       $app.innerHTML = `${header('📖 이야기')}
         <article class="story">
           <div class="story-head">${eraTag(s.era)}<h1>${s.emoji} ${esc(s.title)}</h1></div>
-          ${s.paras.slice(0, shown).map((p, i) => `<p class="para ${i === shown - 1 ? 'new' : ''}">${esc(p)}</p>`).join('')}
+          ${s.paras.slice(0, shown).map((p, i) => `<p class="para ${i === shown - 1 ? 'new' : ''}">${gloss(p)}</p>`).join('')}
           <div class="story-ctrl">
             <button class="ghost" id="say" ${canSpeak ? '' : 'hidden'}>${reading ? '⏹ 그만 읽기' : '🔊 읽어 줘'}</button>
             ${done ? '' : `<button class="main" id="more">다음 이야기 ▼ <small>${shown}/${s.paras.length}</small></button>`}
@@ -184,7 +217,7 @@
   function afterStory(s) {
     const p = s.person && personById[s.person];
     return `
-      <div class="think"><b>💬 너라면?</b><p>${esc(s.think)}</p><small>정답은 없어요. 가족이랑 이야기해 봐요!</small></div>
+      <div class="think"><b>💬 너라면?</b><p>${gloss(s.think)}</p><small>정답은 없어요. 가족이랑 이야기해 봐요!</small></div>
       <div class="quiz" id="quiz">
         <b>🧩 한 문제만!</b><p>${esc(s.quiz.q)}</p>
         <div class="choices">${s.quiz.choices.map((c, i) => `<button class="choice" data-i="${i}">${esc(c)}</button>`).join('')}</div>
@@ -207,7 +240,7 @@
           const got = first ? (tries === 1 ? 3 : 2) : 0;
           S.stories[s.id] = true; save();
           if (got) { addStars(got); toast(`⭐ ${got}개! 이야기 완료`); } else toast('정답! 👏');
-          const w = box.querySelector('.why'); w.hidden = false; w.textContent = '💡 ' + s.quiz.why;
+          const w = box.querySelector('.why'); w.hidden = false; w.innerHTML = '💡 ' + gloss(s.quiz.why);
           document.querySelector('.stars').textContent = `⭐ ${S.stars}`;
         } else {
           b.classList.add('no'); b.disabled = true;
@@ -254,13 +287,13 @@
             <div class="silhouette ${solved ? 'show' : ''}">${solved ? p.emoji : '❓'}</div>
             ${solved && open < p.hints.length ? '<p class="more-hints">✨ 맞혔으니 남은 힌트도 열어 줄게요. 이 인물을 더 알아봐요!</p>' : ''}
             <ol class="hints">${p.hints.map((h, i) => {
-              if (i < open) return `<li class="on">${esc(h)}</li>`;
-              if (solved) return `<li class="on bonus"><span class="tag-new">더 알아보기</span>${esc(h)}</li>`;
+              if (i < open) return `<li class="on">${gloss(h)}</li>`;
+              if (solved) return `<li class="on bonus"><span class="tag-new">더 알아보기</span>${gloss(h)}</li>`;
               return `<li>힌트 ${i + 1} 🔒</li>`;
             }).join('')}</ol>
             ${!solved && open < p.hints.length ? `<button class="ghost" id="more">🔓 힌트 하나 더 (⭐ ${4 - open}개로 줄어요)</button>` : ''}
             <div class="choices four">${opts.map((o) => `<button class="choice" data-id="${o.id}" ${solved ? 'disabled' : ''}>${esc(o.name)}</button>`).join('')}</div>
-            ${solved ? `<div class="about"><b>${p.emoji} ${esc(p.name)}</b><p>${esc(p.about)}</p>
+            ${solved ? `<div class="about"><b>${p.emoji} ${esc(p.name)}</b><p>${gloss(p.about)}</p>
               <button class="ghost" data-say="${esc(p.name + '. ' + p.hints.join(' ') + ' ' + p.about)}">🔊 힌트까지 읽어 줘</button></div>
               <button class="main wide" id="next">${n + 1 < list.length ? '다음 인물 →' : '결과 보기'}</button>` : ''}
           </div>`;
@@ -382,7 +415,7 @@
         draw();
         document.getElementById('res').innerHTML = `
           <section class="result"><div class="big-em">🎉</div><h1>칙칙폭폭, 출발! ⭐ ${got}개</h1>
-          <ol class="mini-line">${answer.map((k) => { const x = byKey[k]; return `<li><b>${esc(x.when)}</b> ${x.emoji} ${esc(x.title)}<br><small>${esc(x.why)}</small></li>`; }).join('')}</ol>
+          <ol class="mini-line">${answer.map((k) => { const x = byKey[k]; return `<li><b>${esc(x.when)}</b> ${x.emoji} ${gloss(x.title)}<br><small>${gloss(x.why)}</small></li>`; }).join('')}</ol>
           <div class="nav2"><button class="main" data-go="train" data-arg="${level}">🔁 한 번 더</button>${level < 4 ? `<button class="ghost" data-go="train" data-arg="${level + 1}">다음 단계 →</button>` : ''}</div></section>`;
       } else {
         // 맞게 탄 칸은 남기고, 틀린 칸만 내려요 (잠깐 맞음/틀림을 보여 준 뒤)
@@ -433,7 +466,7 @@
   };
 
   // 🎮 역사 속으로 (adventure.js)
-  const ADV = H.makeAdventure({ S, save, addStars, toast, esc, speak, hush, canSpeak, header, go, $app, personById, eraTag });
+  const ADV = H.makeAdventure({ S, save, addStars, toast, esc, gloss, speak, hush, canSpeak, header, go, $app, personById, eraTag });
   Object.assign(views, ADV.views);
   go('home');
   if (canSpeak) speechSynthesis.getVoices();

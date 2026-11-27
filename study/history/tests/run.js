@@ -8,7 +8,7 @@ const ROOT = path.join(__dirname, '..');
 const ctx = { window: {} };
 ctx.H = undefined;
 vm.createContext(ctx);
-for (const f of ['eras', 'people', 'events', 'stories', 'adventures']) {
+for (const f of ['eras', 'people', 'events', 'stories', 'adventures', 'words']) {
   vm.runInContext(fs.readFileSync(path.join(ROOT, 'data', `${f}.js`), 'utf8').replace('window.H = window.H || {};', 'var H = window.H = window.H || {};'), ctx, { filename: `data/${f}.js` });
 }
 const H = ctx.window.H;
@@ -111,6 +111,30 @@ for (const A of H.adventures) {
     check(w, filled(q.q) && filled(q.why) && Array.isArray(q.choices) && q.answer >= 0 && q.answer < q.choices.length, `기억 퀴즈 "${q.q}" 가 이상해요`);
   }
 }
+
+// 낱말 사전
+const W = H.words || {};
+const allText = [];
+for (const p of H.people) allText.push(...p.hints, p.about);
+for (const st of H.stories) allText.push(...st.paras, st.think, st.quiz.why);
+for (const v of H.events) allText.push(v.title, v.why);
+for (const e of H.eras) allText.push(e.one);
+for (const A of H.adventures) {
+  for (const sc of A.scenes) { allText.push(sc.say, sc.after || '', sc.done || ''); for (const o of sc.options || []) allText.push(o.fb || ''); }
+  allText.push(A.card.how); for (const q of A.review) allText.push(q.why);
+}
+const joined = allText.join('\n');
+const unused = [];
+for (const [w, m] of Object.entries(W)) {
+  check('낱말', w.length >= 2, `"${w}" 는 너무 짧아요 (2글자 이상, 다른 말 속에 섞여 잘못 잡혀요)`);
+  check('낱말', filled(m) && m.length <= 90, `"${w}" 의 뜻이 비었거나 너무 길어요 (${(m || '').length}자, 90자까지)`);
+  // 뜻에 인물 이름이 있으면 "나는 누구일까요?" 힌트에서 정답이 보여요
+  for (const p of H.people) check('낱말', !m.includes(p.name.replace(/(대왕|여왕|왕검)$/, '')), `"${w}" 의 뜻에 인물 이름 "${p.name}" 이 들어 있어요 (퀴즈 정답이 보여요)`);
+  if (!joined.includes(w)) unused.push(w);
+}
+// 다른 말 속에 섞여 잘못 잡히는 낱말이 없게: 낱말 앞뒤가 흔한 말의 일부인 경우를 몇 가지 확인
+for (const bad of ['이어진', '떨어진', '만들어진']) check('낱말', !Object.keys(W).some((w) => bad.includes(w) && w.length < bad.length), `"${bad}" 안에 사전 낱말이 잘못 잡혀요`);
+console.log(`낱말 사전 ${Object.keys(W).length}개 (글에 나오는 것 ${Object.keys(W).length - unused.length}개${unused.length ? `, 아직 글에 없는 것: ${unused.join(', ')}` : ''})`);
 
 // 인터넷 없이 열기 (sw.js 가 모든 파일을 담는지)
 const sw = fs.readFileSync(path.join(ROOT, 'sw.js'), 'utf8');
