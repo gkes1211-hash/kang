@@ -123,6 +123,7 @@
       else if (go === 'settings') settings();
       else if (go === 'review') reviewSession();
       else if (go === 'hw') hwList();
+      else if (go === 'drill') drillHome();
     }));
   }
 
@@ -185,6 +186,7 @@
           <button class="btn primary" data-go="review" ${due.length ? '' : 'disabled'}>복습 시작</button>
         </section>
         ${hwCard()}
+        ${drillCard()}
         <section class="today">
           <div><span class="k">오늘 푼 문제</span><b>${t.solved}</b></div>
           <div><span class="k">처음에 맞힌 문제</span><b>${t.correct}</b></div>
@@ -1201,6 +1203,182 @@
       $('#list').addEventListener('click', back);
     }
     intro();
+  }
+  // ------------------------------------------------------------------ ⚡ 연산 연습 (속도 + 정확도)
+  // 한 판 10문제. 정확도 100%이면서 문제당 평균 시간이 목표 안이면 통과하고 다음 단계가 열린다.
+  const DR = M5.drill;
+  const UNIT_NAME = { 1: '1단원 어림하기', 2: '2단원 분수의 곱셈', 4: '4단원 소수의 곱셈', 6: '6단원 평균' };
+  const drOf = (id) => state.drill[id] || (state.drill[id] = { open: 1, best: {}, hist: [] });
+  const sec = (ms) => (ms / 1000).toFixed(1);
+  function drillCard() {
+    const passed = DR.CATS.reduce((s, c) => s + Object.values((state.drill[c.id] || {}).best || {}).filter((b) => b.pass).length, 0);
+    return `<section class="hw-card drill-card">
+      <div><h2>⚡ 연산 연습</h2><p>분수·소수의 곱셈, 어림, 평균을 <b>빠르고 정확하게</b>! 통과한 단계 <b>${passed} / ${DR.CATS.length * 3}</b></p></div>
+      <button class="btn primary" data-go="drill">연산하러 가기</button>
+    </section>`;
+  }
+  function drillHome() {
+    onKey = null;
+    const units = [...new Set(DR.CATS.map((c) => c.unit))].sort();
+    const card = (c) => {
+      const r = drOf(c.id);
+      const lvs = [1, 2, 3].map((lv) => {
+        const b = r.best[lv];
+        const st = lv > r.open ? 'lock' : b && b.pass ? 'pass' : b ? 'try' : 'new';
+        const label = st === 'lock' ? '🔒' : st === 'pass' ? `🏆 ${b.avg}초` : b ? `${b.acc}% · ${b.avg}초` : '도전!';
+        return `<button class="dlv ${st}" data-cat="${c.id}" data-lv="${lv}" ${st === 'lock' ? 'disabled' : ''}><span>${lv}단계</span><b>${label}</b><em>목표 ${c.target[lv - 1]}초</em></button>`;
+      }).join('');
+      return `<div class="dcat"><div class="dhead"><b>${esc(c.name)}</b><span class="dex">${txt(c.ex)}</span></div><div class="dlvs">${lvs}</div></div>`;
+    };
+    app.innerHTML = `${header(statsHtml())}
+      <main class="subs">
+        <button class="back" data-go="home">← 처음으로</button>
+        <h2>⚡ 연산 연습</h2>
+        <p class="lead">한 판에 <b>${DR.ROUND}문제</b>를 풀고 걸린 시간을 재요. <b>정확도 100%</b>이면서 문제당 평균 시간이 <b>목표 시간 안</b>이면 통과! 다음 단계가 열려요.<br>속도보다 <b>정확도가 먼저</b>예요. 틀리지 않게 풀다 보면 빨라져요.</p>
+        ${units.map((u) => `<h3 class="tops-h">${esc(UNIT_NAME[u])}</h3><div class="dcats">${DR.CATS.filter((c) => c.unit === u).map(card).join('')}</div>`).join('')}
+      </main>`;
+    bindCommon();
+    $$('.dlv:not([disabled])').forEach((b) => b.addEventListener('click', () => drillIntro(DR.CATS.find((c) => c.id === b.dataset.cat), Number(b.dataset.lv))));
+  }
+  function drillIntro(cat, lv) {
+    const go = () => drillRun(cat, lv);
+    onKey = (ev) => { if (ev.key === 'Enter') { ev.preventDefault(); go(); } };
+    const isF = cat.unit === 2;
+    app.innerHTML = `${header(statsHtml())}
+      <main class="center"><section class="panel">
+        <div class="big-emoji">⚡</div>
+        <h2>${esc(cat.name)} · ${lv}단계</h2>
+        <p>${DR.ROUND}문제를 풀어요. 목표: <b>정확도 100%</b>, 문제당 평균 <b>${cat.target[lv - 1]}초</b> 안에!</p>
+        ${isF ? '<p class="small muted">답은 기약분수로, 가분수는 대분수로 써요. 대분수는 <b>2 3/4</b>처럼 띄어 써요.</p>' : ''}
+        <p class="small muted">답을 쓰고 Enter를 누르면 바로 다음 문제가 나와요. 틀리면 정답을 보여 줄 때는 시계가 멈춰요.</p>
+        <div class="btns"><button id="go" class="btn primary">시작! <kbd>Enter</kbd></button><button class="btn" data-go="drill">연산 목록</button></div>
+      </section></main>`;
+    bindCommon();
+    $('#go').addEventListener('click', go);
+  }
+  function drillRun(cat, lv, list) {
+    const probs = list || DR.makeRound(cat, lv, rng);
+    const res = [];
+    let i = 0, used = 0, t0 = 0, timer = null, tries = 0, waiting = false;
+    const now = () => used + (t0 ? performance.now() - t0 : 0);
+    const start = () => { if (!t0) t0 = performance.now(); };
+    const pause = () => { if (t0) { used += performance.now() - t0; t0 = 0; } };
+    app.innerHTML = `${header(statsHtml())}
+      <main class="drill">
+        <div class="dtop"><button class="back" id="dstop">← 그만하기</button><span class="dname">⚡ ${esc(cat.name)} · ${lv}단계</span><span class="dclock">⏱ <b id="clock">0.0</b>초</span></div>
+        <div class="dbar"><span id="bar"></span></div>
+        <section class="dcard">
+          <p class="dno" id="dno"></p>
+          <p class="dq" id="dq"></p>
+          <div class="drow"><span class="deq">=</span><input id="din" class="in din" type="text" inputmode="decimal" autocomplete="off" spellcheck="false" aria-label="답"><button id="dok" class="btn primary">확인 <kbd>Enter</kbd></button></div>
+          <div id="dfb" class="dfb" aria-live="polite"></div>
+        </section>
+      </main>`;
+    bindCommon();
+    timer = setInterval(() => { const c = $('#clock'); if (!c) { clearInterval(timer); return; } c.textContent = sec(now()); }, 100);
+    $('#dstop').addEventListener('click', () => { clearInterval(timer); drillHome(); });
+    function show() {
+      const p = probs[i];
+      M5.currentDrill = p; // 브라우저 자동 테스트에서 쓴다
+      tries = 0; waiting = false;
+      $('#dno').textContent = `${i + 1} / ${probs.length}`;
+      $('#dq').innerHTML = txt(p.text);
+      $('#bar').style.width = `${(i / probs.length) * 100}%`;
+      $('#din').value = ''; $('#din').disabled = false; $('#din').focus();
+      $('#dok').innerHTML = '확인 <kbd>Enter</kbd>';
+      $('#dfb').innerHTML = '';
+      $('#dfb').className = 'dfb';
+      start();
+    }
+    function next() { i++; if (i >= probs.length) finish(); else show(); }
+    function submit() {
+      if (waiting === 'auto') return;
+      if (waiting) { next(); return; }
+      const p = probs[i];
+      const g = DR.judge(p, $('#din').value);
+      if (g.empty) return;
+      if (g.invalid) { $('#dfb').textContent = g.invalid; $('#dfb').className = 'dfb warn'; return; }
+      if (g.form) {
+        tries++;
+        $('#dfb').textContent = g.form === 'reduce' ? '값은 맞아요! 약분해서 기약분수로 써요.' : '값은 맞아요! 가분수를 대분수로 바꿔 써요.';
+        $('#dfb').className = 'dfb warn';
+        $('#din').select();
+        return;
+      }
+      if (g.ok) {
+        res.push({ p, ok: tries === 0, form: tries > 0 });
+        $('#dfb').textContent = tries ? '○ 맞았어요 (다음엔 처음부터 기약분수로!)' : '○';
+        $('#dfb').className = 'dfb good';
+        $('#din').disabled = true;
+        waiting = 'auto';
+        setTimeout(next, tries ? 700 : 250);
+        return;
+      }
+      pause();
+      res.push({ p, ok: false, input: $('#din').value });
+      $('#dfb').innerHTML = `✕ 정답: <b>${txt(DR.answerText(p))}</b> · 확인했으면 Enter`;
+      $('#dfb').className = 'dfb bad';
+      $('#din').disabled = true;
+      $('#dok').innerHTML = '다음 <kbd>Enter</kbd>';
+      $('#dok').focus();
+      waiting = true; // Enter를 누르면 다음 문제 (그때 시계가 다시 가요)
+    }
+    $('#dok').addEventListener('click', submit);
+    onKey = (ev) => { if (ev.key === 'Enter') { ev.preventDefault(); submit(); } };
+    function finish() {
+      pause();
+      clearInterval(timer);
+      drillResult(cat, lv, res, used, !!list);
+    }
+    show();
+  }
+  function drillResult(cat, lv, res, ms, retryRun) {
+    const n = res.length, good = res.filter((x) => x.ok).length;
+    const acc = Math.round((good / n) * 100), avg = Number(sec(ms / n)), target = cat.target[lv - 1];
+    const pass = acc === 100 && avg <= target;
+    const r = drOf(cat.id);
+    let msg = '', unlocked = false;
+    if (!retryRun) {
+      const prevHist = r.hist.filter((h) => h.lv === lv).slice(-4);
+      r.hist.push({ at: S.todayStr(), lv, acc, avg });
+      if (r.hist.length > 30) r.hist.splice(0, r.hist.length - 30);
+      const b = r.best[lv];
+      const better = !b || (pass && !b.pass) || (acc > b.acc) || (acc === b.acc && avg < b.avg);
+      if (better) r.best[lv] = { acc, avg, pass: pass || (b && b.pass) || false, at: S.todayStr() };
+      if (pass && lv === r.open && lv < 3) { r.open = lv + 1; unlocked = true; }
+      if (pass) { S.ensureToday(state); state.today.passed++; S.bumpDay(state, 'p'); }
+      save();
+      const trend = [...prevHist, { avg, acc }].map((h) => `${h.acc === 100 ? '' : `${h.acc}% `}${h.avg}초`).join(' → ');
+      msg = prevHist.length ? `<p class="small muted">이 단계 지난 기록: ${trend}</p>` : '';
+    }
+    const head = retryRun ? `<div class="big-emoji">🔁</div><h2>틀린 문제 다시 풀기: ${good} / ${n}</h2>`
+      : pass ? `<div class="stamp"><span>${lv}단계</span><b>통과</b><span>🏆</span></div><h2>정확도 100%, 목표 시간 안! ${unlocked ? `${lv + 1}단계가 열렸어요!` : ''}</h2>`
+        : acc < 100 ? `<div class="big-emoji">🎯</div><h2>정확도 ${acc}%. 속도보다 정확하게!</h2><p>틀린 문제를 다시 보고, 천천히 정확하게 풀어 봐요. 정확해지면 속도는 따라와요.</p>`
+          : `<div class="big-emoji">💪</div><h2>정확도 100%! 이제 조금만 더 빠르게</h2><p>문제당 평균 ${avg}초 → 목표 ${target}초. ${(avg - target).toFixed(1)}초만 줄이면 통과예요!</p>`;
+    const wrong = res.filter((x) => !x.ok);
+    const goAgain = () => drillRun(cat, lv);
+    const goWrong = () => drillRun(cat, lv, wrong.map((x) => x.p));
+    onKey = (ev) => { if (ev.key === 'Enter') { ev.preventDefault(); if (wrong.length && !retryRun) goWrong(); else goAgain(); } };
+    app.innerHTML = `${header(statsHtml())}
+      <main class="center"><section class="panel">
+        ${head}
+        <div class="result">
+          <div><span class="k">정확도</span><b class="${acc === 100 ? 'good' : 'bad'}">${acc}%</b></div>
+          <div><span class="k">걸린 시간</span><b>${sec(ms)}초</b></div>
+          <div><span class="k">문제당 평균</span><b class="${avg <= target ? 'good' : ''}">${avg}초</b></div>
+          <div><span class="k">목표</span><b>${target}초</b></div>
+        </div>
+        ${msg}
+        ${wrong.length ? `<div class="dwrong"><p class="q">✕ 틀린 문제</p><ul>${wrong.map((x) => `<li>${txt(x.p.text)} = <b>${txt(DR.answerText(x.p))}</b>${x.form ? ' <span class="small muted">(기약분수·대분수로 쓰지 않았어요)</span>' : x.input ? ` <span class="small muted">(내 답: ${esc(x.input)})</span>` : ''}</li>`).join('')}</ul></div>` : ''}
+        <div class="btns">
+          ${wrong.length && !retryRun ? '<button id="wr" class="btn primary">틀린 문제만 다시 <kbd>Enter</kbd></button>' : ''}
+          <button id="again" class="btn ${wrong.length && !retryRun ? '' : 'primary'}">새 문제로 다시 ${wrong.length && !retryRun ? '' : '<kbd>Enter</kbd>'}</button>
+          <button class="btn" data-go="drill">연산 목록</button>
+        </div>
+      </section></main>`;
+    bindCommon();
+    $('#again').addEventListener('click', goAgain);
+    if ($('#wr')) $('#wr').addEventListener('click', goWrong);
   }
   // ------------------------------------------------------------------ 오늘의 복습 (기획서 7번)
   function reviewSession() {

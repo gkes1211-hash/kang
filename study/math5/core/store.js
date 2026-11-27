@@ -22,6 +22,7 @@
       mastered: {}, // 완전히 익힌 유형 { 틀 이름: 날짜 }
       settings: { mode: 'endless' }, // endless(무한) | set10(10문제)
       top: {},      // 🏔️ 최상위 유형별 기록 { 틀 이름: { best: 변형 3문제 중 가장 많이 맞힌 수, last, tries, at } }
+      drill: {},    // ⚡ 연산 연습 종류별 { open: 열린 단계, best: { 단계: { acc, avg, pass, at } }, hist: [{ at, lv, acc, avg }] }
       hw: {},       // 문제집 오답 연습 세트별 진행 { 세트 이름: { status, streak, best, solved, correct, stage, due, doneAt, mastered } }
     };
   }

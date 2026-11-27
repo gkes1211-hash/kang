@@ -450,6 +450,33 @@ check('비슷한 문제', simRows.dupSets / simRows.sets < 0.02, `같은 문제�
   check('같이 풀기', few.length === 0, `직접 채울 단계가 거의 없는 최상위 틀: ${few.join(', ')}`);
   console.log(`\n[같이 풀기] 최상위 틀마다 대표 문제 200개를 한 단계씩 나누어 확인${few.length ? ' — 채울 단계가 적은 틀: ' + few.join(', ') : ''}`);
 }
+// ---------------------------------------------------------------- ⚡ 연산 연습
+{
+  const DR = M5.drill;
+  for (const cat of DR.CATS) for (const lv of [1, 2, 3]) {
+    const where = `연산 ${cat.id} ${lv}단계`;
+    const texts = new Set();
+    for (let i = 0; i < 400; i++) {
+      const p = cat.gen(rng, lv);
+      texts.add(p.text);
+      check(where, !BAD_WORDS.test(p.text) && !/[⟪⟫]/.test(T.plain(p.text)) && !/[가-힣]\(이\)|을\(를\)/.test(p.text), '문제 글이 이상해요: ' + p.text);
+      const inp = p.type === 'frac' ? T.plain(Fr.mk(p.value)) : p.value;
+      check(where, DR.judge(p, inp).ok === true, `정답(${inp})을 넣었는데 틀렸대요: ${p.text}`);
+      check(where, DR.judge(p, '99999').ok !== true, '아무 수나 맞대요: ' + p.text);
+      if (p.type === 'frac') {
+        const f = Fr.parse(p.value);
+        check(where, f.n > 0 && f.d <= 100 && f.n / f.d < 500, '분수 답이 너무 커요: ' + p.value);
+        if (f.d > 1) check(where, !!DR.judge(p, `${f.n * 2}/${f.d * 2}`).form, '약분 안 한 답을 안내하지 않아요');
+      } else {
+        const d = D.parse(p.value);
+        check(where, d && d.n > 0 && d.s <= 4, '수 답이 이상해요: ' + p.value);
+      }
+    }
+    check(where, texts.size >= 30, `문제 종류가 너무 적어요(${texts.size})`);
+    check(where, DR.makeRound(cat, lv, rng).length === DR.ROUND, '한 판 문제 수가 모자라요');
+  }
+  console.log(`\n[연산 연습] ${DR.CATS.length}가지 × 3단계, 단계마다 400문제 채점 확인`);
+}
 // ---------------------------------------------------------------- 난이도 직접 고르기
 {
   const st = M5.store.fresh();

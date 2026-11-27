@@ -2,7 +2,7 @@
 // 파일을 새로 만들면 아래 FILES 에도 넣어 주세요. (tests/run.js 가 빠진 파일이 없는지 확인해요)
 // 학습 기록은 여기가 아니라 브라우저의 localStorage('math5-v1')에 따로 저장돼요.
 const PREFIX = 'math5-';
-const CACHE = `${PREFIX}v14`;
+const CACHE = `${PREFIX}v15`;
 const FILES = [
   './',
   './index.html',
@@ -17,6 +17,7 @@ const FILES = [
   './core/store.js',
   './core/review.js',
   './core/guide.js',
+  './core/drill.js',
   './core/homework.js',
   './templates/words.js',
   './templates/common.js',
