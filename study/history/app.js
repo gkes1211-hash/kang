@@ -9,7 +9,7 @@
   const personById = Object.fromEntries(H.people.map((p) => [p.id, p]));
 
   // ---------------------------------------------------------------- 기록 (이 브라우저에만 저장)
-  const blank = () => ({ stars: 0, people: {}, stories: {}, trains: 0, best: {}, last: '' });
+  const blank = () => ({ stars: 0, people: {}, stories: {}, trains: 0, best: {}, last: '', adv: {}, explorer: null });
   let S = blank();
   try { S = Object.assign(blank(), JSON.parse(localStorage.getItem(KEY) || '{}')); } catch (e) { /* 새로 시작 */ }
   const save = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) { /* 저장 못 해도 놀 수는 있어요 */ } };
@@ -42,7 +42,7 @@
   // ---------------------------------------------------------------- 화면 바꾸기
   const views = {};
   let current = 'home';
-  const go = (name, arg) => { hush(); current = name; views[name](arg); window.scrollTo(0, 0); };
+  const go = (name, arg) => { hush(); document.getElementById('toast').classList.remove('on'); current = name; views[name](arg); window.scrollTo(0, 0); };
   $app.addEventListener('click', (ev) => {
     const b = ev.target.closest('[data-go]');
     if (b) go(b.dataset.go, b.dataset.arg);
@@ -66,6 +66,7 @@
         <div class="hero-top"><h1>🧭 역사 탐험대</h1><span class="stars big">⭐ ${S.stars}</span></div>
         <p>외우지 말고, 놀면서 만나 보자! 옛날 사람들도 우리처럼 고민하고, 꾀를 내고, 용기를 냈어요.</p>
       </section>
+      ${ADV.homeCard()}
       ${trainHTML(true)}
       <button class="today" data-go="story" data-arg="${todays.id}">
         <span class="em">${todays.emoji}</span>
@@ -91,7 +92,8 @@
 
   // 시대 열차: 그 시대 인물을 만나거나 이야기를 읽으면 칸에 불이 켜져요
   function eraLit(id) {
-    return H.people.some((p) => p.era === id && S.people[p.id]) || H.stories.some((s) => s.era === id && S.stories[s.id]);
+    return H.people.some((p) => p.era === id && S.people[p.id]) || H.stories.some((s) => s.era === id && S.stories[s.id])
+      || H.adventures.some((a) => a.era === id && S.adv && S.adv[a.id]);
   }
   function trainHTML(clickable) {
     const cars = H.eras.map((e) => `
@@ -425,6 +427,9 @@
       ${H.eras.map((e) => `<h2 style="color:${e.color}">${e.emoji} ${esc(e.name)}</h2><div class="cards">${H.people.filter((p) => p.era === e.id).map(personCard).join('')}</div>`).join('')}`;
   };
 
+  // 🎮 역사 속으로 (adventure.js)
+  const ADV = H.makeAdventure({ S, save, addStars, toast, esc, speak, hush, canSpeak, header, go, $app, personById, eraTag });
+  Object.assign(views, ADV.views);
   go('home');
   if (canSpeak) speechSynthesis.getVoices();
 })();

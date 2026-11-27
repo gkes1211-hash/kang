@@ -8,7 +8,7 @@ const ROOT = path.join(__dirname, '..');
 const ctx = { window: {} };
 ctx.H = undefined;
 vm.createContext(ctx);
-for (const f of ['eras', 'people', 'events', 'stories']) {
+for (const f of ['eras', 'people', 'events', 'stories', 'adventures']) {
   vm.runInContext(fs.readFileSync(path.join(ROOT, 'data', `${f}.js`), 'utf8').replace('window.H = window.H || {};', 'var H = window.H = window.H || {};'), ctx, { filename: `data/${f}.js` });
 }
 const H = ctx.window.H;
@@ -73,6 +73,45 @@ for (const s of H.stories) {
   check(w, Number.isInteger(q.answer) && q.answer >= 0 && q.answer < (q.choices || []).length, '퀴즈 answer 번호가 보기 범위 밖이에요');
 }
 
+// 모험 편
+uniq(H.adventures, '모험');
+const BGS = new Set(['land', 'camp', 'river', 'castle', 'night']);
+for (const A of H.adventures) {
+  const w = `모험 ${A.id}`;
+  check(w, eraIds.has(A.era), `era "${A.era}" 가 eras.js 에 없어요`);
+  check(w, H.people.some((p) => p.id === A.person), `person "${A.person}" 가 people.js 에 없어요`);
+  for (const k of ['emoji', 'title', 'hook', 'think']) check(w, filled(A[k]), `${k} 가 비었어요`);
+  const c = A.card || {};
+  for (const k of ['title', 'when', 'who', 'vs', 'how']) check(w, filled(c[k]), `진짜 역사 카드의 ${k} 가 비었어요`);
+  check(w, Array.isArray(c.words) && c.words.length >= 3, '카드의 핵심 단어(words)는 3개 이상');
+  check(w, Array.isArray(A.scenes) && A.scenes.length >= 3, '장면이 3개 이상 있어야 해요');
+  (A.scenes || []).forEach((sc, k) => {
+    const ws = `${w} 장면 ${k + 1}`;
+    check(ws, ['talk', 'choice', 'retreat', 'timing'].includes(sc.type), `type "${sc.type}" 을 몰라요`);
+    check(ws, sc.who === 'me' || (A.cast && A.cast[sc.who]), `말하는 사람 "${sc.who}" 가 cast 에 없어요`);
+    check(ws, filled(sc.say), '말풍선(say)이 비었어요');
+    // 말풍선은 짧게: 아이가 읽기 부담 없도록 (이름 자리 {name} 은 빼고 셈)
+    check(ws, (sc.say || '').replace('{name}', '').length <= 70, `말풍선이 너무 길어요 (${(sc.say || '').length}자, 70자까지)`);
+    check(ws, sc.stage && BGS.has(sc.stage.bg) && Array.isArray(sc.stage.sprites), 'stage 의 bg 나 sprites 가 이상해요');
+    if (sc.type === 'choice') {
+      const os = sc.options || [];
+      check(ws, os.length >= 2, '보기는 2개 이상');
+      check(ws, os.filter((o) => o.ok).length === 1, '정답 보기(ok)는 딱 1개여야 해요');
+      for (const o of os) {
+        check(ws, filled(o.e) && filled(o.t), '보기에 그림(e)과 글(t)이 있어야 해요');
+        if (!o.ok) check(ws, filled(o.fb), `틀린 보기 "${o.t}" 에 다시 생각할 힌트(fb)가 없어요`);
+      }
+      check(ws, filled(sc.after), '맞힌 뒤 한마디(after)가 없어요');
+    }
+    if (sc.type === 'retreat') check(ws, Number.isInteger(sc.times) && sc.times > 1 && filled(sc.done), 'times(2 이상)와 done 이 있어야 해요');
+    if (sc.type === 'timing') check(ws, filled(sc.hint), 'hint 가 있어야 해요');
+  });
+  check(w, Array.isArray(A.review) && A.review.length >= 2, '기억 퀴즈(review)는 2개 이상');
+  for (const q of A.review || []) {
+    check(w, filled(q.q) && filled(q.why) && Array.isArray(q.choices) && q.answer >= 0 && q.answer < q.choices.length, `기억 퀴즈 "${q.q}" 가 이상해요`);
+  }
+}
+
 // 인터넷 없이 열기 (sw.js 가 모든 파일을 담는지)
 const sw = fs.readFileSync(path.join(ROOT, 'sw.js'), 'utf8');
 const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
@@ -82,6 +121,6 @@ for (const m of html.matchAll(/(?:src|href)="([^"]+)"/g)) {
 }
 for (const m of sw.matchAll(/'\.\/([^']+)'/g)) check('sw.js', fs.existsSync(path.join(ROOT, m[1])), `sw.js 에 적힌 ${m[1]} 파일이 없어요`);
 
-console.log(`시대 ${H.eras.length} · 인물 ${H.people.length} · 사건 ${H.events.length} · 이야기 ${H.stories.length}`);
+console.log(`시대 ${H.eras.length} · 인물 ${H.people.length} · 사건 ${H.events.length} · 이야기 ${H.stories.length} · 모험 ${H.adventures.length}`);
 if (bad) { console.log(`\n✗ ${bad}개 고쳐야 해요`); process.exit(1); }
 console.log('✓ 모두 괜찮아요');
