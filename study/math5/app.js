@@ -360,7 +360,9 @@
       $('#weird').addEventListener('click', () => opts.onWeird(result));
       $('#stop').addEventListener('click', () => opts.onStop());
       $('#back').addEventListener('click', () => opts.onBack());
-      if (opts.onLevel && $('.lvchange')) {
+      // 단계 바꾸기: 바꾼 다음에도 '바꾸기' 단추가 남아 있어서 몇 번이든 다시 바꿀 수 있어요
+      const bindLevel = () => {
+        if (!opts.onLevel || !$('.lvchange')) return;
         $('.lvchange').addEventListener('click', () => {
           const pop = $('.lvpop');
           pop.hidden = !pop.hidden;
@@ -368,10 +370,12 @@
           pop.innerHTML = tierPick(opts.levelNow()) + '<p class="small muted">다음 문제부터 바뀌어요.</p>';
           pop.querySelectorAll('.lvb').forEach((b) => b.addEventListener('click', () => {
             opts.onLevel(Number(b.dataset.lv));
-            $('.level').innerHTML = `${opts.levelText2()} <span class="small muted">· 다음 문제부터</span>`;
+            $('.level').innerHTML = `${opts.levelText2()} <span class="small muted">· 다음 문제부터</span> <button type="button" class="link lvchange">바꾸기</button><div class="lvpop" hidden></div>`;
+            bindLevel();
           }));
         });
-      }
+      };
+      bindLevel();
       $$('.opt').forEach((b) => b.addEventListener('click', () => choose(b)));
       $$('.figure .gp').forEach((c) => c.addEventListener('click', () => pickPoint(c.dataset.p)));
       if ($('#pclear')) $('#pclear').addEventListener('click', () => { if (canInput()) { sel.clear(); paintPoints(); } });
