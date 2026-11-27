@@ -58,7 +58,7 @@ H.makeAdventure = (api) => {
     $app.innerHTML = `${header('🎮 역사 속으로')}
       <div class="badge-card"><span class="av">${m.av}</span><div><small>시간 여행 탐험대</small><b>${esc(m.name)} 대원</b></div>
         <button class="ghost" data-go="advSetup">바꾸기</button></div>
-      <p class="lead">역사 속 인물 곁에서, 중요한 순간마다 네가 골라! 틀려도 괜찮아, 다시 생각해 보면 돼.</p>
+      <p class="lead">하고 싶은 모험을 골라! 옛날 → 요즘 순서로 놓여 있어요. (${H.adventures.filter((a) => S.adv[a.id]).length} / ${H.adventures.length} 완료)</p>
       <div class="list">${H.adventures.map((a) => {
         const r = S.adv[a.id];
         return `<button class="row adv-row" data-go="adv" data-arg="${a.id}">
@@ -289,7 +289,7 @@ H.makeAdventure = (api) => {
         ${newPerson ? `<div class="newcard">🗂️ 인물 카드 <b>${p.emoji} ${esc(p.name)}</b> 를 얻었어요!</div>` : ''}
         <div class="think"><b>💬 너라면?</b><p>${esc(A.think)}</p><small>정답은 없어요. 가족이랑 이야기해 봐요!</small></div>
         <p class="muted center">🧠 ${REVIEW_DAYS[0]}일 뒤에 기억 퀴즈가 찾아와요. 그때 다시 만나요!</p>
-        <div class="nav2"><button class="ghost" data-go="adv" data-arg="${A.id}">🔁 다시 하기</button><button class="main" data-go="home">처음으로</button></div>`;
+        <div class="nav2"><button class="ghost" data-go="adv" data-arg="${A.id}">🔁 다시 하기</button><button class="ghost" data-go="advList">🗺️ 다른 모험 고르기</button><button class="main" data-go="home">처음으로</button></div>`;
       const cs = document.getElementById('cardsay');
       if (cs) cs.onclick = () => speak(`${c.title}. ${c.when}. ${c.who}${c.vs ? `, ${c.vs}` : ''}. ${c.how}`);
       window.scrollTo(0, 0);
@@ -355,9 +355,10 @@ H.makeAdventure = (api) => {
     return `${due ? `<button class="review-banner" data-go="advReview">🧠 기억 퀴즈가 ${due}개 찾아왔어요! <b>풀러 가기 ▶</b></button>` : ''}
       <button class="adv-hero" data-go="${S.explorer ? 'adv' : 'advList'}" data-arg="${pick.id}">
         <span class="em">🎮</span>
-        <span><small>역사 속으로 · ${S.explorer ? `${esc(me().av)} ${esc(me().name)} 대원 출동!` : '탐험대원이 되어 출동!'}</small>
+        <span><small>${fresh && S.explorer ? '다음 추천 모험' : '역사 속으로'} · ${S.explorer ? `${esc(me().av)} ${esc(me().name)} 대원 출동!` : '탐험대원이 되어 출동!'}</small>
           <b>${pick.emoji} ${esc(pick.title)}</b><i>${fresh ? esc(pick.hook) : '모든 모험을 끝냈어요! 다시 해서 ⭐을 모아 봐요.'}</i></span>
-      </button>`;
+      </button>
+      <button class="adv-pick" data-go="advList"><span>🗺️ 모험 골라서 하기</span><b>${H.adventures.filter((a) => S.adv[a.id]).length} / ${H.adventures.length} 완료 ›</b></button>`;
   };
 
   return { views, homeCard };
