@@ -479,6 +479,13 @@
       if (a.type === 'multi') a.values.forEach((i) => { const b = $(`.opt[data-i="${i}"]`); if (b) b.classList.add('right'); });
       if (a.type === 'ox' || a.type === 'ineq') { const b = $(`.opt[data-v="${String(a.value)}"]`); if (b) b.classList.add('right'); }
       if (a.type === 'points') revealPoints();
+      revealFigure();
+    }
+    // 정답을 보여 줄 때 그림을 바꾼다 (예: 전개도에 맞닿는 선분 짝 번호)
+    function revealFigure() {
+      if (!p.figureAfter) return;
+      const fig = $('.qcard .figure');
+      if (fig) fig.innerHTML = F.render(p.figureAfter) + '<p class="fig-note">같은 번호끼리 접으면 맞닿아요. 빨간 점은 한 곳에서 만나는 점이에요.</p>';
     }
     // 점 찍기 문제의 정답: 완성된 도형과 찍어야 할 점을 보여 준다
     function revealPoints() {
@@ -567,6 +574,7 @@
           // 힌트를 다 썼는데도 틀리면: 정답과 풀이를 보여 주고 따라 풀게 한다
           phase = 'copy';
           if (a.type === 'points') revealPoints();
+          revealFigure();
           const ansT = G.answerText(p);
           parts.push(`<p class="reveal">정답은 <b>${txt(ansT)}</b>${T.j(ansT, '이에요/예요').slice(ansT.length)}. 풀이를 천천히 읽고, 정답을 직접 입력(선택)해 봐요.</p>${solutionHtml(true)}`);
           fb.innerHTML = parts.join('');

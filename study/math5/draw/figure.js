@@ -194,7 +194,7 @@
       nx /= L; ny /= L;
       if (q.c && (m[0] - q.c[0]) * nx + (m[1] - q.c[1]) * ny < 0) { nx = -nx; ny = -ny; }
       const d = q.d || 0.48;
-      out.push(txt([m[0] + nx * d, m[1] + ny * d], q.t, 'st'));
+      out.push(txt([m[0] + nx * d, m[1] + ny * d], q.t, q.cls || 'st'));
     }
     for (const q of f.dots || []) {
       out.push(`<circle class="cdot" cx="${X(q.p[0])}" cy="${Y(q.p[1])}" r="4"/>`);

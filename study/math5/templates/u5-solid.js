@@ -14,8 +14,8 @@
       { id: 'u5s1', name: '직육면체와 정육면체', concept: '직사각형 6개로 둘러싸인 도형을 직육면체, 정사각형 6개로 둘러싸인 도형을 정육면체라고 해요.\n선분으로 둘러싸인 부분을 면, 면과 면이 만나는 선분을 모서리, 모서리와 모서리가 만나는 점을 꼭짓점이라고 해요.\n직육면체와 정육면체는 모두 면 6개, 모서리 12개, 꼭짓점 8개예요.\n직육면체는 길이가 같은 모서리가 4개씩 3묶음이라서, 모든 모서리의 길이의 합은 (가로 + 세로 + 높이) × 4예요.\n정육면체는 직육면체라고 할 수 있지만, 직육면체는 정육면체라고 할 수 없어요.' },
       { id: 'u5s2', name: '직육면체의 겨냥도', concept: '직육면체 모양을 잘 알 수 있게 나타낸 그림을 겨냥도라고 해요.\n보이는 모서리는 실선으로, 보이지 않는 모서리는 점선으로 그려요.\n보이는 면 3개, 보이는 모서리 9개, 보이는 꼭짓점 7개\n보이지 않는 면 3개, 보이지 않는 모서리 3개, 보이지 않는 꼭짓점 1개\n보이지 않는 모서리 3개는 가로, 세로, 높이가 하나씩이에요.' },
       { id: 'u5s3', name: '직육면체의 성질', concept: '직육면체에서 계속 늘여도 만나지 않는 두 면을 서로 평행하다고 해요. 서로 마주 보는 면은 평행하고, 평행한 면은 3쌍이에요.\n평행한 두 면을 직육면체의 밑면이라고 해요.\n서로 만나는 두 면은 수직이에요. 한 면과 수직인 면은 4개이고, 밑면과 수직인 면을 옆면이라고 해요.\n한 꼭짓점에서 만나는 면은 3개예요.' },
-      { id: 'u5s4', name: '정육면체의 전개도', concept: '정육면체의 모서리를 잘라서 펼친 그림을 정육면체의 전개도라고 해요. 잘린 모서리는 실선, 잘리지 않은 모서리는 점선으로 그려요.\n전개도를 접었을 때 마주 보는 면은 평행하고, 한 면과 이웃한 면 4개는 수직이에요.\n한 줄로 이어진 세 면에서 첫째 면과 셋째 면은 마주 보는 면이에요.\n접었을 때 겹치는 면이 있으면 전개도가 아니에요. 정육면체의 전개도는 모두 11가지예요.' },
-      { id: 'u5s5', name: '직육면체의 전개도', concept: '직육면체의 모서리를 잘라서 펼친 그림을 직육면체의 전개도라고 해요.\n마주 보는 면 3쌍은 모양과 크기가 같아요.\n접었을 때 맞닿는 선분의 길이는 같아요.\n접었을 때 겹치는 면이 없어야 해요.' },
+      { id: 'u5s4', name: '정육면체의 전개도', concept: '정육면체의 모서리를 잘라서 펼친 그림을 정육면체의 전개도라고 해요. 잘린 모서리는 실선, 잘리지 않은 모서리는 점선으로 그려요.\n전개도를 접었을 때 마주 보는 면은 평행하고, 한 면과 이웃한 면 4개는 수직이에요.\n한 줄로 이어진 세 면에서 첫째 면과 셋째 면은 마주 보는 면이에요.\n만나는 점·맞닿는 선분은 지퍼처럼 찾아요: 안쪽으로 꺾인 곳(ㄴ자로 오목한 곳)에서 꺾인 점 양쪽의 두 선분이 먼저 맞닿고, 그 바깥 선분끼리 차례로 맞닿아요. 맞닿는 두 선분의 끝점끼리 만나요.\n접었을 때 겹치는 면이 있으면 전개도가 아니에요. 정육면체의 전개도는 모두 11가지예요.' },
+      { id: 'u5s5', name: '직육면체의 전개도', concept: '직육면체의 모서리를 잘라서 펼친 그림을 직육면체의 전개도라고 해요.\n마주 보는 면 3쌍은 모양과 크기가 같아요.\n접었을 때 맞닿는 선분의 길이는 같아요.\n만나는 점·맞닿는 선분은 정육면체처럼 지퍼로 찾아요: 안쪽으로 꺾인 곳에서 꺾인 점 양쪽의 두 선분이 먼저 맞닿고, 그 바깥 선분끼리 차례로 맞닿아요.\n접었을 때 겹치는 면이 없어야 해요.' },
     ],
   });
 
@@ -743,7 +743,7 @@
   const lenOf = (N, s) => s.len; // 직육면체 전개도는 칸 단위 = cm
   // 전개도 그림: 면은 색, 바깥 둘레는 실선, 접는 선(잘리지 않은 모서리)은 점선
   function netFig(N, o = {}) {
-    const u = o.scale || Math.min(46, 420 / Math.max(N.W, N.H));
+    const u = o.scale || Math.min(N.cube ? 72 : 46, 420 / Math.max(N.W, N.H));
     const segs = N.segs.map((s) => ({ a: s.a, b: s.b, cls: 'box' }));
     const seen = new Set();
     for (const rc of N.rects) {
@@ -834,26 +834,90 @@
     });
   }
 
+  // ---- 만나는 점·맞닿는 선분: "지퍼처럼 닫기"로 한 단계씩 설명 ----
+  //   꺾인 곳(오목한 곳)에서 양쪽 선분이 먼저 맞닿고, 그 바깥 선분끼리 차례로 맞닿아요.
+  const CN = ['①', '②', '③', '④', '⑤', '⑥', '⑦'];
+  function zipInfo(N) {
+    const Z = B.zipper(N.segs);
+    if (!Z) return null;
+    const nm = (p) => ptAt(N, p).name;
+    const step = (z, i) => {
+      const c = nm(z.corner[0]) === nm(z.corner[1]) ? `점 ${nm(z.corner[0])}` : `점 ${j(nm(z.corner[0]), '과/와')} 점 ${nm(z.corner[1])}이 만난 곳`;
+      return `${CN[i]} ${c}에서 ${j(segName(N, z.s), '과/와')} ${segName(N, z.t)}이 맞닿아요. → 점 ${j(nm(z.ends[0]), '과/와')} 점 ${nm(z.ends[1])}이 만나요.`;
+    };
+    // 단계 k까지 가는 길: 안쪽에서 먼저 붙인 단계들 + k
+    const chain = (k) => [...Z[k].inside, k].sort((a, b) => a - b);
+    return { Z, nm, step, chain };
+  }
+  // 정답 그림: 맞닿는 선분 짝마다 같은 번호, 이번 문제에 쓰는 짝은 색으로
+  function zipFig(N, zi, hlSteps, pts) {
+    const f = netFig(N, { points: true, faces: false });
+    const c = [N.W / 2, N.H / 2];
+    const on = new Set(hlSteps);
+    f.segs = f.segs.map((sg) => {
+      const k = zi.Z.findIndex((z) => [z.s, z.t].some((x) => x.a === sg.a && x.b === sg.b));
+      return k >= 0 && on.has(k) ? Object.assign({}, sg, { cls: k === hlSteps[hlSteps.length - 1] ? 'hl' : 'hl2' }) : sg;
+    });
+    f.sides = zi.Z.flatMap((z, k) => (on.has(k) ? [z.s, z.t].map((x) => ({ a: x.a, b: x.b, t: CN[k], c, d: 0.62, cls: 'zip' })) : []));
+    if (pts) f.dots = pts.map((p) => ({ p: p.p }));
+    f.pad = 1.1;
+    return f;
+  }
+  // 몇 단계 안쪽까지 생각해야 하는지로 난이도 고르기
+  const depthOK = (d, lv) => (lv === 1 ? d === 0 : lv === 2 ? d >= 1 && d <= 2 : d >= 2);
+
   function pointTpl(sub, cube) {
     return tpl({
-      id: sub + '-point', sub, style: 'A', styleName: '만나는 점', levels: [2, 4],
+      id: sub + '-point', sub, style: 'A', styleName: '만나는 점', levels: [1, 4], weak: ['concept'],
       build(r, lv) {
         const N = makeNet(r, cube, lv);
         if (!N) return null;
-        // 다른 점과 만나는 점을 고른다
-        const cand = N.pts.filter((p) => N.pts.some((q) => q !== p && q.cube === p.cube));
-        const p = r.pick(cand);
-        const same = N.pts.filter((q) => q !== p && q.cube === p.cube);
+        const zi = zipInfo(N);
+        if (!zi) return null;
+        // 단계마다 바로 만나게 되는 두 점 (끝점끼리, 꺾인 곳의 두 점끼리)
+        const links = [];
+        zi.Z.forEach((z, k) => {
+          for (const [a, b] of [[zi.nm(z.ends[0]), zi.nm(z.ends[1])], [zi.nm(z.corner[0]), zi.nm(z.corner[1])]]) if (a !== b) links.push([a, b, k]);
+        });
+        // 점 p에서 q까지 이어지는 단계들 (가장 짧은 길)
+        const path = (p0, q0) => {
+          const prev = new Map([[p0, null]]);
+          const qu = [p0];
+          while (qu.length) {
+            const x = qu.shift();
+            if (x === q0) break;
+            for (const [a, b, k] of links) for (const [u, v] of [[a, b], [b, a]]) if (u === x && !prev.has(v)) { prev.set(v, [x, k]); qu.push(v); }
+          }
+          const ks = [];
+          for (let x = q0; prev.get(x); x = prev.get(x)[0]) ks.push(prev.get(x)[1]);
+          return ks;
+        };
+        const cand = N.pts.filter((p) => N.pts.some((q) => q !== p && q.cube === p.cube)).map((p) => {
+          const same = N.pts.filter((q) => q !== p && q.cube === p.cube);
+          const ks = [...new Set(same.flatMap((q) => path(p.name, q.name)))];
+          const depth = Math.max(...ks.map((k) => zi.Z[k].inside.length));
+          return { p, same, ks, depth };
+        });
+        const pool = cand.filter((x) => depthOK(x.depth, lv));
+        const it = r.pick(pool.length ? pool : cand);
+        const { p, same } = it;
         const diff = r.sample(N.pts.filter((q) => q !== p && q.cube !== p.cube), 5 - same.length);
         const opts = [...same, ...diff].sort((a, b) => (a.name < b.name ? -1 : 1));
+        const steps = [...new Set(it.ks.flatMap((k) => zi.chain(k)))].sort((a, b) => a - b);
+        const lines = steps.map((k) => zi.step(zi.Z[k], k));
         return {
           text: `${what(cube)}의 전개도를 접었을 때 점 ${j(p.name, '과/와')} 만나는 점을 모두 고르세요.`,
           figure: netFig(N, { points: true, faces: false }),
+          figureAfter: zipFig(N, zi, steps, [p, ...same]),
           answer: { type: 'multi', options: opts.map((q) => ({ text: `점 ${q.name}`, key: q.name, correct: q.cube === p.cube })) },
           keepOrder: true,
           patterns: [],
-          hints: ['접는 선(점선)을 따라 면을 하나씩 세워 본다고 생각해요.', `점 ${p.name}이 있는 면과 이웃한 면을 접으면 어느 점이 겹치는지 따라가요.`, `점 ${p.name}과 만나는 점: ${same.map((q) => '점 ' + q.name).join(', ')}`],
-          solution: [`접으면 점 ${p.name}, ${same.map((q) => '점 ' + q.name).join(', ')}이 한 꼭짓점에서 만나요.`],
+          hints: [
+            '전개도를 지퍼처럼 닫는다고 생각해요. 안쪽으로 꺾인 곳(ㄴ자로 오목한 곳)에서는 꺾인 점 양쪽의 두 선분이 먼저 맞닿아요.',
+            `${lines[0]}`,
+            lines.length > 1 ? lines.slice(1).join('\n') : `그래서 점 ${p.name}과 만나는 점은 ${same.map((q) => '점 ' + q.name).join(', ')}이에요.`,
+          ],
+          solution: [...lines, `그래서 점 ${j(p.name, '과/와')} 만나는 점은 ${same.map((q) => '점 ' + q.name).join(', ')}이에요.`, '(정답 그림에서 같은 번호끼리 맞닿는 선분이에요.)'],
           key: `${sub}-point|${N.cells.map((c) => c.join(',')).join(' ')}|${JSON.stringify(N.L)}|${p.name}|${diff.map((q) => q.name).join('')}`,
           data: { pts: N.pts.map((q) => ({ name: q.name, cube: q.cube })), p: p.name },
         };
@@ -867,21 +931,33 @@
 
   function edgeTpl(sub, cube) {
     return tpl({
-      id: sub + '-edge', sub, style: 'A', styleName: '맞닿는 선분', levels: [2, 4],
+      id: sub + '-edge', sub, style: 'A', styleName: '맞닿는 선분', levels: [1, 4], weak: ['concept'],
       build(r, lv) {
         const N = makeNet(r, cube, lv);
         if (!N) return null;
-        const s = r.pick(N.segs);
-        const t = B.gluePartner(N.segs, s);
+        const zi = zipInfo(N);
+        if (!zi) return null;
+        const pool = zi.Z.map((z, k) => k).filter((k) => depthOK(zi.Z[k].inside.length, lv));
+        const k = r.pick(pool.length ? pool : zi.Z.map((z, i) => i));
+        const z = zi.Z[k];
+        const [s, t] = r.chance(0.5) ? [z.s, z.t] : [z.t, z.s];
+        // 헷갈리기 쉬운 보기: 바로 옆 선분, 길이가 같은 선분
         const wrong = r.sample(N.segs.filter((x) => x !== s && x !== t), 3);
         const opts = r.shuffle([t, ...wrong]);
+        const steps = zi.chain(k);
+        const lines = steps.map((i) => zi.step(zi.Z[i], i));
         return {
           text: `${what(cube)}의 전개도를 접었을 때 ${j(segName(N, s), '과/와')} 맞닿는 선분을 고르세요.`,
           figure: netFig(N, { points: true, faces: false }),
-          answer: { type: 'choice', options: opts.map((x) => Object.assign({ text: segName(N, x), correct: x === t }, x === t ? {} : { pattern: { cause: 'condition', msg: `접었을 때 ${segName(N, s)}의 두 끝점과 만나는 점을 각각 찾아 이어 봐요.` } })) },
+          figureAfter: zipFig(N, zi, steps),
+          answer: { type: 'choice', options: opts.map((x) => Object.assign({ text: segName(N, x), correct: x === t }, x === t ? {} : { pattern: { cause: 'concept', msg: '접었을 때 맞닿지 않는 선분이에요. 안쪽으로 꺾인 곳부터 지퍼처럼 닫아 봐요. 꺾인 점 양쪽의 두 선분이 먼저 맞닿고, 그 바깥 선분끼리 차례로 맞닿아요.' } })) },
           keepOrder: true,
-          hints: ['맞닿는 선분은 접었을 때 겹치는 선분이에요. 길이가 같아요.', `${segName(N, s)}의 양 끝점이 접으면 어느 점과 만나는지 찾아요.`, `맞닿는 선분: ${segName(N, t)}`],
-          solution: [`접으면 ${j(segName(N, s), '과/와')} ${segName(N, t)}이 맞닿아요.`],
+          hints: [
+            '전개도를 지퍼처럼 닫는다고 생각해요. 안쪽으로 꺾인 곳(ㄴ자로 오목한 곳)에서는 꺾인 점 양쪽의 두 선분이 먼저 맞닿아요.',
+            steps.length > 1 ? `먼저 ${lines[0]}` : `${segName(N, s)}이 붙어 있는 꺾인 곳을 찾아요. 꺾인 점의 반대쪽 선분이 맞닿는 선분이에요.`,
+            lines.join('\n'),
+          ],
+          solution: [...lines, `그래서 ${j(segName(N, s), '과/와')} 맞닿는 선분은 ${segName(N, t)}이에요.`, '(정답 그림에서 같은 번호끼리 맞닿는 선분이에요.)'],
           key: `${sub}-edge|${N.cells.map((c) => c.join(',')).join(' ')}|${JSON.stringify(N.L)}|${segName(N, s)}|${opts.map((x) => segName(N, x)).join('')}`,
           data: { want: segName(N, t) },
         };

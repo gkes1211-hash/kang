@@ -235,6 +235,7 @@ for (const tpl of M5.templates) {
     // (7) 그림이 오류 없이 그려지는지
     try {
       M5.figure.render(p.figure);
+      if (p.figureAfter) M5.figure.render(p.figureAfter);
       for (const o of a.options || []) if (o.figure) M5.figure.render(o.figure);
     } catch (e) { fail(where, '그림 오류: ' + e.message, p); }
   }
@@ -316,6 +317,44 @@ for (const tpl of M5.templates) {
 // 문제 종류가 아주 적은 틀(예: 수직선 한쪽)은 가끔 같은 문제가 겹칠 수 있다. 전체의 2% 아래면 통과.
 check('비슷한 문제', simRows.dupSets / simRows.sets < 0.02, `같은 문제가 겹친 세트가 ${simRows.dupSets}개예요`);
 
+// ---------------------------------------------------------------- 전개도 지퍼 설명 = 실제로 접은 결과
+{
+  const Bx = M5.box;
+  let n = 0;
+  for (const net of Bx.NETS) for (let k = 0; k < 8; k++) for (const L of [{ x: 1, y: 1, z: 1 }, { x: 2, y: 5, z: 3 }, { x: 7, y: 4, z: 2 }]) {
+    const R = Bx.layout(Bx.fold(Bx.orient(net, k)), L);
+    if (!R) continue;
+    const S = Bx.boundary(R), Z = Bx.zipper(S), P = Bx.netPoints(R);
+    const key = (q) => q.map((v) => v.toFixed(4)).join(',');
+    const par = new Map(P.map((q) => [key(q.p), key(q.p)]));
+    const find = (x) => (par.get(x) === x ? x : find(par.get(x)));
+    for (const z of Z || []) { par.set(find(key(z.ends[0])), find(key(z.ends[1]))); par.set(find(key(z.corner[0])), find(key(z.corner[1]))); }
+    const ok = Z && Z.length === 7 && Z.every((z) => Bx.gluePartner(S, z.s) === z.t && Math.abs(z.s.len - z.t.len) < 1e-9)
+      && P.every((a) => P.every((b) => (a.cube === b.cube) === (find(key(a.p)) === find(key(b.p)))));
+    check('전개도 지퍼', ok, `전개도 ${net.map((c) => c.join('')).join(' ')} 방향 ${k}: 지퍼로 닫은 결과가 실제로 접은 결과와 달라요`);
+    n++;
+  }
+  // 만나는 점 문제: 풀이에 적힌 단계만 따라가도 정답 점에 모두 닿는지
+  for (const id of ['u5s4-point', 'u5s5-point']) {
+    const t = M5.templates.find((x) => x.id === id);
+    for (let i = 0; i < 300; i++) {
+      const p = M5.makeProblem(t, 1 + (i % 4), rng, null);
+      const ans = p.answer.values.map((k) => p.answer.options[k].text.slice(2));
+      const me = p.text.match(/점 (.)[과와]/)[1];
+      const g = new Map();
+      const link = (a, b) => { (g.get(a) || g.set(a, []).get(a)).push(b); (g.get(b) || g.set(b, []).get(b)).push(a); };
+      for (const l of p.solution) {
+        const m = l.match(/→ 점 (.)[과와] 점 (.)이 만나요/), c = l.match(/^. 점 (.)[과와] 점 (.)이 만난 곳/);
+        if (m) link(m[1], m[2]);
+        if (c) link(c[1], c[2]);
+      }
+      const seen = new Set([me]), q = [me];
+      while (q.length) { const x = q.shift(); for (const y of g.get(x) || []) if (!seen.has(y)) { seen.add(y); q.push(y); } }
+      check(id, ans.every((x) => seen.has(x)), '풀이 단계만으로는 닿지 않는 정답 점이 있어요', p);
+    }
+  }
+  console.log(`\n[전개도 지퍼 설명] 전개도 ${n}개에서 맞닿는 선분·만나는 점이 실제로 접은 결과와 같아요`);
+}
 // ---------------------------------------------------------------- 문제집 오답 세트
 {
   for (const h of M5.homework) {

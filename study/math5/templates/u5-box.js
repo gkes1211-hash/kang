@@ -203,6 +203,36 @@
   function gluePartner(segs, sg) {
     return segs.find((t) => t !== sg && t.rect.face === sg.rect.o[sg.dir] && t.rect.o[t.dir] === sg.rect.face) || null;
   }
+  // 지퍼처럼 닫기: 전개도의 꺾인 곳(오목한 곳)에서 양쪽 선분이 먼저 맞닿고, 그다음 바깥쪽 선분끼리 차례로 맞닿는다.
+  //   둘레를 한 바퀴 돌며 '이웃한 두 선분이 맞닿는 짝'을 찾아 붙이고 빼기를 반복한다 (정육면체 전개도는 늘 7번)
+  //   결과: [{ s, t, corner: [s.b, t.a], ends: [s.a, t.b], inside: [안쪽에서 먼저 붙인 단계 번호들] }]
+  function zipper(segs) {
+    const key = (p) => p.map((v) => v.toFixed(4)).join(',');
+    const cyc = [segs[0]];
+    while (cyc.length < segs.length) {
+      const last = cyc[cyc.length - 1];
+      const nx = segs.find((x) => key(x.a) === key(last.b));
+      if (!nx || cyc.includes(nx)) return null;
+      cyc.push(nx);
+    }
+    const pos = new Map(cyc.map((x, i) => [x, i]));
+    const n = cyc.length;
+    let list = cyc.slice();
+    const steps = [];
+    while (list.length) {
+      let f = -1;
+      for (let i = 0; i < list.length; i++) if (gluePartner(segs, list[i]) === list[(i + 1) % list.length]) { f = i; break; }
+      if (f < 0) return null;
+      const s = list[f], t = list[(f + 1) % list.length];
+      const ps = pos.get(s), pt = pos.get(t);
+      const between = (x) => { const d = (pos.get(x) - ps + n) % n; return d > 0 && d < (pt - ps + n) % n; };
+      const inside = steps.map((st, i) => (between(st.s) && between(st.t) ? i : -1)).filter((i) => i >= 0);
+      steps.push({ s, t, corner: [s.b, t.a], ends: [s.a, t.b], inside });
+      list = list.filter((x) => x !== s && x !== t);
+    }
+    return steps;
+  }
+
   // 전개도 위의 점(칸의 꼭짓점) → 접었을 때의 정육면체 꼭짓점 (만나는 세 면)
   function cornerOf(r, corner) {
     const dirs = { NW: ['N', 'W'], NE: ['N', 'E'], SE: ['S', 'E'], SW: ['S', 'W'] }[corner];
@@ -221,5 +251,5 @@
     return [...pts.values()];
   }
 
-  M5.box = { V, NAMES, HIDDEN, EDGES, FACES, OPP, faceName, edgeName, sharedEdge, hiddenEdge, boxFig, proj, fold, NETS, NONNETS, HEX, orient, layout, boundary, gluePartner, netPoints, cornerOf, DOPP, AXIS, T8, canonCells };
+  M5.box = { V, NAMES, HIDDEN, EDGES, FACES, OPP, faceName, edgeName, sharedEdge, hiddenEdge, boxFig, proj, fold, NETS, NONNETS, HEX, orient, layout, boundary, gluePartner, zipper, netPoints, cornerOf, DOPP, AXIS, T8, canonCells };
 })();
