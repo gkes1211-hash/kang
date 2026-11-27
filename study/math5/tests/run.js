@@ -327,6 +327,10 @@ check('비슷한 문제', simRows.dupSets / simRows.sets < 0.02, `같은 문제�
       const res = G.grade(p, G.inputFor(p.answer.type, h.childValue));
       check(where, res.ok === false && !!res.pattern, '아이가 쓴 답을 넣으면 틀림 + 원인이 나와야 해요', p);
     }
+    for (const m of h.mistakes || []) {
+      const res = G.grade(p, G.inputFor(p.answer.type, m.value));
+      check(where, res.ok === false && res.pattern && res.pattern.title === m.title, `자주 하는 실수(${m.title})의 답을 넣으면 그 원인이 나와야 해요`, p);
+    }
     try { M5.figure.render(p.figure); } catch (e) { fail(where, '그림 오류: ' + e.message); }
     check(where, h.solution.length >= 2 && h.hints.every((x) => x.length > 5), '풀이·힌트가 부족해요');
     const mk = M5.hw.practiceMaker(h, rng, []);

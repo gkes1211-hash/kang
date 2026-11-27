@@ -1332,7 +1332,7 @@
       <main class="center"><section class="panel hw-panel">
         <div class="big-emoji">📸</div>
         <h2>${esc(h.source)}</h2>
-        <p>문제집에서 틀렸던 문제예요. ${h.childAnswer ? `그때 쓴 답은 <b>${txt(h.childAnswer)}</b>였어요.` : ''}<br>먼저 <b>한 번 더 풀어 볼까요?</b> 그다음에 왜 틀렸는지 같이 봐요.</p>
+        <p>문제집에서 틀렸던 문제예요. ${h.childAnswer ? `그때 쓴 답은 <b>${txt(h.childAnswer)}</b>였어요.<br>먼저 <b>한 번 더 풀어 볼까요?</b> 그다음에 왜 틀렸는지 같이 봐요.` : '<br>그때 쓴 답이 문제집에 남아 있지 않아요. <b>여기서 다시 풀어 보면</b> 낸 답을 보고 왜 틀렸는지 찾아 줄게요.'}</p>
         <div class="btns"><button class="btn" data-go="hw">← 오답 목록</button><button id="go" class="btn primary">다시 풀어 보기 <kbd>Enter</kbd></button></div>
       </section></main>`;
     bindCommon();
@@ -1346,7 +1346,7 @@
         nextLabel: '왜 틀렸는지 보기 →',
         wrongMsg: '<p class="no">이번에도 정답과 달라요. 괜찮아요! 왜 틀렸는지 같이 봐요.</p>',
         onFirst() {},
-        onDone(r) { hwExplain(h, r.firstOk); },
+        onDone(r) { hwExplain(h, r.firstOk, false, r); },
         onWeird() { reportProblem(p); hwExplain(h, null); },
         onStop: hwBack,
         onBack: hwBack,
@@ -1354,7 +1354,7 @@
     }
   }
   // 2) 왜 틀렸는지 + 풀이 (한 단계씩)
-  function hwExplain(h, retryOk, resume) {
+  function hwExplain(h, retryOk, resume, retry) {
     const info = M5.findSub(h.sub);
     const steps = h.solution;
     let shown = resume ? steps.length : 1;
@@ -1370,7 +1370,7 @@
         </section>
         <section class="acard">
           ${retryOk === true ? '<p class="good-box">다시 풀 때는 맞혔어요! 👍 같은 유형을 연습해서 확실히 알고 넘어가요.</p>' : ''}
-          ${h.kind === 'wrong' ? `<div class="hw-why"><p class="q">🔍 왜 틀렸을까?</p><p class="cause"><span class="badge">${esc(CAUSE[d.cause])}</span> <b>${txt(d.title)}</b></p><p>${txt(d.msg)}</p></div>` : '<div class="hw-why"><p class="q">📘 같이 풀어 봐요</p><p>한 단계씩 읽어 보고, 이해가 되면 다음 단계를 열어요.</p></div>'}
+          ${hwWhy(h, d, retryOk, retry)}
           <ol class="hw-steps">${steps.map((x, i) => `<li class="${i < shown ? '' : 'hid'}">${txt(x)}</li>`).join('')}</ol>
           <div class="btns left"><button id="more" class="btn" ${shown >= steps.length ? 'hidden' : ''}>다음 단계 보기 ▶</button><button id="go" class="btn primary" ${shown >= steps.length ? '' : 'hidden'}>${resume ? '이어서 연습하기' : '같은 유형 문제 연습하기'} <kbd>Enter</kbd></button></div>
           <details class="concept"><summary>📘 개념 다시 보기</summary><p>${txt(info.sub.concept)}</p></details>
@@ -1390,6 +1390,21 @@
       if (shown < steps.length) more(); else hwPractice(h);
     };
   }
+  // 왜 틀렸을까: 사진 속 답으로 찾은 원인 / 다시 풀 때 낸 답으로 찾은 원인 / 자주 하는 실수
+  function hwWhy(h, d, retryOk, retry) {
+    if (h.kind !== 'wrong') return '<div class="hw-why"><p class="q">📘 같이 풀어 봐요</p><p>한 단계씩 읽어 보고, 이해가 되면 다음 단계를 열어요.</p></div>';
+    const one = (x, lead = '') => `<div class="hw-why"><p class="q">🔍 왜 틀렸을까?</p>${lead}<p class="cause"><span class="badge">${esc(CAUSE[x.cause])}</span> <b>${txt(x.title || '')}</b></p><p>${txt(x.msg)}</p></div>`;
+    if (d) return one(d);
+    const pt = retry && retry.firstRes && retry.firstRes.pattern;
+    const raw = retry && retry.firstInput != null && !retryOk ? String(retry.firstInput).trim() : '';
+    const mine = raw ? `<b class="bad">${esc(raw)}</b>` : '';
+    const josa = (pair) => T.j(raw, pair).slice(raw.length);
+    if (pt) return one(pt, `<p>방금 낸 답 ${mine}${josa('을/를')} 보니 이런 실수를 한 것 같아요.</p>`);
+    const list = (h.mistakes || []).map((m) => `<li><span class="badge">${esc(CAUSE[m.cause])}</span> <b>${txt(m.title)}</b><br><span class="small">${txt(m.msg)}</span></li>`).join('');
+    const lead = retryOk === true ? '이번에는 맞혔어요. 그때는 아래 실수 중 하나였을 수 있어요.' : mine ? `방금 낸 답 ${mine}${josa('은/는')} 흔한 실수와 달라요. 아래 실수 중 비슷한 게 있는지 풀이와 비교해 봐요.` : '이 문제에서 자주 하는 실수예요. 내가 어디서 틀렸는지 생각해 봐요.';
+    return `<div class="hw-why"><p class="q">🔍 왜 틀렸을까?</p><p>${lead}</p><ul class="hw-mist">${list}</ul></div>`;
+  }
+
   // 3) 같은 유형 연습: 처음에 맞힌 문제가 GOAL번 연속이면 완료
   function hwPractice(h) {
     const s = HW.stateOf(state, h.id);

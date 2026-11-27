@@ -19,7 +19,11 @@
       if (!KINDS[h.kind]) fail(h, 'kind는 wrong 또는 unknown이에요');
       if (!M5.findSub(h.sub)) fail(h, '소단원 이름이 틀렸어요: ' + h.sub);
       if (!h.problem.text || !h.problem.answer) fail(h, '문제 글과 정답이 있어야 해요');
-      if (h.kind === 'wrong' && !(h.diagnosis && CAUSES.includes(h.diagnosis.cause) && h.diagnosis.title && h.diagnosis.msg)) fail(h, '틀린 문제에는 diagnosis(cause, title, msg)가 있어야 해요');
+      // 틀린 문제: 아이가 쓴 답이 사진에 있으면 diagnosis(왜 틀렸는지) 하나,
+      //   답이 남아 있지 않으면(다른 곳에 풀었을 때) mistakes(이 문제에서 자주 하는 실수 목록)로 앱에서 다시 풀 때 원인을 찾는다
+      const okD = (d) => d && CAUSES.includes(d.cause) && d.title && d.msg;
+      if (h.kind === 'wrong' && h.childAnswer != null && !okD(h.diagnosis)) fail(h, '아이가 쓴 답이 있으면 diagnosis(cause, title, msg)가 있어야 해요');
+      if (h.kind === 'wrong' && h.childAnswer == null && !(Array.isArray(h.mistakes) && h.mistakes.length >= 2 && h.mistakes.every((m) => okD(m) && m.value != null))) fail(h, '아이 답이 없는 틀린 문제에는 자주 하는 실수(mistakes) 2개 이상이 있어야 해요');
       if (!Array.isArray(h.hints) || h.hints.length !== 3) fail(h, '힌트는 3단계예요');
       if (!h.practice.length) fail(h, '연습 문제가 없어요');
       for (const it of h.practice) {
@@ -35,7 +39,8 @@
   function original(h) {
     const info = M5.findSub(h.sub);
     const pats = [];
-    if (h.kind === 'wrong' && h.childValue != null) pats.push({ value: h.childValue, cause: h.diagnosis.cause, msg: h.diagnosis.msg });
+    if (h.kind === 'wrong' && h.childValue != null) pats.push({ value: h.childValue, cause: h.diagnosis.cause, title: h.diagnosis.title, msg: h.diagnosis.msg });
+    for (const m of h.mistakes || []) pats.push({ value: m.value, cause: m.cause, title: m.title, msg: m.msg });
     return {
       tid: 'hw:' + h.id, unit: info.unit.id, sub: h.sub, style: 'A', styleName: '내 문제집 문제', level: 1,
       text: h.problem.text, figure: h.problem.figure || null, answer: Object.assign({}, h.problem.answer),

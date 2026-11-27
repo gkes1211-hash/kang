@@ -8,6 +8,9 @@
 //   4. 연습 문제(practice)는 같은 유형의 문제 틀 { tid, level }을 먼저 쓰고, 맞는 틀이 없으면 { custom: 문제 }를 직접 적어요.
 //   5. node tests/run.js 로 검사한 뒤 main에 올려요.
 //   kind: 'wrong'(틀린 문제) | 'unknown'(모르는 문제, childAnswer·diagnosis 없이 풀이부터)
+//   틀린 표시만 있고 아이 답이 문제집에 없을 때(다른 곳에 풀었을 때): childAnswer·diagnosis 대신
+//     mistakes: [{ value: 그 실수를 했을 때 나오는 답, cause, title, msg }, …] (2개 이상)
+//     → 아이가 앱에서 다시 풀 때 낸 답이 이 중 하나와 같으면 그 원인을 보여 주고, 아니면 목록을 보여 줘요.
 (function () {
   'use strict';
   const M5 = globalThis.M5;
