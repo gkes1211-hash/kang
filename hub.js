@@ -14,7 +14,9 @@
   const installed = matchMedia('(display-mode: fullscreen), (display-mode: standalone), (display-mode: minimal-ui)').matches || navigator.standalone;
   if (to && installed && !desk) { location.replace(to); return; }
 
-  // 윈도우 컴퓨터: 전체 메뉴 바탕화면 아이콘 만들기 파일 (이미 그 아이콘으로 열었으면 감춤)
+  // 전체 메뉴 바탕화면 아이콘 만들기 파일: 처음부터 보이게 두고(스크립트가 늦거나 예전 것이어도 보이도록),
+  // 휴대폰·태블릿·맥처럼 윈도우가 아닌 기기나, 이미 그 아이콘으로 연 창에서만 감춘다.
   const kit = document.getElementById('win-shortcut');
-  if (kit && /Windows/.test(navigator.userAgent) && !desk) kit.hidden = false;
+  const mobile = /Android|iPhone|iPad|iPod|Macintosh|CrOS/.test(navigator.userAgent) && !/Windows/.test(navigator.userAgent);
+  if (kit && (desk || mobile)) kit.hidden = true;
 })();
