@@ -711,3 +711,7 @@ button.mini:hover { border-color: var(--accent); }
 .result b.good { color: var(--good); }
 .result b.bad { color: #c0392b; }
 .drow .btn { width: auto; flex: 0 0 auto; }
+
+/* 학습 앱 모음으로 돌아가기 */
+.menu-link { display: table; margin: 0 0 12px; padding: 6px 14px; border-radius: 999px; background: var(--surface); border: 2px solid var(--line); color: var(--ink); font-weight: 800; font-size: 15px; text-decoration: none; }
+.menu-link:hover, .menu-link:focus-visible { border-color: var(--accent); outline: none; }

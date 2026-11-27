@@ -30,7 +30,7 @@ kang/                  학습 앱 모음 (전체 메뉴)
 ```
 
 - 앱마다 **설치(홈 화면·바탕화면 아이콘)가 따로**예요. 체육시간 아이콘은 체육 게임만, 꼬마 탐험대 아이콘은 꼬마 탐험대만 열려요.
-- 새 앱을 만들면 알맞은 주제 폴더 안에 넣고, 그 주제의 `index.html` 목록과 맨 앞 `index.html` 메뉴에 한 줄씩 더해요.
+- 새 앱을 만들면 알맞은 주제 폴더 안에 넣고, 그 주제의 `index.html` 목록과 맨 앞 `index.html` 메뉴에 한 줄씩 더해요. 앱 첫 화면에는 `menu-link.js` 로 메뉴 돌아가기 버튼을 넣어요.
 
 ## 예전 주소
 
@@ -41,6 +41,7 @@ kang/                  학습 앱 모음 (전체 메뉴)
 | 파일 | 하는 일 |
 | --- | --- |
 | `index.html`, `hub.css`, `hub.js` | 전체 메뉴, 주제 목록 화면 모양 |
+| `menu-link.js` | 앱 첫 화면에 "← 🎒 학습 앱 모음" 버튼을 넣어요 (`<script src="../../menu-link.js" data-before="넣을 자리" defer>`). 보통 브라우저나 학습 앱 모음 아이콘 창에서만 보이고, 그 앱만 따로 설치한 창에서는 숨어요. 수학·역사 탐험대는 앱 코드 안의 `menuLink` 로 같은 일을 해요 |
 | `desktop-shortcut/` | 전체 메뉴 윈도우 바탕화면 아이콘 만들기 파일 (`kang-desktop-shortcut.zip`). 아이콘은 `?desktop=1` 주소로 열어서, 예전 체육시간 아이콘으로 착각하지 않아요 (`hub.js`) |
 | `moved.js`, `escape/` `mugunghwa/` `balloon/` `byeok/` `fitness/` `jegi/` `planner/` `sing/` | 예전 주소 → 새 주소로 옮겨 주는 안내 (예전 오프라인 저장도 지워요) |
 | `sw.js`, `english/sw.js` | 예전 주소에 남은 오프라인 저장 정리 |

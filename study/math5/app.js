@@ -166,6 +166,14 @@
     </div>`;
   }
 
+  // 학습 앱 모음(전체 메뉴)으로 돌아가는 버튼: 보통 브라우저나 "학습 앱 모음" 아이콘 창에서만 (이 앱만 따로 설치한 창에서는 감춤)
+  const menuLink = (() => {
+    let desk = false;
+    try { desk = sessionStorage.getItem('kang-desktop-menu') === '1'; } catch (e) { /* 표시 없음 */ }
+    const solo = matchMedia('(display-mode: standalone), (display-mode: fullscreen), (display-mode: minimal-ui)').matches || navigator.standalone;
+    return solo && !desk ? '' : '<a class="menu-link" href="../../">← 🎒 학습 앱 모음</a>';
+  })();
+
   // ------------------------------------------------------------------ 홈
   function home() {
     S.ensureToday(state);
@@ -178,6 +186,7 @@
     const mode = state.settings.mode;
     app.innerHTML = `${header(NAV)}
       <main class="home">
+        ${menuLink}
         <section class="review-card ${due.length ? 'has' : ''}">
           <div>
             <h2>📅 오늘의 복습 <b>${due.length}개</b></h2>

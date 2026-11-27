@@ -48,12 +48,20 @@
     if (b) go(b.dataset.go, b.dataset.arg);
   });
 
+  // 학습 앱 모음(전체 메뉴)으로 돌아가는 버튼: 보통 브라우저나 "학습 앱 모음" 아이콘 창에서만 (이 앱만 따로 설치한 창에서는 감춤)
+  const menuLink = (() => {
+    let desk = false;
+    try { desk = sessionStorage.getItem('kang-desktop-menu') === '1'; } catch (e) { /* 표시 없음 */ }
+    const solo = matchMedia('(display-mode: standalone), (display-mode: fullscreen), (display-mode: minimal-ui)').matches || navigator.standalone;
+    return solo && !desk ? '' : '<a class="menu-link" href="../../">← 🎒 학습 앱 모음</a>';
+  })();
+
   // ---------------------------------------------------------------- 처음 화면
   views.home = () => {
     const met = Object.keys(S.people).length;
     const read = Object.keys(S.stories).length;
     const todays = todayStory();
-    $app.innerHTML = `
+    $app.innerHTML = `${menuLink}
       <section class="hero">
         <div class="hero-top"><h1>🧭 역사 탐험대</h1><span class="stars big">⭐ ${S.stars}</span></div>
         <p>외우지 말고, 놀면서 만나 보자! 옛날 사람들도 우리처럼 고민하고, 꾀를 내고, 용기를 냈어요.</p>
