@@ -144,7 +144,10 @@ const allNumbers = (p) => {
   return out;
 };
 
+// ONLY=u1-top 처럼 주면 이름에 그 글자가 든 틀만 검사 (빨리 확인할 때)
+const ONLY = process.env.ONLY ? process.env.ONLY.split(',') : null;
 for (const tpl of M5.templates) {
+  if (ONLY && !ONLY.some((o) => tpl.id.includes(o))) continue;
   const t0 = Date.now();
   const before = failCount;
   const keys = new Set();
@@ -153,7 +156,9 @@ for (const tpl of M5.templates) {
   for (let i = 0; i < PER; i++) {
     const level = lo + (i % (hi - lo + 1));
     let p;
-    try { p = M5.makeProblem(tpl, level, rng, null); } catch (e) { fail(tpl.id, '문제를 만들다 오류: ' + e.message); continue; }
+    // 최상위 틀은 대표 문제(0)·변형(1~3) 모양도 골고루 검사
+    const v = tpl.tier === 'top' && i % 2 === 0 ? (i / 2) % 4 : undefined;
+    try { p = M5.makeProblem(tpl, level, rng, null, v); } catch (e) { fail(tpl.id, '문제를 만들다 오류: ' + e.message); continue; }
     rejected += p.rejected;
     keys.add(p.key);
     const where = `${tpl.id} 난이도${p.level}`;

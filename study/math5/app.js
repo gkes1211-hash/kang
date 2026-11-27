@@ -243,7 +243,7 @@
         <div class="mbtns">
           <button class="sub mb basic" data-sub="${key}" data-mode="basic"><b>📘 기본 → 응용 → 심화</b><span>지금: ${M5.TIERS[tierOf(key) - 1]}</span></button>
           <button class="mb think" data-sub="${key}" data-mode="think" ${has('think') ? '' : 'disabled'}><b>🧩 사고력</b></button>
-          <button class="mb top" data-sub="${key}" data-mode="top" ${has('top') ? '' : 'disabled'}><b>🏔️ 최상위</b>${has('top') ? '' : '<span>준비 중</span>'}</button>
+          <button class="mb top" data-sub="${key}" data-mode="top" ${has('top') ? '' : 'disabled'}><b>🏔️ 최상위</b>${has('top') ? `<span>${topDone(scope)}</span>` : '<span>준비 중</span>'}</button>
         </div>
       </div>`;
     };
@@ -261,7 +261,8 @@
     bindCommon();
     $$('.mb').forEach((b) => b.addEventListener('click', () => {
       const k = b.dataset.sub;
-      play(/^u\d+$/.test(k) ? { unit: unitId } : { unit: unitId, sub: k }, { mode: b.dataset.mode });
+      const scope = /^u\d+$/.test(k) ? { unit: unitId } : { unit: unitId, sub: k };
+      if (b.dataset.mode === 'top') topList(scope); else play(scope, { mode: b.dataset.mode });
     }));
   }
 
@@ -989,6 +990,150 @@
     nextNormal();
   }
 
+  // ------------------------------------------------------------------ 🏔️ 최상위: 대표 문제 → 변형 3문제
+  // 문제집처럼 유형마다 대표 문제를 풀이와 함께 익히고, 같은 유형을 비튼 변형 문제 3개에 도전한다.
+  const TOP_N = 3;
+  const topName = (t) => t.styleName.replace(/^최상위( 이야기)?: /, '');
+  function topDone(scope) {
+    const pool = M5.modePool(scope, 'top');
+    const n = pool.filter((t) => state.top[t.id] && state.top[t.id].best === TOP_N).length;
+    return `정복 ${n} / ${pool.length}`;
+  }
+  function topList(scope) {
+    onKey = null;
+    const pool = M5.modePool(scope, 'top');
+    const where = scope.sub ? M5.findSub(scope.sub).sub.name : `${scope.unit}단원 전체`;
+    const card = (t, i) => {
+      const r = state.top[t.id];
+      const badge = !r ? '<span class="tp new">새 유형</span>' : r.best === TOP_N ? '<span class="tp ok">🏅 정복</span>' : `<span class="tp mid">변형 ${r.best} / ${TOP_N}</span>`;
+      return `<button class="topic" data-tid="${t.id}"><span class="no">${t.story ? '🌟 이야기' : `유형 ${i + 1}`}</span><b>${esc(topName(t))}</b>${scope.sub ? '' : `<span class="small muted">${esc(M5.findSub(t.sub).sub.name)}</span>`}${badge}</button>`;
+    };
+    const main = pool.filter((t) => !t.story), story = pool.filter((t) => t.story);
+    app.innerHTML = `${header(statsHtml())}
+      <main class="subs">
+        <button class="back" id="tback">← 소단원 고르기</button>
+        <h2>🏔️ 최상위 · ${esc(where)}</h2>
+        <p class="lead">유형마다 <b>① 대표 문제</b>를 풀이와 함께 익히고, <b>② 변형 문제 ${TOP_N}개</b>에 도전해요.<br>변형 문제를 ${TOP_N}개 모두 맞히면 그 유형을 <b>정복</b>해요. 어려우면 힌트를 봐도 괜찮아요!</p>
+        <h3 class="tops-h">📌 대표 유형</h3>
+        <div class="topics">${main.map(card).join('')}</div>
+        ${story.length ? `<h3 class="tops-h">🌟 이야기 문제 <span class="small muted">여러 가지를 이어서 푸는 긴 문제</span></h3><div class="topics">${story.map(card).join('')}</div>` : ''}
+      </main>`;
+    bindCommon();
+    $('#tback').addEventListener('click', () => subs(scope.unit));
+    $$('.topic').forEach((b) => b.addEventListener('click', () => topTopic(M5.templates.find((t) => t.id === b.dataset.tid), scope)));
+  }
+
+  function topTopic(tpl, scope) {
+    const avoid = new Set(state.recent.map((x) => x.key));
+    const mk = (v) => { const p = M5.makeProblem(tpl, 4, rng, avoid, v); avoid.add(p.key); return p; };
+    const rep = mk(0);
+    const back = () => topList(scope);
+    const results = [];
+    const banner = (i) => {
+      const dots = Array.from({ length: TOP_N }, (_, k) => (k < results.length ? `<span class="dot ${results[k] ? 'ok' : 'bad'}">${results[k] ? '○' : '✕'}</span>` : `<span class="dot ${k === i ? 'now' : ''}">${k + 1}</span>`)).join('');
+      return `<div class="banner chal"><span>🏔️ ${esc(topName(tpl))} · 변형 문제 <b>${i + 1} / ${TOP_N}</b></span><span class="dots">${dots}</span></div>`;
+    };
+    const solveOpts = (extra) => Object.assign({ fix: true, backLabel: '← 최상위 유형 목록', onStop: back, onBack: back }, extra);
+
+    // 1) 대표 문제: 힌트와 풀이를 한 단계씩 열거나, 먼저 직접 풀어 보기
+    function intro() {
+      const steps = rep.solution || [];
+      let shown = 0;
+      app.innerHTML = `${header(statsHtml())}
+        <main class="hw-explain">
+          <button class="back" id="tback">← 최상위 유형 목록</button>
+          <section class="qcard">
+            <div class="banner top-rep">📌 대표 문제 · ${esc(topName(tpl))}</div>
+            <p class="qtext">${txt(rep.text)}</p>
+            ${rep.figure ? `<div class="figure">${F.render(rep.figure)}</div>` : ''}
+            ${rep.answer.options ? `<ol class="rep-opts">${rep.answer.options.map((o) => `<li>${txt(o.text || '')}</li>`).join('')}</ol>` : ''}
+          </section>
+          <section class="acard">
+            <div class="hw-why"><p class="q">📘 대표 문제로 익혀요</p><p>먼저 어떻게 풀지 생각해 봐요. 직접 풀어 봐도 되고, 풀이를 한 단계씩 열어 봐도 돼요.</p></div>
+            <ol class="hw-steps">${rep.hints.slice(0, 2).map((h) => `<li class="hid hint">💡 ${txt(h)}</li>`).join('')}${steps.map((x) => `<li class="hid">${txt(x)}</li>`).join('')}<li class="hid ans">답: <b>${txt(G.answerText(rep))}</b></li></ol>
+            <div class="btns left">
+              <button id="try" class="btn">✏️ 먼저 풀어 볼래요</button>
+              <button id="more" class="btn primary">💡 풀이 한 단계씩 보기 <kbd>Enter</kbd></button>
+              <button id="go" class="btn primary" hidden>변형 문제 ${TOP_N}개 도전 ▶ <kbd>Enter</kbd></button>
+            </div>
+          </section>
+        </main>`;
+      bindCommon();
+      const lis = $$('.hw-steps li');
+      const more = () => {
+        shown++;
+        lis.forEach((li, i) => li.classList.toggle('hid', i >= shown));
+        $('#more').innerHTML = '다음 단계 보기 ▶ <kbd>Enter</kbd>';
+        if (shown >= lis.length) { $('#more').hidden = true; $('#try').hidden = true; $('#go').hidden = false; $('#go').focus(); }
+      };
+      $('#tback').addEventListener('click', back);
+      $('#more').addEventListener('click', more);
+      $('#go').addEventListener('click', () => variant(0));
+      $('#try').addEventListener('click', tryRep);
+      onKey = (ev) => {
+        if (ev.key !== 'Enter') return;
+        ev.preventDefault();
+        if (shown < lis.length) more(); else variant(0);
+      };
+    }
+    function tryRep() {
+      solve(rep, solveOpts({
+        banner: `<div class="banner top-rep">📌 대표 문제 · ${esc(topName(tpl))}</div>`,
+        nextLabel: `변형 문제 ${TOP_N}개 도전 →`,
+        onFirst(ok) { recordFirst(rep, ok); },
+        onDone() { variant(0); },
+        onWeird() { reportProblem(rep); back(); },
+      }));
+    }
+    // 2) 변형 문제 3개 (같은 유형을 숫자·물음을 바꾸어)
+    function variant(i) {
+      if (i >= TOP_N) { finish(); return; }
+      const p = mk(i + 1);
+      state.recent.push({ key: p.key, tid: p.tid, sub: p.sub, styleName: p.styleName, style: p.style });
+      if (state.recent.length > 50) state.recent.splice(0, state.recent.length - 50);
+      let first = null;
+      solve(p, solveOpts({
+        banner: banner(i),
+        nextLabel: i === TOP_N - 1 ? '결과 보기 →' : '다음 변형 문제 →',
+        onFirst(ok) { first = ok; recordFirst(p, ok); },
+        onDone() { results.push(!!first); variant(i + 1); },
+        onWeird(r) {
+          reportProblem(p);
+          if (r.firstOk != null) recordFirst(p, r.firstOk, -1);
+          variant(i); // 같은 자리에 새 문제
+        },
+      }));
+    }
+    // 3) 결과: 3개 모두 맞히면 정복
+    function finish() {
+      const score = results.filter(Boolean).length;
+      const rec = state.top[tpl.id] || (state.top[tpl.id] = { best: 0, last: 0, tries: 0, at: '' });
+      const firstWin = rec.best < TOP_N && score === TOP_N;
+      rec.best = Math.max(rec.best, score); rec.last = score; rec.tries++; rec.at = S.todayStr();
+      if (firstWin) { S.ensureToday(state); state.today.passed++; S.bumpDay(state, 'p'); }
+      save();
+      const dots = results.map((ok) => `<span class="dot ${ok ? 'ok' : 'bad'}">${ok ? '○' : '✕'}</span>`).join('');
+      const body = score === TOP_N
+        ? '<div class="stamp" aria-label="유형 정복 도장"><span>최상위</span><b>정복</b><span>🏅</span></div><h2>변형 문제를 모두 맞혔어요!</h2>'
+        : score === TOP_N - 1 ? `<div class="big-emoji">🌟</div><h2>${score}개 맞혔어요. 정복까지 한 걸음!</h2><p>틀린 문제의 풀이를 떠올리며 한 번 더 도전해 봐요.</p>`
+          : `<div class="big-emoji">🌱</div><h2>${score}개 맞혔어요. 괜찮아요!</h2><p>최상위 문제는 원래 어려워요. 대표 문제 풀이를 다시 보고 도전하면 훨씬 쉬워져요.</p>`;
+      const again = () => topTopic(tpl, scope);
+      onKey = (ev) => { if (ev.key === 'Enter') { ev.preventDefault(); if (score === TOP_N) back(); else again(); } };
+      app.innerHTML = `${header(statsHtml())}
+        <main class="center"><section class="panel">
+          <p class="dots big">${dots}</p>
+          ${body}
+          <p class="muted">${esc(topName(tpl))}</p>
+          <div class="btns">${score === TOP_N
+            ? '<button id="list" class="btn primary">다른 유형 고르기 <kbd>Enter</kbd></button><button id="again" class="btn">새 숫자로 한 번 더</button>'
+            : '<button id="again" class="btn primary">대표 문제부터 다시 도전 <kbd>Enter</kbd></button><button id="list" class="btn">다른 유형 고르기</button>'}</div>
+        </section></main>`;
+      bindCommon();
+      $('#again').addEventListener('click', again);
+      $('#list').addEventListener('click', back);
+    }
+    intro();
+  }
   // ------------------------------------------------------------------ 오늘의 복습 (기획서 7번)
   function reviewSession() {
     const today = S.todayStr();

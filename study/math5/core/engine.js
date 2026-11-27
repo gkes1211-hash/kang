@@ -73,12 +73,13 @@
   }
 
   // 문제 틀 하나로 문제 하나 만들기. avoid: 피하고 싶은 문제 key 모음 (최근에 낸 문제)
-  function makeProblem(tpl, level, rng, avoid) {
+  // v: 최상위 '대표 문제 → 변형' 순서 (0 = 대표 문제, 1~3 = 변형). 없으면 아무 모양이나.
+  function makeProblem(tpl, level, rng, avoid, v) {
     const lv = Math.max(tpl.levels[0], Math.min(level, tpl.levels[1]));
     let fallback = null;
     let rejected = 0;
     for (let i = 0; i < 120; i++) {
-      const raw = tpl.build(rng, lv);
+      const raw = tpl.build(rng, lv, v);
       const p = raw ? finalize(tpl, raw, rng, lv) : null;
       if (!p) { rejected++; continue; }
       p.rejected = rejected;
@@ -89,6 +90,8 @@
     throw new Error('문제를 만들지 못했어요: ' + tpl.id);
   }
   M5.makeProblem = makeProblem;
+  // 최상위 문제의 모양 고르기: 대표 문제(0)와 변형 1은 기본 모양, 변형 2·3은 비튼 모양 (n: 모양 수)
+  M5.topForm = (r, v, n) => (v == null ? r.int(0, n - 1) : Math.min([0, 0, 1, 2][v] || 0, n - 1));
 
   // 이 문제에 원인(cause)이 같은 오답 패턴이 있는지 (객관식은 보기에 붙은 패턴까지 본다)
   function hasCause(p, cause) {
