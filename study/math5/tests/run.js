@@ -25,7 +25,7 @@ let failCount = 0;
 const failures = [];
 function fail(where, msg, p) {
   failCount++;
-  if (failures.length < 40) failures.push(`  ✗ [${where}] ${msg}${p ? `\n      문제: ${p.text.replace(/\n/g, ' / ')}\n      정답: ${G.answerText(p)}` : ''}`);
+  if (failures.length < (Number(process.env.FAILMAX) || 40)) failures.push(`  ✗ [${where}] ${msg}${p ? `\n      문제: ${p.text.replace(/\n/g, ' / ')}\n      정답: ${G.answerText(p)}` : ''}`);
 }
 function check(where, cond, msg, p) { if (!cond) fail(where, msg, p); }
 
