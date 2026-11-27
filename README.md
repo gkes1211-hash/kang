@@ -41,6 +41,7 @@ kang/                  학습 앱 모음 (전체 메뉴)
 | 파일 | 하는 일 |
 | --- | --- |
 | `index.html`, `hub.css`, `hub.js` | 전체 메뉴, 주제 목록 화면 모양 |
+| `desktop-shortcut/` | 전체 메뉴 윈도우 바탕화면 아이콘 만들기 파일 (`kang-desktop-shortcut.zip`). 아이콘은 `?desktop=1` 주소로 열어서, 예전 체육시간 아이콘으로 착각하지 않아요 (`hub.js`) |
 | `moved.js`, `escape/` `mugunghwa/` `balloon/` `byeok/` `fitness/` `jegi/` `planner/` `sing/` | 예전 주소 → 새 주소로 옮겨 주는 안내 (예전 오프라인 저장도 지워요) |
 | `sw.js`, `english/sw.js` | 예전 주소에 남은 오프라인 저장 정리 |
 

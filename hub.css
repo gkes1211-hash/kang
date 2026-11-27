@@ -19,3 +19,7 @@ a.card span.d { color: var(--soft); font-size: 16px; }
 a.card small { display: block; margin-top: 6px; color: var(--soft); font-size: 14px; }
 a.card .go { margin-left: auto; font-size: 30px; color: var(--accent, var(--ink)); flex: none; }
 .note { color: var(--soft); font-size: 13px; margin-top: 18px; line-height: 1.6; }
+.kit { margin-top: 18px; background: #fff; border: 2px dashed var(--line); border-radius: 18px; padding: 12px 14px; }
+.kit[hidden] { display: none; }
+.kit a { display: block; color: var(--ink); font-weight: 800; font-size: 17px; }
+.kit span { display: block; margin-top: 4px; color: var(--soft); font-size: 13px; line-height: 1.5; }
