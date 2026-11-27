@@ -252,11 +252,16 @@
           <div class="who">
             <div class="who-top"><span>${n + 1} / ${list.length}</span>${eraTag(p.era)}</div>
             <div class="silhouette ${solved ? 'show' : ''}">${solved ? p.emoji : '❓'}</div>
-            <ol class="hints">${p.hints.map((h, i) => `<li class="${i < open ? 'on' : ''}">${i < open ? esc(h) : `힌트 ${i + 1} 🔒`}</li>`).join('')}</ol>
+            ${solved && open < p.hints.length ? '<p class="more-hints">✨ 맞혔으니 남은 힌트도 열어 줄게요. 이 인물을 더 알아봐요!</p>' : ''}
+            <ol class="hints">${p.hints.map((h, i) => {
+              if (i < open) return `<li class="on">${esc(h)}</li>`;
+              if (solved) return `<li class="on bonus"><span class="tag-new">더 알아보기</span>${esc(h)}</li>`;
+              return `<li>힌트 ${i + 1} 🔒</li>`;
+            }).join('')}</ol>
             ${!solved && open < p.hints.length ? `<button class="ghost" id="more">🔓 힌트 하나 더 (⭐ ${4 - open}개로 줄어요)</button>` : ''}
             <div class="choices four">${opts.map((o) => `<button class="choice" data-id="${o.id}" ${solved ? 'disabled' : ''}>${esc(o.name)}</button>`).join('')}</div>
             ${solved ? `<div class="about"><b>${p.emoji} ${esc(p.name)}</b><p>${esc(p.about)}</p>
-              <button class="ghost" data-say="${esc(p.name + '. ' + p.about)}">🔊 읽어 줘</button></div>
+              <button class="ghost" data-say="${esc(p.name + '. ' + p.hints.join(' ') + ' ' + p.about)}">🔊 힌트까지 읽어 줘</button></div>
               <button class="main wide" id="next">${n + 1 < list.length ? '다음 인물 →' : '결과 보기'}</button>` : ''}
           </div>`;
         bindSay();
