@@ -595,3 +595,7 @@ button.mini:hover { border-color: var(--accent); }
 .hw-mist li { margin: 8px 0; }
 .hw-mist .badge { display: inline-block; background: var(--bad-soft); color: var(--bad); font-size: 13px; font-weight: 700; padding: 1px 8px; border-radius: 99px; }
 .hw-why .bad { color: var(--bad); }
+.fig-geo .pg.netface { fill: #e7f0fd; stroke: none; }
+.fig-geo .pg.shade { fill: #fde3b8; stroke: none; }
+.fig-geo .pg.shape-b { fill: #fde3b8; }
+.fig-geo .sg.box { stroke: #2b3447; stroke-width: 2; }
