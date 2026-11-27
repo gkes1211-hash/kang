@@ -21,6 +21,7 @@
       review: {},   // 오늘의 복습 일정 { 틀 이름: { tid, unit, sub, level, wrongDate, stage, due } }
       mastered: {}, // 완전히 익힌 유형 { 틀 이름: 날짜 }
       settings: { mode: 'endless' }, // endless(무한) | set10(10문제)
+      ladder: {},   // 5단계 도전 { 소단원: { best: 가장 높이 올라간 단계(0~4), done: 완주 횟수, last: 날짜 } }
       hw: {},       // 문제집 오답 연습 세트별 진행 { 세트 이름: { status, streak, best, solved, correct, stage, due, doneAt, mastered } }
     };
   }

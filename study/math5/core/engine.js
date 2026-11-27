@@ -137,6 +137,31 @@
     return false;
   }
 
+  // 5단계 도전 (기본 · 응용 · 심화 · 사고력 · 최상위)
+  //   기본: 문제집 형식 틀의 쉬운 문제 / 응용: 문제집 형식 보통 / 심화: 문제집 형식 어려움
+  //   사고력: 새로운 유형(O/X와 이유, 틀린 줄 찾기, 퍼즐 …) / 최상위: tier 'top' 틀 (없으면 여러 단계 틀의 가장 어려운 문제)
+  M5.TIERS = ['기본', '응용', '심화', '사고력', '최상위'];
+  M5.tierItems = function (subId, k) {
+    const T = M5.templates.filter((t) => t.sub === subId);
+    const normal = T.filter((t) => t.tier !== 'top');
+    const at = (t, l) => ({ tpl: t, level: Math.max(t.levels[0], Math.min(l, t.levels[1])) });
+    if (k === 0) return { items: normal.filter((t) => t.style === 'A' && t.levels[0] === 1).map((t) => at(t, 1)) };
+    if (k === 1) return { items: normal.filter((t) => t.style === 'A' && t.levels[1] >= 2).map((t) => at(t, 2)) };
+    if (k === 2) return { items: normal.filter((t) => t.style === 'A' && t.levels[1] >= 3).map((t) => at(t, 3)) };
+    if (k === 3) return { items: normal.filter((t) => t.style === 'B').map((t) => at(t, 3)) };
+    const tops = T.filter((t) => t.tier === 'top');
+    if (tops.length) return { items: tops.map((t) => at(t, 4)) };
+    let hard = normal.filter((t) => t.style === 'A' && t.levels[0] >= 2 && t.levels[1] >= 4);
+    if (!hard.length) hard = normal.filter((t) => t.style === 'A' && t.levels[1] >= 4);
+    return { items: hard.map((t) => at(t, 4)), fallback: true };
+  };
+  // 단계 k의 문제 하나 (최근에 낸 문제는 피한다)
+  M5.tierProblem = function (subId, k, rng, avoid) {
+    const { items } = M5.tierItems(subId, k);
+    const it = rng.pick(items);
+    return makeProblem(it.tpl, it.level, rng, avoid);
+  };
+
   // 무한 모드 진행
   // scope: { unit: 1, sub: 'u1s4' } (sub가 없으면 단원 전체 섞기)
   M5.createSession = function ({ scope, state, rng }) {

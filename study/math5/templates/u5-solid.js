@@ -1210,6 +1210,8 @@
     },
   });
 
+  M5.u5 = { makeNet, netFig, cellFig, dims, drawDims, lensOf, what, segName, ptAt };
+
   M5.addTemplates([
     tCount1, tWhich1, tEdgeSum, tEdgeInv, tFaceArea, tWire, tCompare, tOX('u5s1', OX1), tLine1,
     tCount2, tSketch, tHiddenSum, tMissing, tDash, tCube9, tOX('u5s2', OX2), tLine2,

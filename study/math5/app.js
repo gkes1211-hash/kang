@@ -240,7 +240,7 @@
         <span class="nm">${esc(name)}</span>
         <span class="meta"><span class="stars" title="난이도">${stars(lvOf(key))}</span> ${M5.LEVELS[lvOf(key) - 1]}${r == null ? '' : ` · 정답률 ${r}%`}</span>
         ${desc ? `<span class="desc">${esc(desc)}</span>` : ''}
-      </button>${lvPick(key, lvOf(key))}</div>`;
+      </button>${lvPick(key, lvOf(key))}${/^u\d+$/.test(key) ? '' : ladderBtn(key)}</div>`;
     };
     app.innerHTML = `${header()}
       <main class="subs">
@@ -258,6 +258,7 @@
       const k = b.dataset.sub;
       play(/^u\d+$/.test(k) ? { unit: unitId } : { unit: unitId, sub: k });
     }));
+    $$('[data-ladder]').forEach((b) => b.addEventListener('click', () => ladder(b.dataset.ladder, { unitId })));
     $$('.lvb').forEach((b) => b.addEventListener('click', () => {
       const n = Number(b.dataset.lv);
       state.levels[b.dataset.key] = n;
@@ -265,6 +266,87 @@
       toast(`난이도를 ${stars(n)} ${M5.LEVELS[n - 1]}으로 바꿨어요.`);
       subs(unitId, summary);
     }));
+  }
+
+  // ------------------------------------------------------------------ 5단계 도전 (기본 → 응용 → 심화 → 사고력 → 최상위)
+  function ladderBtn(sub) {
+    const L = (state.ladder || {})[sub];
+    const st = !L ? '' : L.done ? ` <b>🏆 ${L.done}번 완주</b>` : L.best >= 0 ? ` · ${M5.TIERS[L.best]}까지` : '';
+    return `<button type="button" class="ladb" data-ladder="${sub}">🪜 5단계 도전${st}</button>`;
+  }
+  function ladderSteps(k, passed) {
+    return `<ol class="ladder">${M5.TIERS.map((t, i) => `<li class="${i < k || (i === k && passed) ? 'ok' : i === k ? 'now' : ''}"><span>${i < k || (i === k && passed) ? '✓' : i + 1}</span>${t}</li>`).join('')}</ol>`;
+  }
+  function ladder(sub, from = {}) {
+    const info = M5.findSub(sub);
+    const unitId = info.unit.id;
+    const back = from.back || (() => subs(unitId));
+    if (!state.ladder) state.ladder = {};
+    const L = state.ladder[sub] || (state.ladder[sub] = { best: -1, done: 0, last: '' });
+    const topFallback = M5.tierItems(sub, 4).fallback;
+    let k = 0, tries = 0;
+    const avoid = new Set(state.recent.map((x) => x.key));
+    onKey = (ev) => { if (ev.key === 'Enter') { ev.preventDefault(); step(); } };
+    app.innerHTML = `${header(statsHtml())}
+      <main class="center"><section class="panel">
+        <div class="big-emoji">🪜</div>
+        <h2>5단계 도전: ${esc(info.sub.name)}</h2>
+        <p>같은 소단원 문제를 <b>기본 → 응용 → 심화 → 사고력 → 최상위</b> 순서로 한 칸씩 올라가요.<br>처음 낸 답으로 맞히면 다음 칸으로! 틀리면 고친 뒤 같은 칸의 새 문제에 다시 도전해요.</p>
+        ${ladderSteps(-1)}
+        ${topFallback ? '<p class="muted small">이 단원의 최상위 문제는 아직 준비 중이라, 지금은 가장 어려운 문제가 나와요.</p>' : ''}
+        <div class="btns"><button class="btn" id="lback">← 돌아가기</button><button id="go" class="btn primary">도전 시작 <kbd>Enter</kbd></button></div>
+      </section></main>`;
+    bindCommon();
+    $('#lback').addEventListener('click', back);
+    $('#go').addEventListener('click', step);
+    function step() {
+      const p = M5.tierProblem(sub, k, rng, avoid);
+      avoid.add(p.key);
+      state.recent.push({ key: p.key, tid: p.tid, sub: p.sub, styleName: p.styleName, style: p.style });
+      if (state.recent.length > 50) state.recent.splice(0, state.recent.length - 50);
+      let passed = null;
+      solve(p, {
+        fix: true,
+        banner: `<div class="banner lad"><span>🪜 <b>${M5.TIERS[k]}</b>${tries ? ` · 다시 도전 ${tries}` : ''}</span>${ladderSteps(k)}</div>`,
+        nextLabel: '다음 →',
+        backLabel: '← 소단원 고르기',
+        onFirst(ok) {
+          passed = ok;
+          recordFirst(p, ok);
+          if (ok) {
+            if (k > L.best) { L.best = k; save(); }
+            toast(k < 4 ? `🎉 ${M5.TIERS[k]} 통과! 다음은 ${M5.TIERS[k + 1]}이에요.` : '🏆 최상위까지 통과!');
+          }
+        },
+        onDone() {
+          if (passed) { k++; tries = 0; if (k >= 5) finish(); else step(); } else { tries++; step(); }
+        },
+        onWeird(r) { reportProblem(p); if (r.firstOk != null) recordFirst(p, r.firstOk, -1); step(); },
+        onStop: () => back(),
+        onBack: () => back(),
+      });
+    }
+    function finish() {
+      L.done = (L.done || 0) + 1;
+      L.last = S.todayStr();
+      L.best = 4;
+      S.ensureToday(state);
+      state.today.passed++;
+      S.bumpDay(state, 'p');
+      save();
+      onKey = (ev) => { if (ev.key === 'Enter') { ev.preventDefault(); back(); } };
+      app.innerHTML = `${header(statsHtml())}
+        <main class="center"><section class="panel">
+          <div class="big-emoji">🏆</div>
+          <h2>5단계 완주!</h2>
+          <p><b>${esc(info.sub.name)}</b>${T.j(info.sub.name, '을/를').slice(info.sub.name.length)} 기본부터 최상위까지 모두 통과했어요.</p>
+          ${ladderSteps(5)}
+          <div class="btns"><button class="btn" data-go="home">홈으로</button><button id="again" class="btn">한 번 더</button><button id="lb" class="btn primary">돌아가기 <kbd>Enter</kbd></button></div>
+        </section></main>`;
+      bindCommon();
+      $('#again').addEventListener('click', () => ladder(sub, from));
+      $('#lb').addEventListener('click', back);
+    }
   }
 
   // 난이도 고르기 단추 4개 (소단원 화면·문제 화면에서 같이 쓴다)
@@ -1467,9 +1549,12 @@
           <h2>알고 넘어갔어요!</h2>
           <p><b>${esc(h.source)}</b>와 같은 유형을 ${HW.GOAL}번 연속 맞혔어요.</p>
           <p class="muted">잊지 않게 내일, 7일 뒤, 30일 뒤에 문제 2개씩 다시 확인해요.</p>
-          <div class="btns"><button class="btn" data-go="home">홈으로</button><button class="btn primary" data-go="hw">오답 목록 <kbd>Enter</kbd></button></div>
+          <p>더 단단하게 하고 싶으면 같은 소단원을 <b>🪜 기본부터 최상위까지</b> 올라가 봐요.</p>
+          <div class="btns"><button class="btn" data-go="hw">오답 목록</button><button id="lad" class="btn primary">🪜 5단계 도전 <kbd>Enter</kbd></button></div>
         </section></main>`;
       bindCommon();
+      onKey = (ev) => { if (ev.key === 'Enter') { ev.preventDefault(); ladder(h.sub, { back: hwList }); } };
+      $('#lad').addEventListener('click', () => ladder(h.sub, { back: hwList }));
     }
   }
   // 4) 다시 확인 (1일·7일·30일): 2문제 모두 처음에 맞히면 다음 단계, 하나라도 틀리면 다시 연습

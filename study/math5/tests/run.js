@@ -355,6 +355,19 @@ check('비슷한 문제', simRows.dupSets / simRows.sets < 0.02, `같은 문제�
   }
   console.log(`\n[전개도 지퍼 설명] 전개도 ${n}개에서 맞닿는 선분·만나는 점이 실제로 접은 결과와 같아요`);
 }
+// ---------------------------------------------------------------- 5단계 도전: 소단원마다 다섯 칸 모두 문제가 있는지
+{
+  const top = [];
+  for (const u of M5.units) for (const s of u.subs) {
+    for (let k = 0; k < 5; k++) {
+      const { items, fallback } = M5.tierItems(s.id, k);
+      check('5단계 도전', items.length > 0, `${s.name}의 ${M5.TIERS[k]} 칸에 문제가 없어요`);
+      if (k === 4 && !fallback) top.push(s.name);
+      for (let i = 0; i < 5 && items.length; i++) { const p = M5.tierProblem(s.id, k, rng, null); check('5단계 도전', !!p && p.sub === s.id, `${s.name} ${M5.TIERS[k]} 문제를 만들지 못했어요`); }
+    }
+  }
+  console.log(`\n[5단계 도전] 소단원 ${M5.units.reduce((n, u) => n + u.subs.length, 0)}개 × 5칸 확인, 최상위 전용 문제가 있는 소단원: ${top.join(', ')}`);
+}
 // ---------------------------------------------------------------- 문제집 오답 세트
 {
   for (const h of M5.homework) {

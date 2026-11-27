@@ -603,3 +603,14 @@ button.mini:hover { border-color: var(--accent); }
 .fig-geo .sg.hl2 { stroke: #2f6fde; stroke-width: 3.5; }
 .fig-geo .zip { font-weight: 800; fill: #c2410c; }
 .fig-note { font-size: 15px; color: var(--ink-2); margin: 6px 0 0; }
+
+/* 5단계 도전 */
+.ladb { margin: 0 4px; align-self: flex-start; background: #fff6e8; border: 1.5px solid #f0b35a; color: #8a4b00; border-radius: 10px; padding: 5px 12px; font-size: 14px; font-weight: 700; }
+.ladb:hover { background: #ffecc9; }
+.ladder { list-style: none; display: flex; flex-wrap: wrap; gap: 6px; padding: 0; margin: 12px 0; justify-content: center; }
+.ladder li { display: inline-flex; align-items: center; gap: 5px; padding: 4px 10px 4px 5px; border-radius: 99px; background: var(--surface-2); color: var(--ink-2); font-size: 14px; font-weight: 700; }
+.ladder li span { display: inline-grid; place-items: center; width: 20px; height: 20px; border-radius: 50%; background: #fff; font-size: 12px; }
+.ladder li.ok { background: var(--good-soft); color: var(--good); }
+.ladder li.now { background: #ffe3b8; color: #8a4b00; }
+.banner.lad { background: #fff6e8; color: #8a4b00; flex-wrap: wrap; }
+.banner.lad .ladder { margin: 0 0 0 auto; }
