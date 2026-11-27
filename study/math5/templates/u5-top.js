@@ -197,7 +197,7 @@
         answer: { type: 'num', value: String(ans), unit: '군데' },
         patterns: [{ value: String(empties.length), cause: 'concept', msg: '붙일 수 있는 모든 자리를 셌어요. 붙인 뒤 접었을 때 겹치는 면이 생기는 자리는 빼야 해요.' }].filter((pt) => Number(pt.value) !== ans),
         hints: ['빈 자리마다 한 칸을 붙여 보고, 접었을 때 6개 면이 겹치지 않는지 확인해요.', '한 줄로 5칸 이상이 되거나, 접었을 때 이미 있는 면과 같은 자리로 가는 칸은 안 돼요. 마주 보는 면이 빠진 자리를 찾아요.', `붙일 수 있는 빈 자리 ${empties.length}군데 중 전개도가 되는 곳: ${ans}군데`],
-        solution: [`정사각형 5개 둘레에 붙일 수 있는 자리는 ${empties.length}군데예요.`, `그중 접었을 때 겹치지 않고 정육면체가 되는 자리는 ${ans}군데예요.`, '빠진 면은 이미 있는 어떤 면과 마주 보는 면이어야 하고, 그 자리에 오도록 붙여야 해요.'],
+        solution: [`정사각형 5개 둘레에 붙일 수 있는 자리는 ${empties.length}군데예요.`, `그중 접었을 때 겹치지 않고 정육면체가 되는 자리는 ${ans}군데예요.`, '빠진 면은 이미 있는 어떤 면과 마주 보는 면이어야 하고, 그 자리에 오도록 붙여야 해요.', `정육면체가 되는 자리: ${ans}군데`],
         key: `u5s4-top-addone|${sh.map(key).sort().join(' ')}`,
         data: { five: sh },
       };

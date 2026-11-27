@@ -1035,10 +1035,14 @@
     };
     const solveOpts = (extra) => Object.assign({ fix: true, backLabel: '← 최상위 유형 목록', onStop: back, onBack: back }, extra);
 
-    // 1) 대표 문제: 힌트와 풀이를 한 단계씩 열거나, 먼저 직접 풀어 보기
+    // 1) 대표 문제 🧭 같이 풀기
+    //   ① 어떻게 풀지 먼저 생각하기 (막히면 방법 힌트) → ② 풀이를 한 단계씩, 계산 결과를 직접 채우기 → ③ 변형 문제는 혼자서
     function intro() {
-      const steps = rep.solution || [];
-      let shown = 0;
+      const steps = M5.guide.steps(rep);
+      const plan = rep.hints.slice(0, 2); // 방법을 떠올리게 하는 힌트 (마지막 힌트는 답에 가까워서 빼요)
+      let stage = 'think', hintN = 0, idx = 0, tries = 0;
+      const done = []; // 지난 조각 [{ st, mark }]
+      M5.currentGuide = { steps, get idx() { return idx; } }; // 브라우저 자동 테스트에서 쓴다
       app.innerHTML = `${header(statsHtml())}
         <main class="hw-explain">
           <button class="back" id="tback">← 최상위 유형 목록</button>
@@ -1048,33 +1052,93 @@
             ${rep.figure ? `<div class="figure">${F.render(rep.figure)}</div>` : ''}
             ${rep.answer.options ? `<ol class="rep-opts">${rep.answer.options.map((o) => `<li>${txt(o.text || '')}</li>`).join('')}</ol>` : ''}
           </section>
-          <section class="acard">
-            <div class="hw-why"><p class="q">📘 대표 문제로 익혀요</p><p>먼저 어떻게 풀지 생각해 봐요. 직접 풀어 봐도 되고, 풀이를 한 단계씩 열어 봐도 돼요.</p></div>
-            <ol class="hw-steps">${rep.hints.slice(0, 2).map((h) => `<li class="hid hint">💡 ${txt(h)}</li>`).join('')}${steps.map((x) => `<li class="hid">${txt(x)}</li>`).join('')}<li class="hid ans">답: <b>${txt(G.answerText(rep))}</b></li></ol>
-            <div class="btns left">
-              <button id="try" class="btn">✏️ 먼저 풀어 볼래요</button>
-              <button id="more" class="btn primary">💡 풀이 한 단계씩 보기 <kbd>Enter</kbd></button>
-              <button id="go" class="btn primary" hidden>변형 문제 ${TOP_N}개 도전 ▶ <kbd>Enter</kbd></button>
-            </div>
-          </section>
+          <section class="acard" id="guide"></section>
         </main>`;
       bindCommon();
-      const lis = $$('.hw-steps li');
-      const more = () => {
-        shown++;
-        lis.forEach((li, i) => li.classList.toggle('hid', i >= shown));
-        $('#more').innerHTML = '다음 단계 보기 ▶ <kbd>Enter</kbd>';
-        if (shown >= lis.length) { $('#more').hidden = true; $('#try').hidden = true; $('#go').hidden = false; $('#go').focus(); }
-      };
       $('#tback').addEventListener('click', back);
-      $('#more').addEventListener('click', more);
-      $('#go').addEventListener('click', () => variant(0));
-      $('#try').addEventListener('click', tryRep);
-      onKey = (ev) => {
-        if (ev.key !== 'Enter') return;
-        ev.preventDefault();
-        if (shown < lis.length) more(); else variant(0);
+      const box = $('#guide');
+      const stageBar = () => `<ol class="gsteps"><li class="${stage === 'think' ? 'now' : 'ok'}">🤔 방법 생각하기</li><li class="${stage === 'steps' ? 'now' : stage === 'end' ? 'ok' : ''}">🧭 한 단계씩 풀기</li><li>✏️ 혼자 풀기</li></ol>`;
+      const planHtml = () => (hintN ? `<ul class="gplan">${plan.slice(0, hintN).map((h) => `<li>💡 ${txt(h)}</li>`).join('')}</ul>` : '');
+      const doneHtml = () => {
+        let h = '';
+        done.forEach((d, i) => {
+          const s = `<span class="${d.mark === 'ok' ? 'g-ok' : d.mark === 'shown' ? 'g-shown' : ''}">${txt(M5.guide.filled(d.st))}</span>${d.mark === 'ok' ? ' ✓' : ''}`;
+          h += i && d.st.cont ? ` <span class="g-arr">→</span> ${s}` : `${i ? '</p>' : ''}<p class="gline">${s}`;
+        });
+        return h ? h + '</p>' : '';
       };
+
+      function render() {
+        if (stage === 'think') {
+          box.innerHTML = `${stageBar()}
+            <div class="hw-why"><p class="q">🤔 먼저 생각해 봐요</p><p>무엇을 먼저 구해야 할까요? 어떤 순서로 풀면 될지 떠올려 봐요. 종이에 써 봐도 좋아요.</p></div>
+            ${planHtml()}
+            <div class="btns left">
+              <button id="gready" class="btn primary">방법이 떠올랐어요 → 한 단계씩 풀기 <kbd>Enter</kbd></button>
+              ${hintN < plan.length ? `<button id="ghint" class="btn">💡 ${hintN ? '힌트 하나 더' : '방법이 안 떠올라요 (힌트)'}</button>` : ''}
+              <button id="try" class="btn ghost">✏️ 혼자 끝까지 풀어 볼래요</button>
+            </div>`;
+          $('#gready').addEventListener('click', () => { stage = 'steps'; render(); });
+          if ($('#ghint')) $('#ghint').addEventListener('click', () => { hintN++; render(); });
+          $('#try').addEventListener('click', tryRep);
+          onKey = (ev) => { if (ev.key === 'Enter') { ev.preventDefault(); stage = 'steps'; render(); } };
+          return;
+        }
+        if (stage === 'steps' && idx >= steps.length) stage = 'end';
+        if (stage === 'end') {
+          box.innerHTML = `${stageBar()}${planHtml()}<div class="gdone">${doneHtml()}</div>
+            <div class="good-box">🎉 대표 문제를 끝까지 풀었어요! 답: <b>${txt(G.answerText(rep))}</b></div>
+            <p>이제 같은 유형의 문제를 <b>혼자서</b> 풀어 봐요. 막히면 지금 푼 순서를 떠올려요.</p>
+            <div class="btns left"><button id="go" class="btn primary">✏️ 혼자 풀기: 변형 문제 ${TOP_N}개 ▶ <kbd>Enter</kbd></button></div>`;
+          $('#go').addEventListener('click', () => variant(0));
+          onKey = (ev) => { if (ev.key === 'Enter') { ev.preventDefault(); variant(0); } };
+          $('#go').focus();
+          return;
+        }
+        const st = steps[idx];
+        const n = steps.slice(0, idx + 1).filter((x) => x.kind === 'ask').length, total = steps.filter((x) => x.kind === 'ask').length;
+        let cur;
+        if (st.kind === 'read') {
+          cur = `<p class="gline gcur">${st.cont && idx ? '<span class="g-arr">→</span> ' : ''}${txt(st.text)}</p>
+            <div class="btns left"><button id="gnext" class="btn primary">읽었어요, 다음 ▶ <kbd>Enter</kbd></button></div>`;
+        } else {
+          cur = `<p class="gq">✍️ 단계 ${n} / ${total}: □에 알맞은 수를 써요${st.type === 'frac' ? ' <span class="small muted">(분수는 2 3/4, 7/4처럼)</span>' : ''}</p>
+            <p class="gline gcur">${st.cont && idx ? '<span class="g-arr">→</span> ' : ''}${txt(st.before)}<input id="gin" class="in gin" type="text" inputmode="decimal" autocomplete="off" spellcheck="false" aria-label="□에 들어갈 수">${txt(st.after)}</p>
+            <div id="gfb" class="fb" aria-live="polite"></div>
+            <div class="btns left"><button id="gok" class="btn primary">확인 <kbd>Enter</kbd></button></div>`;
+        }
+        box.innerHTML = `${stageBar()}${planHtml()}<div class="gdone">${doneHtml()}</div>${cur}`;
+        const next = (mark) => { done.push({ st, mark }); idx++; tries = 0; render(); };
+        if (st.kind === 'read') {
+          $('#gnext').addEventListener('click', () => next('read'));
+          onKey = (ev) => { if (ev.key === 'Enter') { ev.preventDefault(); next('read'); } };
+          $('#gnext').focus();
+          return;
+        }
+        const submit = () => {
+          if (tries >= 2) { next('shown'); return; }
+          const v = $('#gin').value;
+          if (!v.trim()) { $('#gfb').innerHTML = '<p class="small">□에 들어갈 수를 써 봐요.</p>'; return; }
+          if (M5.guide.check(st, v)) { next('ok'); return; }
+          tries++;
+          if (tries === 1) {
+            const more = hintN < plan.length ? `<br>💡 ${txt(plan[hintN])}` : '';
+            if (hintN < plan.length) hintN++;
+            $('#gfb').innerHTML = `<p class="bad-box">아쉬워요! 천천히 다시 생각해 봐요.${more}</p>`;
+            $('#gin').select();
+          } else {
+            $('#gfb').innerHTML = `<p class="bad-box">괜찮아요. □에 들어갈 수는 <b>${txt(st.shown)}</b>예요. 확인하고 다음 단계로 가요.</p>`;
+            $('#gin').value = T.plain(st.shown);
+            $('#gin').disabled = true;
+            $('#gok').innerHTML = '다음 ▶ <kbd>Enter</kbd>';
+            $('#gok').focus();
+          }
+        };
+        $('#gok').addEventListener('click', submit);
+        onKey = (ev) => { if (ev.key === 'Enter') { ev.preventDefault(); submit(); } };
+        $('#gin').focus();
+      }
+      render();
     }
     function tryRep() {
       solve(rep, solveOpts({

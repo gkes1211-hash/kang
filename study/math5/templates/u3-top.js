@@ -108,7 +108,18 @@
         answer: { type: 'num', value: String(ans), unit: '개' },
         patterns: pats.filter(notAns(ans)),
         hints: ['위쪽을 향한 삼각형(△)과 아래쪽을 향한 삼각형(▽)을 나누어 세면 빠뜨리지 않아요.', '줄마다 몇 개인지 세어 보고 더해요. 크기가 다르면 크기별로 따로 세요.', steps],
-        solution: [steps],
+        solution: (() => {
+          const ks = f === 0 ? [1] : f === 1 ? [sz] : Array.from({ length: n }, (_, i) => i + 1);
+          const lines = [];
+          for (const k of ks) {
+            const up = ((n - k + 1) * (n - k + 2)) / 2, dn = triCount(n, k) - up;
+            const nm = k === 1 ? '가장 작은 삼각형' : `작은 삼각형 ${k * k}개짜리`;
+            lines.push(dn ? `${nm} △: ${up}개 → ${nm} ▽: ${dn}개` : `${nm} △: ${up}개 (▽는 없어요)`);
+          }
+          const all = ks.map((k) => triCount(n, k));
+          lines.push(all.length > 1 || triCount(n, ks[0]) !== ((n - ks[0] + 1) * (n - ks[0] + 2)) / 2 ? `모두: ${ks.map((k) => { const up = ((n - k + 1) * (n - k + 2)) / 2, dn = triCount(n, k) - up; return dn ? `${up} + ${dn}` : `${up}`; }).join(' + ')} = ${ans}(개)` : `답: ${ans}개`);
+          return lines;
+        })(),
         key: `u3s1-top-tri|${f}|${n}|${sz}`,
         data: { f, n, sz },
       };
@@ -343,7 +354,10 @@
         answer: { type: 'num', value: String(ans), unit: '개' },
         patterns: pats.filter(notAns(ans)),
         hints: ['대칭축은 도형을 접었을 때 완전히 겹치게 하는 직선이에요. 접는 방법을 모두 찾아요.', '정■각형의 대칭축은 ■개예요. 직사각형·마름모는 2개, 이등변삼각형은 1개, 평행사변형은 0개예요.', steps],
-        solution: [steps],
+        solution: [
+          ...sh.map((s2, i) => `${NM[i]}(${s2.nm})의 대칭축: ${s2.ax}개`),
+          f === 0 ? `모두: ${ax.join(' + ')} = ${ans}(개)` : f === 1 ? `가장 많은 것 - 가장 적은 것: ${Math.max(...ax)} - ${Math.min(...ax)} = ${ans}(개)` : `${ask.match(/(\d)개 이상/)[1]}개 이상인 도형: ${ans}개`,
+        ],
         key: `u3s3-top-axes|${f}|${sh.map((s) => s.nm).join(',')}|${ask}`,
         data: { f, ax, ask },
       };

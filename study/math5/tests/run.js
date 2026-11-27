@@ -424,6 +424,32 @@ check('비슷한 문제', simRows.dupSets / simRows.sets < 0.02, `같은 문제�
   }
   console.log(`\n[문제집 오답 세트] ${M5.homework.length}개 확인 (정답 검산, 아이 답 진단, 연습 문제 30개씩)`);
 }
+// ---------------------------------------------------------------- 🧭 같이 풀기 (최상위 대표 문제를 한 단계씩)
+{
+  const few = [];
+  for (const tpl of M5.templates.filter((t) => t.tier === 'top')) {
+    let asks = 0;
+    const N = 200;
+    for (let i = 0; i < N; i++) {
+      const p = M5.makeProblem(tpl, 4, rng, null, 0);
+      const st = M5.guide.steps(p);
+      const where = `${tpl.id} 같이 풀기`;
+      // 조각을 다시 이으면 풀이와 똑같아야 해요
+      const back = [];
+      st.forEach((s) => { const t = M5.guide.filled(s); if (s.cont) back[back.length - 1] += ' → ' + t; else back.push(t); });
+      check(where, back.join('\n') === p.solution.map((x) => String(x).split(' → ').map((c) => c.trim()).join(' → ')).join('\n'), '조각을 이으면 풀이와 달라요', p);
+      for (const s of st.filter((x) => x.kind === 'ask')) {
+        asks++;
+        check(where, M5.guide.check(s, T.plain(s.shown)), `□의 답(${s.shown})을 넣었는데 틀렸다고 해요`, p);
+        check(where, !M5.guide.check(s, '99999.5'), '아무 수나 넣어도 맞았다고 해요', p);
+        check(where, !BAD_WORDS.test(s.before + s.after) && !/[⟪⟫]/.test(T.plain(s.before + s.after)), '단계 글이 깨졌어요', p);
+      }
+    }
+    if (asks / N < 1) few.push(`${tpl.id}(${(asks / N).toFixed(1)})`);
+  }
+  check('같이 풀기', few.length === 0, `직접 채울 단계가 거의 없는 최상위 틀: ${few.join(', ')}`);
+  console.log(`\n[같이 풀기] 최상위 틀마다 대표 문제 200개를 한 단계씩 나누어 확인${few.length ? ' — 채울 단계가 적은 틀: ' + few.join(', ') : ''}`);
+}
 // ---------------------------------------------------------------- 난이도 직접 고르기
 {
   const st = M5.store.fresh();
