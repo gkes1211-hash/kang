@@ -1,5 +1,5 @@
 // 역사 탐험대: 화면과 놀이
-// 데이터는 data/*.js (H.eras, H.people, H.events, H.stories)
+// 데이터는 data/*.js (H.eras, H.people, H.facts, H.events, H.stories, H.words, H.adventures, H.rulers)
 (() => {
   'use strict';
   const KEY = 'history5-v1';
@@ -9,7 +9,7 @@
   const personById = Object.fromEntries(H.people.map((p) => [p.id, p]));
 
   // ---------------------------------------------------------------- 기록 (이 브라우저에만 저장)
-  const blank = () => ({ stars: 0, people: {}, stories: {}, trains: 0, best: {}, last: '', adv: {}, explorer: null });
+  const blank = () => ({ stars: 0, people: {}, stories: {}, trains: 0, best: {}, last: '', adv: {}, explorer: null, line: [], kings: {} });
   let S = blank();
   try { S = Object.assign(blank(), JSON.parse(localStorage.getItem(KEY) || '{}')); } catch (e) { /* 새로 시작 */ }
   const save = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) { /* 저장 못 해도 놀 수는 있어요 */ } };
@@ -89,76 +89,207 @@
     return solo && !desk ? '' : '<a class="menu-link" href="../../">← 🎒 학습 앱 모음</a>';
   })();
 
-  // ---------------------------------------------------------------- 처음 화면
+  // ---------------------------------------------------------------- 처음 화면 (오늘 할 탐험 하나 + 문 두 개)
+  const LEVELS = [[0, '새내기 탐험가'], [20, '꼬마 탐험가'], [50, '씩씩한 탐험가'], [100, '노련한 탐험가'], [180, '역사 박사'], [300, '시간 여행 대장']];
+  const level = () => {
+    let i = 0;
+    LEVELS.forEach((l, k) => { if (S.stars >= l[0]) i = k; });
+    const next = LEVELS[i + 1];
+    const pct = next ? Math.round(((S.stars - LEVELS[i][0]) / (next[0] - LEVELS[i][0])) * 100) : 100;
+    return { n: i + 1, name: LEVELS[i][1], next, pct };
+  };
+  const metCount = () => H.people.filter((p) => S.people[p.id]).length;
+  const advDone = () => H.adventures.filter((a) => S.adv && S.adv[a.id]).length;
+
   views.home = () => {
-    const met = Object.keys(S.people).length;
-    const read = Object.keys(S.stories).length;
-    const todays = todayStory();
+    const lv = level();
+    const m = S.explorer;
+    const met = metCount();
     $app.innerHTML = `${menuLink}
-      <section class="hero">
-        <div class="hero-top"><h1>🧭 역사 탐험대</h1><span class="stars big">⭐ ${S.stars}</span></div>
-        <p>외우지 말고, 놀면서 만나 보자! 옛날 사람들도 우리처럼 고민하고, 꾀를 내고, 용기를 냈어요.</p>
-      </section>
+      <div class="home-top"><h1>🧭 역사 탐험대</h1><span class="stars big">⭐ ${S.stars}</span></div>
+      ${m ? `<div class="badge-card"><span class="av">${esc(m.av)}</span><div><small>시간 여행 탐험대 · ${lv.n}단계 ${esc(lv.name)}</small><b>${esc(m.name)} 대원</b>
+        <div class="lvl"><i style="width:${lv.pct}%"></i></div><small class="lvl-next">${lv.next ? `다음 단계까지 ⭐ ${lv.next[0] - S.stars}개` : '최고 단계예요!'}</small></div></div>` : ''}
       ${ADV.homeCard()}
-      ${trainHTML(true)}
-      <button class="today" data-go="story" data-arg="${todays.id}">
-        <span class="em">${todays.emoji}</span>
-        <span><small>📖 오늘의 이야기 ${S.stories[todays.id] ? '· 읽었어요 ✔' : ''}</small><b>${esc(todays.title)}</b><i>${esc(todays.hook)}</i></span>
-      </button>
-      <div class="grid">
-        <button class="tile" data-go="stories" style="--c:#d68910"><span class="em">📖</span><b>이야기 듣기</b><i>짧은 역사 이야기를 읽거나 들어요 (${read}/${H.stories.length})</i></button>
-        <button class="tile" data-go="whoPick" style="--c:#c0392b"><span class="em">🕵️</span><b>나는 누구일까요?</b><i>힌트를 보고 인물을 맞혀요. 힌트를 적게 볼수록 별이 많아요</i></button>
-        <button class="tile" data-go="trainPick" style="--c:#2e86c1"><span class="em">🚂</span><b>연표 기차</b><i>사건을 옛날 → 요즘 순서로 기차에 태워요</i></button>
-        <button class="tile" data-go="book" style="--c:#16a085"><span class="em">🗂️</span><b>인물 도감</b><i>만난 인물 카드를 모아요 (${met}/${H.people.length})</i></button>
+      <div class="doors">
+        <button class="door" data-go="eraMap"><span class="em">🗺️</span><b>시대 지도</b><i>고조선부터 지금까지, 시대마다 왕과 사건을 살펴봐요</i></button>
+        <button class="door" data-go="book"><span class="em">🗂️</span><b>인물 도감</b><i>내가 만난 인물 ${met} / ${H.people.length}</i><span class="mini-bar"><i style="width:${Math.round((met / H.people.length) * 100)}%"></i></span></button>
       </div>
-      <p class="note">기록은 이 기기에만 저장돼요. 🔊 "읽어 줘" 버튼은 기기에 한국어 목소리가 있어야 소리가 나요.</p>`;
+      <button class="ghost wide" data-go="advList">🎮 다른 모험 고르기 (${advDone()} / ${H.adventures.length} 완료)</button>
+      <p class="note">기록은 이 기기에만 저장돼요. 🔊 버튼은 기기에 한국어 목소리가 있어야 소리가 나요.</p>`;
   };
 
-  // 날짜마다 바뀌는 오늘의 이야기 (아직 안 읽은 이야기 먼저)
-  function todayStory() {
-    const d = new Date();
-    const n = d.getFullYear() * 400 + d.getMonth() * 32 + d.getDate();
-    const unread = H.stories.filter((s) => !S.stories[s.id]);
-    const pool = unread.length ? unread : H.stories;
-    return pool[n % pool.length];
-  }
+  // ---------------------------------------------------------------- 한 판 흐름: 🎮 모험 → 🧑 인물 카드 → 📅 연표에 놓기
+  let flow = null; // { A, stars, gain, wrongs, newPerson, placed }
+  const afterAdventure = (A, info) => { flow = Object.assign({ A }, info); go('flowPerson'); };
+  const progress = (step) => {
+    const names = ['① 모험', '② 인물 카드', '③ 연표'];
+    return `<div class="prog">${names.map((n, i) => `<span class="${i < step ? 'done' : i === step ? 'now' : ''}">${n}${i < step ? ' ✔' : ''}</span>`).join('')}</div>`;
+  };
+  const storyOf = (A) => H.stories.find((s) => s.id === (A.story || A.id)) || H.stories.find((s) => s.person === A.person);
 
-  // 시대 열차: 그 시대 인물을 만나거나 이야기를 읽으면 칸에 불이 켜져요
-  function eraLit(id) {
-    return H.people.some((p) => p.era === id && S.people[p.id]) || H.stories.some((s) => s.era === id && S.stories[s.id])
-      || H.adventures.some((a) => a.era === id && S.adv && S.adv[a.id]);
+  // 인물 카드: 업적 4줄, 같은 시대 사람들, 이야기 더 듣기
+  function personPage(p, inFlow) {
+    const f = (H.facts || {})[p.id] || { when: '', items: [] };
+    const e = eraById[p.era];
+    const friends = H.people.filter((q) => q.era === p.era && q.id !== p.id);
+    const story = inFlow ? storyOf(flow.A) : H.stories.find((s) => s.person === p.id);
+    const isNew = inFlow && flow.newPerson;
+    $app.innerHTML = `${header(inFlow ? '🧑 인물 카드' : `🗂️ ${esc(p.name)}`)}
+      ${inFlow ? progress(1) : ''}
+      <section class="pcard-big" style="--c:${e.color}">
+        ${isNew ? '<span class="new">NEW 인물 카드!</span>' : ''}
+        <div class="em">${p.emoji}</div><b>${esc(p.name)}</b>
+        <span class="ptag">${e.emoji} ${esc(e.name)}${f.when ? ` · ${esc(f.when)}` : ''}</span>
+        <ul class="facts">${f.items.map((t) => `<li>${gloss(t)}</li>`).join('')}</ul>
+        ${canSpeak ? `<button class="ghost" data-say="${esc(`${p.name}. ${f.items.map((t) => t.replace(/^\S+\s/, '')).join('. ')}`)}">🔊 읽어 줘</button>` : ''}
+      </section>
+      ${friends.length ? `<section class="card friends-box"><b>👥 같은 시대 사람들</b>
+        <div class="friends">${friends.slice(0, 6).map((q) => (S.people[q.id]
+          ? `<button data-go="person" data-arg="${q.id}"><span class="em">${q.emoji}</span>${esc(q.name)}</button>`
+          : `<button class="lock" data-go="whoOne" data-arg="${q.id}"><span class="em">❓</span>잠김</button>`)).join('')}</div>
+        <p class="muted small">❓를 누르면 "나는 누구일까요?"로 카드를 열 수 있어요</p></section>` : ''}
+      ${story ? `<button class="ghost wide" data-go="storyFrom" data-arg="${story.id}|${inFlow ? 'flowPerson' : 'person'}|${inFlow ? '' : p.id}">📖 이야기 더 듣기 · 읽기 — ${esc(story.title)}</button>` : ''}
+      ${inFlow ? '<button class="main wide" data-go="flowPlace">다음: 📅 연표에 놓기 ▶</button>'
+        : `<div class="nav2"><button class="ghost" data-go="book">🗂️ 인물 도감</button><button class="ghost" data-go="era" data-arg="${p.era}:people">${e.emoji} ${esc(e.name)} 보기</button></div>`}`;
+    bindSay();
   }
-  function trainHTML(clickable) {
-    const cars = H.eras.map((e) => `
-      <button class="car ${eraLit(e.id) ? 'lit' : ''}" style="--c:${e.color}" ${clickable ? `data-go="era" data-arg="${e.id}"` : 'disabled'}>
-        <span class="em">${e.emoji}</span><span class="nm">${esc(e.name)}</span>
-      </button>`).join('<span class="link" aria-hidden="true"></span>');
-    return `<div class="train-wrap"><div class="train-title">🚂 시대 열차 <small>옛날 → 요즘 · 칸을 누르면 그 시대 이야기가 나와요</small></div><div class="train"><span class="loco" aria-hidden="true">🚂</span>${cars}</div></div>`;
-  }
+  views.flowPerson = () => { if (!flow) { go('home'); return; } personPage(personById[flow.A.person], true); };
+  views.person = (id) => {
+    const p = personById[id];
+    if (!S.people[id]) { go('whoOne', id); return; }
+    personPage(p, false);
+  };
 
-  // ---------------------------------------------------------------- 시대 한 칸
-  views.era = (id) => {
+  // 나만의 연표: 배운 사건만 쌓여요. 처음엔 길잡이 사건 3개(고려·조선 건국, 광복)가 함께 있어요
+  const ANCHORS = ['goryeo', 'joseon', 'liberation'];
+  views.flowPlace = () => {
+    if (!flow) { go('home'); return; }
+    const ev = H.events.find((v) => v.id === flow.A.event);
+    if (!ev) { go('flowDone'); return; }
+    S.line = S.line || [];
+    const items = H.events.filter((v) => v.id !== ev.id && (S.line.includes(v.id) || ANCHORS.includes(v.id))).sort((a, b) => a.year - b.year);
+    const correct = items.filter((v) => v.year < ev.year).length;
+    let tries = 0; let done = false; let near = false;
+    const draw = (msg) => {
+      const slot = (i) => {
+        if (done) return i === correct ? `<div class="slot placed"><small>${esc(ev.when)}</small>${ev.emoji} ${gloss(ev.title)}</div>` : '';
+        const dim = near && Math.abs(i - correct) > 1;
+        return `<button class="slot ${dim ? 'dim' : ''}" data-i="${i}" ${dim ? 'disabled' : ''}>여기? 👆</button>`;
+      };
+      $app.innerHTML = `${header('📅 연표에 놓기')}
+        ${progress(2)}
+        <section class="card center">
+          <b class="q">📅 오늘 사건을 내 연표 어디에 놓을까?</b>
+          <div class="drag ${done ? 'ok' : ''}">${ev.emoji} ${esc(ev.title)} <small>(${esc(ev.when)})</small></div>
+          ${msg ? `<div class="hintbox">${msg}</div>` : ''}
+        </section>
+        <div class="tl">
+          ${items.map((v, i) => `${slot(i)}<div class="ev ${S.line.includes(v.id) ? '' : 'anchor'}"><small>${esc(v.when)}</small>${v.emoji} ${esc(v.title)}${S.line.includes(v.id) ? '' : ' <i>길잡이</i>'}</div>`).join('')}
+          ${slot(items.length)}
+        </div>
+        <p class="muted small center">내가 배운 사건이 하나씩 쌓여서 "나만의 연표"가 길어져요</p>
+        ${done ? '<button class="main wide" data-go="flowDone">🎉 오늘 탐험 끝!</button>' : ''}`;
+      $app.querySelectorAll('button.slot').forEach((b) => {
+        b.onclick = () => {
+          const i = Number(b.dataset.i);
+          if (i === correct || tries >= 2) {
+            const got = tries === 0 ? 2 : 1;
+            done = true;
+            if (!S.line.includes(ev.id)) S.line.push(ev.id);
+            addStars(got); flow.placed = got; save();
+            draw(`${i === correct ? (tries === 0 ? '🎉 딱 맞았어요! ⭐ 2개' : '👍 맞았어요! ⭐ 1개') : '정답은 여기예요! ⭐ 1개'}<br>${gloss(ev.why)}`);
+            const placed = $app.querySelector('.slot.placed'); if (placed) placed.scrollIntoView({ block: 'center' });
+          } else {
+            tries++;
+            b.classList.add('wiggle');
+            if (tries === 1) draw(`🤔 다시 생각해 볼까? 이 사건은 <b>${esc(ev.when)}</b>의 일이에요. 연표 속 해와 비교해 봐요!`);
+            else { near = true; draw('💡 힌트! 밝게 남은 자리 중 하나예요. 앞뒤 사건의 해를 살펴봐요.'); }
+          }
+        };
+      });
+    };
+    draw('');
+  };
+
+  views.flowDone = () => {
+    if (!flow) { go('home'); return; }
+    const A = flow.A; const p = personById[A.person];
+    $app.innerHTML = `${header('🎉 오늘 탐험 끝')}
+      <section class="result"><div class="big-em">🎉</div><h1>${esc((S.explorer || { name: '탐험' }).name)} 대원, 오늘 탐험 완료!</h1>
+        <div class="sum">
+          <div><span class="em">${A.emoji}</span><b>${esc(A.title.split(':')[0])}</b><small>모험 ${'⭐'.repeat(flow.stars)}</small></div>
+          <div><span class="em">${p.emoji}</span><b>${esc(p.name)}</b><small>인물 카드</small></div>
+          <div><span class="em">📅</span><b>${(S.line || []).length}개</b><small>내 연표 사건</small></div>
+        </div></section>
+      <div class="think"><b>💬 너라면?</b><p>${gloss(A.think)}</p><small>정답은 없어요. 가족이랑 이야기해 봐요!</small></div>
+      <p class="muted center">🧠 3일 뒤에 기억 퀴즈가 찾아와요. 그때 다시 만나요!</p>
+      <div class="nav2"><button class="ghost" data-go="book">🗂️ 인물 도감</button><button class="ghost" data-go="eraMap">🗺️ 시대 지도</button><button class="main" data-go="home">처음으로</button></div>`;
+  };
+
+  // ---------------------------------------------------------------- 🗺️ 시대 지도 (세로 노선) · 시대 상세 (탭)
+  const eraStats = (id) => {
+    const adv = H.adventures.filter((a) => a.era === id);
+    const ppl = H.people.filter((p) => p.era === id);
+    return { adv, advDone: adv.filter((a) => S.adv && S.adv[a.id]).length, ppl, met: ppl.filter((p) => S.people[p.id]).length, events: H.events.filter((v) => v.era === id) };
+  };
+  views.eraMap = () => {
+    $app.innerHTML = `${header('🗺️ 시대 지도')}
+      <p class="lead">고조선부터 지금까지! 정거장을 누르면 그 시대를 자세히 볼 수 있어요.</p>
+      <div class="line">${H.eras.map((e, i) => {
+        const st = eraStats(e.id);
+        const rulers = H.rulers && H.rulers[e.id];
+        const chips = [
+          st.adv.length ? `<span class="${st.advDone === st.adv.length ? 'ok' : ''}">🎮 모험 ${st.advDone}/${st.adv.length}</span>` : '',
+          st.ppl.length ? `<span class="${st.met === st.ppl.length ? 'ok' : ''}">🧑 ${st.met}/${st.ppl.length}</span>` : '',
+          rulers ? `<span>${rulers.kind === 'presidents' ? '🏛️ 대통령' : '👑 왕'} ${rulers.list.length}명</span>` : '',
+          `<span>📅 사건 ${st.events.length}</span>`,
+        ].join('');
+        return `<button class="station" data-go="era" data-arg="${e.id}" style="--c:${e.color}">
+          <span class="dot"><span>${e.emoji}</span>${i < H.eras.length - 1 ? '<i></i>' : ''}</span>
+          <span class="info"><b>${esc(e.name)}</b><small>${esc(e.span)}</small><span class="p">${esc(e.one.split('.')[0])}.</span><span class="chips">${chips}</span></span>
+        </button>`;
+      }).join('')}</div>
+      <button class="ghost wide" data-go="trainPick">🚂 순서 맞히기 도전</button>`;
+  };
+
+  views.era = (arg) => {
+    const [id, tabArg] = String(arg).split(':');
     const e = eraById[id];
     const i = eraIndex[id];
-    const people = H.people.filter((p) => p.era === id);
-    const stories = H.stories.filter((s) => s.era === id);
-    const events = H.events.filter((v) => v.era === id).sort((a, b) => a.year - b.year);
+    const st = eraStats(id);
+    const rulers = H.rulers && H.rulers[id];
+    const tabs = [['traits', '✨ 특징'], ...(rulers ? [['rulers', rulers.kind === 'presidents' ? '🏛️ 대통령' : '👑 왕']] : []), ['events', '📅 사건'], ['people', '🧑 인물']];
+    const tab = tabs.some((t) => t[0] === tabArg) ? tabArg : 'traits';
+    let body = '';
+    if (tab === 'traits') {
+      const stories = H.stories.filter((s) => s.era === id);
+      body = `<ul class="traits">${(e.traits || [e.one]).map((t) => `<li>${gloss(t)}</li>`).join('')}</ul>
+        ${st.adv.length ? `<h3>🎮 이 시대 모험</h3><div class="list">${st.adv.map((a) => `<button class="row" data-go="adv" data-arg="${a.id}"><span class="em">${a.emoji}</span><span class="txt"><b>${esc(a.title)} ${S.adv && S.adv[a.id] ? `<span class="done">${'⭐'.repeat(S.adv[a.id].stars)}</span>` : '<span class="new">NEW</span>'}</b></span></button>`).join('')}</div>` : ''}
+        ${stories.length ? `<h3>📖 이 시대 이야기</h3><div class="list">${stories.map((s) => `<button class="row" data-go="storyFrom" data-arg="${s.id}|era|${id}"><span class="em">${s.emoji}</span><span class="txt"><b>${esc(s.title)} ${S.stories[s.id] ? '<span class="done">✔ 읽음</span>' : ''}</b><i>${esc(s.hook)}</i></span></button>`).join('')}</div>` : ''}`;
+    } else if (tab === 'rulers') {
+      body = H.rulerTab ? H.rulerTab(id, rulerApi) : '';
+    } else if (tab === 'events') {
+      const line = S.line || [];
+      body = `<ol class="mini-line">${st.events.slice().sort((a, b) => a.year - b.year).map((v) => `<li><b>${esc(v.when)}</b> ${v.emoji} ${gloss(v.title)} ${line.includes(v.id) ? '<span class="done">📅 내 연표</span>' : ''}<br><small>${gloss(v.why)}</small></li>`).join('')}</ol>`;
+    } else {
+      body = `<div class="cards">${st.ppl.map(personCard).join('')}</div>
+        ${st.met < st.ppl.length ? `<button class="ghost wide" data-go="whoRound" data-arg="${id}">❓ 이 시대 인물 카드 열기 도전</button>` : ''}`;
+    }
     $app.innerHTML = `${header(`${e.emoji} ${esc(e.name)}`)}
       <section class="era-card" style="--c:${e.color}">
         <div class="span">${esc(e.span)}</div>
         <p class="one">${gloss(e.one)}</p>
-        <button class="ghost" data-say="${esc(e.name + '. ' + e.one)}">🔊 읽어 줘</button>
+        ${canSpeak ? `<button class="ghost" data-say="${esc(e.name + '. ' + (e.traits || [e.one]).map((t) => t.replace(/^\S+\s/, '')).join(' '))}">🔊 읽어 줘</button>` : ''}
       </section>
-      ${stories.length ? `<h2>📖 이 시대 이야기</h2><div class="list">${stories.map(storyRow).join('')}</div>` : ''}
-      <h2>📅 이 시대에 있었던 일</h2>
-      <ol class="mini-line">${events.map((v) => `<li><b>${esc(v.when)}</b> ${v.emoji} ${gloss(v.title)}<br><small>${gloss(v.why)}</small></li>`).join('')}</ol>
-      <h2>🧑 이 시대 사람들</h2>
-      <div class="cards">${people.map(personCard).join('')}</div>
+      <div class="etabs" style="--c:${e.color}">${tabs.map(([k, n]) => `<button class="${k === tab ? 'on' : ''}" data-go="era" data-arg="${id}:${k}">${n}</button>`).join('')}</div>
+      <div class="etab-body">${body}</div>
       <div class="nav2">
         ${i > 0 ? `<button class="ghost" data-go="era" data-arg="${H.eras[i - 1].id}">← ${esc(H.eras[i - 1].name)}</button>` : '<span></span>'}
+        <button class="ghost" data-go="eraMap">🗺️ 시대 지도</button>
         ${i < H.eras.length - 1 ? `<button class="ghost" data-go="era" data-arg="${H.eras[i + 1].id}">${esc(H.eras[i + 1].name)} →</button>` : '<span></span>'}
       </div>`;
     bindSay();
+    if (H.rulerBind && tab === 'rulers') H.rulerBind(id, rulerApi);
   };
   function bindSay() {
     $app.querySelectorAll('[data-say]').forEach((b) => { b.hidden = !canSpeak; b.onclick = () => speak(b.dataset.say); });
@@ -179,6 +310,14 @@
       <div class="list">${sorted.map(storyRow).join('')}</div>`;
   };
 
+  // 다른 화면에서 이야기를 열 때: "id|돌아갈 화면|그 화면 arg"
+  let storyBack = null;
+  views.storyFrom = (arg) => {
+    const [id, back, backArg] = String(arg).split('|');
+    storyBack = back ? { go: back, arg: backArg || '' } : null;
+    current = 'story';
+    views.story(id);
+  };
   views.story = (id) => {
     const s = H.stories.find((x) => x.id === id);
     let shown = 1;
@@ -223,8 +362,8 @@
         <div class="choices">${s.quiz.choices.map((c, i) => `<button class="choice" data-i="${i}">${esc(c)}</button>`).join('')}</div>
         <div class="why" hidden></div>
       </div>
-      ${p ? `<button class="ghost wide" data-go="whoOne" data-arg="${p.id}">🕵️ 이 이야기 속 인물로 "나는 누구일까요?" 하기</button>` : ''}
-      <button class="ghost wide" data-go="stories">📖 다른 이야기 고르기</button>`;
+      ${storyBack ? `<button class="main wide" data-go="${storyBack.go}" data-arg="${esc(storyBack.arg)}">${storyBack.go === 'flowPerson' ? '▶ 탐험 이어 가기' : '↩ 돌아가기'}</button>`
+        : (p ? `<button class="ghost wide" data-go="person" data-arg="${p.id}">🗂️ ${esc(p.name)} 인물 카드 보기</button>` : '')}`;
   }
   function bindQuiz(s) {
     const box = document.getElementById('quiz');
@@ -327,7 +466,7 @@
       $app.innerHTML = `${header('🕵️ 나는 누구일까요?')}
         <section class="result"><div class="big-em">🎉</div><h1>⭐ ${score}개를 모았어요!</h1>
           <p>${list.map((p) => `${p.emoji} ${esc(p.name)}`).join(' · ')}</p>
-          <div class="nav2"><button class="main" data-go="${list.length === 1 ? 'book' : 'whoRound'}" data-arg="${era}">${list.length === 1 ? '🗂️ 인물 도감 보기' : '🔁 한 판 더'}</button>
+          <div class="nav2"><button class="main" data-go="${list.length === 1 ? 'person' : 'whoRound'}" data-arg="${list.length === 1 ? list[0].id : era}">${list.length === 1 ? '🗂️ 인물 카드 보기' : '🔁 한 판 더'}</button>
           <button class="ghost" data-go="home">처음으로</button></div></section>`;
     };
     round();
@@ -451,22 +590,34 @@
     draw();
   };
 
-  // ---------------------------------------------------------------- 인물 도감
+  // ---------------------------------------------------------------- 🗂️ 인물 도감
   const personCard = (p) => {
     const got = S.people[p.id];
     return got
-      ? `<button class="pcard got" data-go="whoOne" data-arg="${p.id}" style="--c:${eraById[p.era].color}"><span class="em">${p.emoji}</span><b>${esc(p.name)}</b><small>${esc(eraById[p.era].name)}</small></button>`
+      ? `<button class="pcard got" data-go="person" data-arg="${p.id}" style="--c:${eraById[p.era].color}"><span class="em">${p.emoji}</span><b>${esc(p.name)}</b><small>${esc(eraById[p.era].name)}</small></button>`
       : `<button class="pcard" data-go="whoOne" data-arg="${p.id}"><span class="em">❓</span><b>???</b><small>${esc(eraById[p.era].name)}</small></button>`;
   };
+  const BADGES = [[3, '🥉', '첫걸음'], [6, '🥈', '모으기 시작'], [10, '🥇', '인물 탐정'], [15, '🏅', '역사 친구'], [20, '🎖️', '인물 박사'], [24, '🏆', '도감 완성']];
   views.book = () => {
-    const met = Object.keys(S.people).length;
+    const met = metCount();
+    const nextB = BADGES.find((b) => met < b[0]);
     $app.innerHTML = `${header('🗂️ 인물 도감')}
-      <p class="lead">${met} / ${H.people.length}명을 만났어요. ❓ 카드를 누르면 그 인물 퀴즈가 바로 나와요.</p>
-      ${H.eras.map((e) => `<h2 style="color:${e.color}">${e.emoji} ${esc(e.name)}</h2><div class="cards">${H.people.filter((p) => p.era === e.id).map(personCard).join('')}</div>`).join('')}`;
+      <section class="card">
+        <div class="book-head"><b>${met} / ${H.people.length}명</b><span>${nextB ? `${nextB[1]} 다음 배지까지 ${nextB[0] - met}명` : '🏆 도감 완성!'}</span></div>
+        <div class="bigbar"><i style="width:${Math.round((met / H.people.length) * 100)}%"></i></div>
+        <div class="badges">${BADGES.map((b) => `<span class="${met >= b[0] ? 'on' : ''}" title="${b[0]}명">${b[1]}<small>${esc(b[2])}</small></span>`).join('')}</div>
+        <p class="muted small">모험을 하면 카드가 생기고, ❓는 "나는 누구일까요?"로 열어요. 카드를 누르면 업적을 다시 볼 수 있어요.</p>
+      </section>
+      ${met < H.people.length ? '<button class="ghost wide" data-go="whoRound" data-arg="all">❓ 카드 열기 도전 (나는 누구일까요?)</button>' : ''}
+      ${H.eras.map((e) => { const ps = H.people.filter((p) => p.era === e.id); if (!ps.length) return ''; const m = ps.filter((p) => S.people[p.id]).length;
+        return `<h2 style="color:${e.color}">${e.emoji} ${esc(e.name)} <small class="muted">${m}/${ps.length}</small></h2><div class="cards">${ps.map(personCard).join('')}</div>`; }).join('')}`;
   };
 
+  // 왕 카드 판 (rulers.js) 이 쓰는 도구
+  const rulerApi = { S, save, addStars, toast, esc, gloss, speak, hush, canSpeak, header, go, $app, shuffle, eraById };
+
   // 🎮 역사 속으로 (adventure.js)
-  const ADV = H.makeAdventure({ S, save, addStars, toast, esc, gloss, speak, hush, canSpeak, header, go, $app, personById, eraTag });
+  const ADV = H.makeAdventure({ S, save, addStars, toast, esc, gloss, speak, hush, canSpeak, header, go, $app, personById, eraTag, afterAdventure });
   Object.assign(views, ADV.views);
   go('home');
   if (canSpeak) speechSynthesis.getVoices();

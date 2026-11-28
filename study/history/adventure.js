@@ -273,6 +273,7 @@ H.makeAdventure = (api) => {
       save();
       const c = A.card;
       $app.innerHTML = `${header(`${A.emoji} 모험 완료`)}
+        <div class="prog"><span class="now">① 모험 ✔</span><span>② 인물 카드</span><span>③ 연표</span></div>
         <section class="result">
           <div class="big-em">🎉</div>
           <h1>${esc(me().name)} 대원, 임무 성공! ${'⭐'.repeat(stars)}</h1>
@@ -286,12 +287,10 @@ H.makeAdventure = (api) => {
           <div class="words">🔑 ${c.words.map((w) => `<span>${esc(w)}</span>`).join('')}</div>
           ${canSpeak ? '<button class="ghost" id="cardsay">🔊 카드 읽어 줘</button>' : ''}
         </section>
-        ${newPerson ? `<div class="newcard">🗂️ 인물 카드 <b>${p.emoji} ${esc(p.name)}</b> 를 얻었어요!</div>` : ''}
-        <div class="think"><b>💬 너라면?</b><p>${esc(A.think)}</p><small>정답은 없어요. 가족이랑 이야기해 봐요!</small></div>
-        <p class="muted center">🧠 ${REVIEW_DAYS[0]}일 뒤에 기억 퀴즈가 찾아와요. 그때 다시 만나요!</p>
-        <div class="nav2"><button class="ghost" data-go="adv" data-arg="${A.id}">🔁 다시 하기</button><button class="ghost" data-go="advList">🗺️ 다른 모험 고르기</button><button class="main" data-go="home">처음으로</button></div>`;
+        <button class="main wide" id="tonext">다음: 🧑 인물 카드 ▶</button>`;
       const cs = document.getElementById('cardsay');
       if (cs) cs.onclick = () => speak(`${c.title}. ${c.when}. ${c.who}${c.vs ? `, ${c.vs}` : ''}. ${c.how}`);
+      document.getElementById('tonext').onclick = () => api.afterAdventure(A, { stars, gain, wrongs, newPerson });
       window.scrollTo(0, 0);
     }
 
@@ -347,18 +346,21 @@ H.makeAdventure = (api) => {
     draw();
   };
 
-  // 처음 화면에 넣을 카드
+  // 처음 화면의 "오늘의 탐험" 카드: 안 한 모험 중 가장 옛날 것 → 다 했으면 별이 적은 모험
   const homeCard = () => {
     const due = dueList().length;
     const fresh = H.adventures.find((a) => !S.adv[a.id]);
-    const pick = fresh || H.adventures[0];
-    return `${due ? `<button class="review-banner" data-go="advReview">🧠 기억 퀴즈가 ${due}개 찾아왔어요! <b>풀러 가기 ▶</b></button>` : ''}
+    const low = H.adventures.filter((a) => S.adv[a.id]).sort((a, b) => S.adv[a.id].stars - S.adv[b.id].stars)[0];
+    const pick = fresh || low || H.adventures[0];
+    const nth = H.adventures.indexOf(pick) + 1;
+    return `${due ? `<button class="review-banner" data-go="advReview">🧠 기억 퀴즈 ${due}개가 찾아왔어요! <b>풀러 가기 ▶</b></button>` : ''}
       <button class="adv-hero" data-go="${S.explorer ? 'adv' : 'advList'}" data-arg="${pick.id}">
-        <span class="em">🎮</span>
-        <span><small>${fresh && S.explorer ? '다음 추천 모험' : '역사 속으로'} · ${S.explorer ? `${esc(me().av)} ${esc(me().name)} 대원 출동!` : '탐험대원이 되어 출동!'}</small>
-          <b>${pick.emoji} ${esc(pick.title)}</b><i>${fresh ? esc(pick.hook) : '모든 모험을 끝냈어요! 다시 해서 ⭐을 모아 봐요.'}</i></span>
-      </button>
-      <button class="adv-pick" data-go="advList"><span>🗺️ 모험 골라서 하기</span><b>${H.adventures.filter((a) => S.adv[a.id]).length} / ${H.adventures.length} 완료 ›</b></button>`;
+        <small>${S.explorer ? (fresh ? `오늘의 탐험 · ${nth} / ${H.adventures.length}번째` : '모든 모험 완료! 별을 더 모아 볼까?') : '탐험대원이 되어 출동!'}</small>
+        <b>${pick.emoji} ${esc(pick.title)}</b>
+        <i>${fresh ? esc(pick.hook) : `지금 ${'⭐'.repeat(S.adv[pick.id].stars)} · ⭐3에 다시 도전!`}</i>
+        <span class="steps3"><span class="on">① 🎮 모험</span><span>② 🧑 인물 카드</span><span>③ 📅 연표에 놓기</span></span>
+        <span class="go">▶ 출발!</span>
+      </button>`;
   };
 
   return { views, homeCard };

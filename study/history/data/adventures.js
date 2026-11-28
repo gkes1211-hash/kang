@@ -23,7 +23,7 @@
 window.H = window.H || {};
 H.adventures = [
   {
-    id: 'salsu', era: 'samguk', emoji: '🌊', person: 'euljimundeok', year: 612,
+    id: 'salsu', event: 'salsu', era: 'samguk', emoji: '🌊', person: 'euljimundeok', year: 612,
     title: '살수대첩: 백만 대군을 막아라!',
     hook: '612년 고구려. 수나라 군대가 몰려와요. 을지문덕 장군을 도와 나라를 지켜 줘!',
     cast: {

@@ -77,7 +77,7 @@ H.stories = [
     quiz: { q: '서희가 거란과의 담판으로 얻은 땅은?', choices: ['강동 6주', '4군 6진', '동북 9성', '청해진'], answer: 0,
       why: '서희는 싸우지 않고 압록강 동쪽의 강동 6주를 얻었어요. 4군 6진은 세종 때 넓힌 땅이에요.' } },
 
-  { id: 'hangul', era: 'joseon1', emoji: '📖', person: 'sejong',
+  { id: 'hangul', era: 'joseon', emoji: '📖', person: 'sejong',
     title: '임금님의 비밀 프로젝트',
     hook: '신하들이 반대해도 포기하지 않은 발명품, 우리는 매일 그걸 쓰고 있어요.',
     paras: [
@@ -91,7 +91,7 @@ H.stories = [
     quiz: { q: '처음 만들었을 때 훈민정음은 몇 자였을까요?', choices: ['24자', '26자', '28자', '40자'], answer: 2,
       why: '처음에는 28자였어요. 그중 4자는 쓰지 않게 되어서 지금은 24자를 써요.' } },
 
-  { id: 'myeongnyang', era: 'joseon2', emoji: '🐢', person: 'yisunsin',
+  { id: 'myeongnyang', era: 'joseon', emoji: '🐢', person: 'yisunsin',
     title: '배 13척으로 130척을 이기다',
     hook: '친구 10명과 100명이 줄다리기를 하면 누가 이길까? 그런데 이긴 사람이 있어요.',
     paras: [
@@ -106,7 +106,7 @@ H.stories = [
     quiz: { q: '이순신 장군이 명량 해전에서 좁은 바닷길을 고른 까닭은?', choices: ['물고기가 많아서', '적이 한꺼번에 몰려올 수 없어서', '집과 가까워서', '바다가 잔잔해서'], answer: 1,
       why: '좁은 물길에서는 수가 많은 적도 한꺼번에 덤빌 수 없어요. 게다가 울돌목은 물살이 아주 세서 적의 배가 엉켰어요.' } },
 
-  { id: 'hwaseong', era: 'joseon2', emoji: '🏗️', person: 'jeongyakyong',
+  { id: 'hwaseong', era: 'joseon', emoji: '🏗️', person: 'jeongyakyong',
     title: '10년 걸릴 공사를 3년 만에',
     hook: '커다란 돌을 혼자서 번쩍! 조선에도 신기한 기계가 있었어요.',
     paras: [

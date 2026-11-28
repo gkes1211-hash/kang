@@ -8,7 +8,7 @@ const ROOT = path.join(__dirname, '..');
 const ctx = { window: {} };
 ctx.H = undefined;
 vm.createContext(ctx);
-for (const f of ['eras', 'people', 'events', 'stories', 'adventures', 'adventures-2', 'words']) {
+for (const f of ['eras', 'people', 'facts', 'events', 'stories', 'adventures', 'adventures-2', 'words']) {
   vm.runInContext(fs.readFileSync(path.join(ROOT, 'data', `${f}.js`), 'utf8').replace('window.H = window.H || {};', 'var H = window.H = window.H || {};'), ctx, { filename: `data/${f}.js` });
 }
 const H = ctx.window.H;
@@ -33,6 +33,12 @@ for (const p of H.people) {
   for (const h of p.hints || []) check(w, !h.includes(core), `힌트에 이름("${core}")이 들어 있어요: ${h}`);
 }
 check('인물', H.people.length >= 4, '보기 4개를 만들려면 인물이 4명 이상 있어야 해요');
+// 인물 카드의 업적 정리 (data/facts.js)
+for (const p of H.people) {
+  const f = (H.facts || {})[p.id];
+  check(`업적 ${p.id}`, f && filled(f.when) && Array.isArray(f.items) && f.items.length === 4 && f.items.every(filled), '업적 정리(when, items 4줄)가 있어야 해요');
+}
+for (const id of Object.keys(H.facts || {})) check('업적', H.people.some((p) => p.id === id), `facts.js 의 "${id}" 는 people.js 에 없는 인물이에요`);
 
 // 사건
 uniq(H.events, '사건');
@@ -84,6 +90,7 @@ for (const A of H.adventures) {
   const c = A.card || {};
   for (const k of ['title', 'when', 'who', 'how']) check(w, filled(c[k]), `진짜 역사 카드의 ${k} 가 비었어요`);
   check(w, Number.isInteger(A.year), 'year(정수)가 있어야 순서대로 놓여요');
+  check(w, H.events.some((v) => v.id === A.event), `event "${A.event}" 가 events.js 에 없어요 (연표에 놓기 단계에 필요)`);
   check(w, Array.isArray(c.words) && c.words.length >= 3, '카드의 핵심 단어(words)는 3개 이상');
   check(w, Array.isArray(A.scenes) && A.scenes.length >= 3, '장면이 3개 이상 있어야 해요');
   (A.scenes || []).forEach((sc, k) => {

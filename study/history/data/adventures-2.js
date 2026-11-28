@@ -5,7 +5,7 @@ H.adventures = H.adventures || [];
 H.adventures.push(
   // ================================================================ 고조선: 단군 신화
   {
-    id: 'dangun', era: 'gojoseon', emoji: '🐻', person: 'dangun', year: -2333,
+    id: 'dangun', event: 'gojoseon', era: 'gojoseon', emoji: '🐻', person: 'dangun', year: -2333,
     title: '단군 신화: 곰아, 꾹 참아!',
     hook: '하늘에서 내려온 환웅, 사람이 되고 싶은 곰과 호랑이. 우리 첫 나라는 어떻게 생겼을까?',
     cast: {
@@ -86,7 +86,7 @@ H.adventures.push(
 
   // ================================================================ 남북국: 장보고와 청해진
   {
-    id: 'jangbogo', era: 'nambuk', emoji: '⛵', person: 'jangbogo', year: 828,
+    id: 'jangbogo', event: 'cheonghae', era: 'nambuk', emoji: '⛵', person: 'jangbogo', year: 828,
     title: '청해진: 해적을 몰아내라!',
     hook: '해적이 신라 사람들을 잡아가요. 장보고와 함께 바다를 지키고 "바다의 왕"이 되어 봐!',
     cast: {
@@ -165,7 +165,7 @@ H.adventures.push(
 
   // ================================================================ 고려: 서희의 외교 담판
   {
-    id: 'seohui', era: 'goryeo', emoji: '🗣️', person: 'seohui', year: 993,
+    id: 'seohui', event: 'seohui', era: 'goryeo', emoji: '🗣️', person: 'seohui', year: 993,
     title: '서희의 담판: 말로 이겨라!',
     hook: '80만 대군이라고 큰소리치는 거란 장수. 칼 대신 말로 나라를 지킬 수 있을까?',
     cast: {
@@ -239,7 +239,7 @@ H.adventures.push(
 
   // ================================================================ 조선 전기: 훈민정음
   {
-    id: 'hangul', era: 'joseon1', emoji: '📖', person: 'sejong', year: 1443,
+    id: 'hangul', event: 'hangul', era: 'joseon', emoji: '📖', person: 'sejong', year: 1443,
     title: '훈민정음: 임금님의 비밀 연구',
     hook: '글을 몰라 억울한 백성들. 세종대왕과 함께 누구나 쉽게 배우는 글자를 만들어 봐!',
     cast: {
@@ -325,7 +325,7 @@ H.adventures.push(
 
   // ================================================================ 조선 후기: 명량 해전
   {
-    id: 'myeongnyang', era: 'joseon2', emoji: '🌊', person: 'yisunsin', year: 1597,
+    id: 'myeongnyang', event: 'myeongnyang', era: 'joseon', emoji: '🌊', person: 'yisunsin', year: 1597,
     title: '명량 해전: 13척의 기적',
     hook: '남은 배는 겨우 13척, 적의 배는 130척이 넘어요. 이순신 장군과 함께 바다를 지켜 줘!',
     cast: {
@@ -410,7 +410,7 @@ H.adventures.push(
 
   // ================================================================ 조선 후기: 수원 화성
   {
-    id: 'hwaseong', era: 'joseon2', emoji: '🏗️', person: 'jeongyakyong', year: 1794,
+    id: 'hwaseong', event: 'hwaseong', era: 'joseon', emoji: '🏗️', person: 'jeongyakyong', year: 1794,
     title: '수원 화성: 돌을 번쩍 들어라!',
     hook: '10년은 걸린다던 성 쌓기! 정약용과 함께 신기한 기계로 빨리 지어 볼까?',
     cast: {
@@ -487,7 +487,7 @@ H.adventures.push(
 
   // ================================================================ 일제 강점기: 3·1 운동
   {
-    id: 'samil', era: 'modern', emoji: '🇰🇷', person: 'yugwansun', year: 1919,
+    id: 'samil', event: 'samil', era: 'modern', emoji: '🇰🇷', person: 'yugwansun', year: 1919,
     title: '3·1 운동: 대한 독립 만세!',
     hook: '나라를 빼앗긴 지 9년. 태극기를 들고 온 나라가 함께 외친 그날로 가 보자.',
     cast: {
