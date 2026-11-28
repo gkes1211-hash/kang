@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'">
+<meta name="theme-color" content="#0f8f84">
+<meta name="description" content="예상하고, 화면 속 실험을 직접 해 보고, 용어 카드를 모으며 다시 공부하는 5학년 2학기 과학">
+<title>과학 실험실</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="app"><p class="loading">불러오는 중…</p></div>
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+<!-- 학기별 내용 (새 학기·단원을 더하려면 data 폴더에 파일을 만들고 여기와 sw.js 에 더해요) -->
+<script src="data/5-2/index.js"></script>
+<script src="data/5-2/u1.js"></script>
+<!-- 실험 장치와 화면 -->
+<script src="lab.js"></script>
+<script src="app.js"></script>
+<script src="install.js"></script>
+</body>
+</html>

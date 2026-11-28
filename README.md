@@ -7,7 +7,7 @@
 | 주제 (목록 폴더) | 바로 가기 | 들어 있는 앱 |
 | --- | --- | --- |
 | 🏃 [체육시간](pe/) | https://gkes1211-hash.github.io/kang/pe/ | [무궁화 꽃이 피었습니다](pe/mugunghwa/) · [풍선 터트리기](pe/balloon/) · [벽 통과하기](pe/byeok/) · [체력왕 운동 카운터](pe/fitness/) · [제기차기](pe/jegi/) |
-| 📚 [공부](study/) | https://gkes1211-hash.github.io/kang/study/ | [꼬마 탐험대 공원](study/kkoma-park/) · [우리 아이 공부 플래너](study/planner/) · [5학년 2학기 수학](study/math5/) · [역사 탐험대](study/history/) |
+| 📚 [공부](study/) | https://gkes1211-hash.github.io/kang/study/ | [꼬마 탐험대 공원](study/kkoma-park/) · [우리 아이 공부 플래너](study/planner/) · [5학년 2학기 수학](study/math5/) · [역사 탐험대](study/history/) · [과학 실험실](study/science/) |
 | 🔤 [영어](english/) | https://gkes1211-hash.github.io/kang/english/ | [여행 영어 첫걸음](english/travel/) |
 | 🎵 [음악](music/) | https://gkes1211-hash.github.io/kang/music/ | [노래 연습장](music/sing/) · [반짝 건반](music/tiles/) |
 
@@ -22,7 +22,8 @@ kang/                  학습 앱 모음 (전체 메뉴)
 │  ├─ kkoma-park/      꼬마 탐험대 공원 (따로 설치하는 앱)
 │  ├─ planner/         우리 아이 공부 플래너 (아이용: planner/kid/)
 │  ├─ math5/           5학년 2학기 수학 (노트북용)
-│  └─ history/         역사 탐험대 (놀면서 만나는 한국사)
+│  ├─ history/         역사 탐험대 (놀면서 만나는 한국사)
+│  └─ science/         과학 실험실 (화면 속 실험으로 다시 공부하는 과학)
 ├─ english/            영어 목록
 │  └─ travel/          여행 영어 첫걸음
 └─ music/              음악 목록
