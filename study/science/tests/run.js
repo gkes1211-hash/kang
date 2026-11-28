@@ -10,7 +10,7 @@ const scripts = [...html.matchAll(/<script src="([^"]+)"/g)].map((m) => m[1]);
 const ctx = { window: {}, console };
 ctx.window = ctx;
 vm.createContext(ctx);
-for (const f of scripts.filter((s) => s.startsWith('data/') || s === 'lab.js')) {
+for (const f of scripts.filter((s) => s.startsWith('data/') || s.startsWith('lab'))) {
   vm.runInContext(fs.readFileSync(path.join(ROOT, f), 'utf8'), ctx, { filename: f });
 }
 const SCI = ctx.SCI;
@@ -63,6 +63,17 @@ for (const sid of SCI.order) {
       check(w, r.lab.grains.filter((g) => !pass(g, big)).length === 1, '구멍 큰 체에는 한 가지만 남아야 해요');
       check(w, r.lab.grains.filter((g) => pass(g, big) && !pass(g, small)).length === 1, '구멍 작은 체에는 한 가지만 남아야 해요');
     }
+    if (r.lab.kit === 'sort') r.lab.items.forEach((it) => { if (it.show) { bubbleOk(`${w} 분류 결과`, it.show); bubbleOk(`${w} 분류 끝`, `${it.show} ${r.lab.lines.done}`); } });
+    if (r.lab.kit === 'timeGraph') {
+      check(w, ['nested', 'cups', 'lamp'].includes(r.lab.scene), `timeGraph 장면 "${r.lab.scene}" 이 없어요`);
+      check(w, r.lab.tmax > 0 && r.lab.ymax > r.lab.ymin, '그래프 범위(tmax, ymin, ymax)가 이상해요');
+      r.lab.runs.forEach((run, i) => {
+        bubbleOk(`${w} 실행${i + 1} 끝`, run.after); check(w, filled(run.btn), '실행 버튼 이름이 비었어요');
+        run.series.forEach((x) => { check(w, filled(x.name) && /^#[0-9a-f]{6}$/i.test(x.color) && x.k > 0, `그래프 선 칸이 이상해요: ${x.name}`); [x.from, x.to].forEach((v) => check(w, v >= r.lab.ymin && v <= r.lab.ymax, `${x.name} 온도 ${v} 가 그래프 밖이에요`)); });
+        if (r.lab.scene === 'nested' || r.lab.scene === 'lamp') check(w, run.series.length === 2, '이 장면은 선이 2개');
+      });
+    }
+    if (r.lab.kit === 'conduct') check(w, r.lab.rods.length === 3 && r.lab.rods[0][1] > r.lab.rods[1][1] && r.lab.rods[1][1] > r.lab.rods[2][1], '막대 3개, 빠른 순서대로');
     if (r.lab.kit === 'mix') check(w, r.lab.items.length >= 3, '섞기 재료는 3개 이상 (돋보기로 3가지를 찾아요)');
     // 관찰 · 퀴즈
     check(w, Array.isArray(r.observe) && r.observe.length >= 1, '관찰 질문이 있어야 해요');

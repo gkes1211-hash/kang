@@ -436,6 +436,7 @@
     api.noSide();
     const b = api.bench;
     b.classList.add('free');
+    b.style.setProperty('--bins', L.bins.length);
     b.innerHTML = `<div class="st-cards">${L.items.map((it, i) => `<button type="button" class="st-card" data-i="${i}"><span class="em">${it.em}</span>${esc(it.t)}</button>`).join('')}</div>
       <div class="st-bins">${L.bins.map((bn) => `<button type="button" class="st-bin" data-b="${bn[0]}"><b><span class="em">${bn[1]}</span>${esc(bn[2])}</b><div class="st-in"></div></button>`).join('')}</div>`;
     let sel = null; let left = L.items.length;
@@ -455,7 +456,7 @@
         bin.querySelector('.st-in').insertAdjacentHTML('beforeend', `<span title="${esc(it.t)}">${it.em}</span>`);
         bin.classList.add('ok'); setTimeout(() => bin.classList.remove('ok'), 500);
         sel = null; left--;
-        if (left === 0) { api.say(L.lines.done); api.done(); } else api.say(L.lines.right);
+        if (left === 0) { api.say(it.show ? `${it.show} ${L.lines.done}` : L.lines.done); api.done(); } else api.say(it.show || L.lines.right);
       } else {
         el.classList.remove('nope'); void el.offsetWidth; el.classList.add('nope');
         api.say(`${L.lines.wrong} ${it.hint}`);
@@ -463,4 +464,7 @@
     });
     api.say(L.lines.start);
   };
+
+  // 다른 실험 파일(lab-heat.js 등)이 같이 쓰는 도구
+  SCI.labTools = { W, H, FONT, rand, clamp, esc, wait, tween, canvasBench, label, rrect, table, draggable };
 })();

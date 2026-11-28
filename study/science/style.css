@@ -157,7 +157,7 @@ button.step:hover { background: #e9f5f2; }
 .st-card .em { font-size: 34px; }
 .st-card.sel { border-color: var(--ac); background: #e3f7f2; transform: translateY(-3px); }
 .st-card.nope { animation: nope .35s; border-color: #f3c4a6; }
-.st-bins { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-top: 18px; }
+.st-bins { display: grid; grid-template-columns: repeat(var(--bins, 4), 1fr); gap: 12px; margin-top: 18px; }
 .st-bin { min-height: 130px; background: #f3faf8; border: 3px dashed #9fd9cf; border-radius: 20px; padding: 10px; }
 .st-bin b { display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 19px; }
 .st-bin b .em { font-size: 30px; }
@@ -198,7 +198,7 @@ button.step:hover { background: #e9f5f2; }
 /* 단원 마무리 */
 .wraplist { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
 .wraplist .tile { border-left: 8px solid var(--c, #ccc); }
-.sum { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin-top: 16px; }
+.sum { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-top: 16px; }
 .sumcard { background: var(--paper); border: 0; border-top: 8px solid var(--c); border-radius: 18px; box-shadow: var(--sh); padding: 14px 10px; display: flex; flex-direction: column; align-items: center; gap: 4px; text-align: center; }
 .sumcard .em { font-size: 40px; }
 .sumcard b { font-size: 19px; }

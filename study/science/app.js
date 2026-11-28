@@ -7,7 +7,7 @@
   const $app = document.getElementById('app');
 
   // ---------------------------------------------------------------- 기록 (이 브라우저에만 저장)
-  const blank = () => ({ stars: 0, done: {}, cards: {}, wrap: {}, auto: true, sem: SCI.order[0] });
+  const blank = () => ({ stars: 0, done: {}, cards: {}, wrap: {}, auto: true, sem: SCI.order[0], last: '' });
   let S = blank();
   try { S = Object.assign(blank(), JSON.parse(localStorage.getItem(KEY) || '{}')); } catch (e) { /* 새로 시작 */ }
   if (!SCI.semesters[S.sem]) S.sem = SCI.order[0];
@@ -62,7 +62,12 @@
   const unitOf = (rid) => units().find((u) => u.plan.some((p) => p[0] === rid));
   const ready = (rid) => !!SEM().rounds[rid];
   const allPlan = () => units().flatMap((u) => u.plan.map((p) => p[0]));
-  const nextRound = () => allPlan().find((rid) => ready(rid) && !S.done[rid]);
+  // 오늘의 실험: 마지막으로 한 단원에 남은 실험이 있으면 그 단원부터, 없으면 교과서 순서대로
+  const nextRound = () => {
+    const lu = S.last && unitOf(S.last);
+    const inUnit = lu && lu.plan.map((p) => p[0]).find((rid) => ready(rid) && !S.done[rid]);
+    return inUnit || allPlan().find((rid) => ready(rid) && !S.done[rid]);
+  };
   const unitDone = (u) => u.plan.every((p) => ready(p[0]) && S.done[p[0]]);
   const cardsOf = (uid) => Object.entries(SEM().cards).filter(([, c]) => c.unit === uid);
 
@@ -264,6 +269,7 @@
   function finishRound() {
     const first = !S.done[R.id];
     S.done[R.id] = true;
+    S.last = R.id;
     addStars(2); R.gain += 2;
     save();
     const nid = nextRound();
