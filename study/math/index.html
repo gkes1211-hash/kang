@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'">
+  <meta name="theme-color" content="#fff7ea">
+  <meta name="description" content="학년과 학기를 골라 수학 공부를 해요.">
+  <title>수학</title>
+  <link rel="icon" href="../math5/icons/icon-192.png">
+  <link rel="stylesheet" href="../../hub.css">
+  <script src="../../hub.js" defer></script>
+  <style>
+    /* 아직 만들지 않은 학기: 누를 수 없는 카드 */
+    .card.soon { display: flex; align-items: center; gap: 16px; text-align: left; background: #fbf4e8; border-radius: 24px; padding: 16px 18px; margin-bottom: 14px; border: 3px dashed var(--line); opacity: 0.75; }
+    .card.soon .ic { width: 76px; height: 76px; border-radius: 20px; flex: none; display: grid; place-items: center; font-size: 42px; background: #f3e8d6; }
+    .card.soon b { display: block; font-size: 22px; margin-bottom: 4px; color: var(--soft); }
+    .card.soon span.d { color: var(--soft); font-size: 16px; }
+    .card.soon .tag { margin-left: auto; flex: none; font-size: 14px; font-weight: 800; color: var(--soft); background: #fff; border: 2px solid var(--line); border-radius: 999px; padding: 4px 12px; }
+  </style>
+</head>
+<body>
+  <main>
+    <a class="back" href="../">← 📚 공부</a>
+    <div class="badge" aria-hidden="true">🧮</div>
+    <h1>수학</h1>
+    <p class="sub">지금 배우는 학년과 학기를 골라요!</p>
+
+    <!-- 새 학기를 만들면 아래 '준비 중' 카드를 a.card 로 바꾸면 돼요 -->
+    <a class="card" href="../math5/" style="--accent:#2f6fde">
+      <img class="ic" src="../math5/icons/icon-192.png" alt="">
+      <div><b>5학년 2학기</b><span class="d">어림하기 · 분수의 곱셈 · 합동과 대칭 · 소수의 곱셈 · 직육면체 · 평균과 가능성</span></div>
+      <span class="go" aria-hidden="true">›</span>
+    </a>
+    <div class="card soon" aria-disabled="true">
+      <span class="ic" aria-hidden="true">📘</span>
+      <div><b>6학년 1학기</b><span class="d">곧 만들어요</span></div>
+      <span class="tag">준비 중</span>
+    </div>
+    <div class="card soon" aria-disabled="true">
+      <span class="ic" aria-hidden="true">📗</span>
+      <div><b>6학년 2학기</b><span class="d">곧 만들어요</span></div>
+      <span class="tag">준비 중</span>
+    </div>
+
+    <div id="win-shortcut" class="kit">
+      <a href="desktop-shortcut/math-desktop-shortcut.zip" download>⬇️ 바탕화면에 "수학" 아이콘 만들기 (윈도우)</a>
+      <span>압축을 풀고 make-shortcut.bat 을 두 번 누르면, 이 화면이 바로 열리는 "수학" 아이콘이 생겨요. 학습 기록은 그대로 이어져요.</span>
+    </div>
+  </main>
+</body>
+</html>

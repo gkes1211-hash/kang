@@ -112,7 +112,7 @@
   function header(extra = '') {
     return `<header class="top"><button class="brand" data-go="home">🧮 5학년 2학기 수학</button>${extra}</header>`;
   }
-  const NAV = '<nav class="nav"><button class="navb" data-go="records">📊 내 기록</button><button class="navb" data-go="settings">⚙️ 설정</button></nav>';
+  const NAV = '<nav class="nav"><a class="navb" href="../math/">🎓 학년 고르기</a><button class="navb" data-go="records">📊 내 기록</button><button class="navb" data-go="settings">⚙️ 설정</button></nav>';
   function bindCommon() {
     $$('[data-go]').forEach((b) => b.addEventListener('click', () => {
       const go = b.dataset.go;

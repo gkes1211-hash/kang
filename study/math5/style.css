@@ -715,3 +715,4 @@ button.mini:hover { border-color: var(--accent); }
 /* 학습 앱 모음으로 돌아가기 */
 .menu-link { display: table; margin: 0 0 12px; padding: 6px 14px; border-radius: 999px; background: var(--surface); border: 2px solid var(--line); color: var(--ink); font-weight: 800; font-size: 15px; text-decoration: none; }
 .menu-link:hover, .menu-link:focus-visible { border-color: var(--accent); outline: none; }
+a.navb { color: inherit; text-decoration: none; display: inline-block; }
