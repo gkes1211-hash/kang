@@ -122,7 +122,7 @@
   let flow = null; // { A, stars, gain, wrongs, newPerson, placed }
   const afterAdventure = (A, info) => { flow = Object.assign({ A }, info); go('flowPerson'); };
   const progress = (step) => {
-    const names = ['① 모험', '② 인물 카드', '③ 연표'];
+    const names = ['① 모험', flow && !flow.A.person ? '② 보물 카드' : '② 인물 카드', '③ 연표'];
     return `<div class="prog">${names.map((n, i) => `<span class="${i < step ? 'done' : i === step ? 'now' : ''}">${n}${i < step ? ' ✔' : ''}</span>`).join('')}</div>`;
   };
   const storyOf = (A) => H.stories.find((s) => s.id === (A.story || A.id)) || H.stories.find((s) => s.person === A.person);
@@ -153,7 +153,26 @@
         : `<div class="nav2"><button class="ghost" data-go="book">🗂️ 인물 도감</button><button class="ghost" data-go="era" data-arg="${p.era}:people">${e.emoji} ${esc(e.name)} 보기</button></div>`}`;
     bindSay();
   }
-  views.flowPerson = () => { if (!flow) { go('home'); return; } personPage(personById[flow.A.person], true); };
+  views.flowPerson = () => {
+    if (!flow) { go('home'); return; }
+    if (flow.A.person) personPage(personById[flow.A.person], true); else treasurePage(flow.A);
+  };
+  // 보물 카드: 한 사람이 아니라 많은 사람이 함께 만든 것(청자, 대장경, 직지 …)은 인물 대신 보물 카드
+  function treasurePage(A) {
+    const t = A.treasure;
+    const e = eraById[A.era];
+    $app.innerHTML = `${header('🏺 보물 카드')}
+      ${progress(1)}
+      <section class="pcard-big" style="--c:${e.color}">
+        <span class="new">보물 카드!</span>
+        <div class="em">${t.emoji}</div><b>${esc(t.name)}</b>
+        <span class="ptag">${e.emoji} ${esc(e.name)} · ${esc(t.when)}</span>
+        <ul class="facts">${t.facts.map((x) => `<li>${gloss(x)}</li>`).join('')}</ul>
+        ${canSpeak ? `<button class="ghost" data-say="${esc(`${t.name}. ${t.facts.map((x) => x.replace(/^\S+\s/, '')).join('. ')}`)}">🔊 읽어 줘</button>` : ''}
+      </section>
+      <button class="main wide" data-go="flowPlace">다음: 📅 연표에 놓기 ▶</button>`;
+    bindSay();
+  }
   views.person = (id) => {
     const p = personById[id];
     if (!S.people[id]) { go('whoOne', id); return; }
@@ -213,12 +232,12 @@
 
   views.flowDone = () => {
     if (!flow) { go('home'); return; }
-    const A = flow.A; const p = personById[A.person];
+    const A = flow.A; const p = A.person ? personById[A.person] : { emoji: A.treasure.emoji, name: A.treasure.name };
     $app.innerHTML = `${header('🎉 오늘 탐험 끝')}
       <section class="result"><div class="big-em">🎉</div><h1>${esc((S.explorer || { name: '탐험' }).name)} 대원, 오늘 탐험 완료!</h1>
         <div class="sum">
           <div><span class="em">${A.emoji}</span><b>${esc(A.title.split(':')[0])}</b><small>모험 ${'⭐'.repeat(flow.stars)}</small></div>
-          <div><span class="em">${p.emoji}</span><b>${esc(p.name)}</b><small>인물 카드</small></div>
+          <div><span class="em">${p.emoji}</span><b>${esc(p.name)}</b><small>${A.person ? '인물 카드' : '보물 카드'}</small></div>
           <div><span class="em">📅</span><b>${(S.line || []).length}개</b><small>내 연표 사건</small></div>
         </div></section>
       <div class="think"><b>💬 너라면?</b><p>${gloss(A.think)}</p><small>정답은 없어요. 가족이랑 이야기해 봐요!</small></div>

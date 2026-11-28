@@ -8,7 +8,7 @@ const ROOT = path.join(__dirname, '..');
 const ctx = { window: {} };
 ctx.H = undefined;
 vm.createContext(ctx);
-for (const f of ['eras', 'people', 'facts', 'events', 'stories', 'adventures', 'adventures-2', 'adventures-3', 'words', 'rulers']) {
+for (const f of ['eras', 'people', 'facts', 'events', 'stories', 'adventures', 'adventures-2', 'adventures-3', 'adventures-4', 'adventures-5', 'words', 'rulers']) {
   vm.runInContext(fs.readFileSync(path.join(ROOT, 'data', `${f}.js`), 'utf8').replace('window.H = window.H || {};', 'var H = window.H = window.H || {};'), ctx, { filename: `data/${f}.js` });
 }
 const H = ctx.window.H;
@@ -85,7 +85,8 @@ const BGS = new Set(['land', 'camp', 'river', 'castle', 'night', 'sea', 'cave'])
 for (const A of H.adventures) {
   const w = `모험 ${A.id}`;
   check(w, eraIds.has(A.era), `era "${A.era}" 가 eras.js 에 없어요`);
-  check(w, H.people.some((p) => p.id === A.person), `person "${A.person}" 가 people.js 에 없어요`);
+  if (A.person) check(w, H.people.some((p) => p.id === A.person), `person "${A.person}" 가 people.js 에 없어요`);
+  else check(w, A.treasure && filled(A.treasure.emoji) && filled(A.treasure.name) && filled(A.treasure.when) && Array.isArray(A.treasure.facts) && A.treasure.facts.length === 4, '인물(person)이 없으면 보물 카드(treasure: emoji, name, when, facts 4줄)가 있어야 해요');
   for (const k of ['emoji', 'title', 'hook', 'think']) check(w, filled(A[k]), `${k} 가 비었어요`);
   const c = A.card || {};
   for (const k of ['title', 'when', 'who', 'how']) check(w, filled(c[k]), `진짜 역사 카드의 ${k} 가 비었어요`);
