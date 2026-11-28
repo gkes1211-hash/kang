@@ -273,7 +273,7 @@ H.makeAdventure = (api) => {
       save();
       const c = A.card;
       $app.innerHTML = `${header(`${A.emoji} 모험 완료`)}
-        <div class="prog"><span class="now">① 모험 ✔</span><span>② 인물 카드</span><span>③ 연표</span></div>
+        <div class="prog"><span class="now">① 모험 ✔</span><span>${A.person ? '② 인물 카드' : '② 보물 카드'}</span><span>③ 연표</span></div>
         <section class="result">
           <div class="big-em">🎉</div>
           <h1>${esc(me().name)} 대원, 임무 성공! ${'⭐'.repeat(stars)}</h1>
@@ -287,7 +287,7 @@ H.makeAdventure = (api) => {
           <div class="words">🔑 ${c.words.map((w) => `<span>${esc(w)}</span>`).join('')}</div>
           ${canSpeak ? '<button class="ghost" id="cardsay">🔊 카드 읽어 줘</button>' : ''}
         </section>
-        <button class="main wide" id="tonext">다음: 🧑 인물 카드 ▶</button>`;
+        <button class="main wide" id="tonext">${A.person ? '다음: 🧑 인물 카드 ▶' : '다음: 🏺 보물 카드 ▶'}</button>`;
       const cs = document.getElementById('cardsay');
       if (cs) cs.onclick = () => speak(`${c.title}. ${c.when}. ${c.who}${c.vs ? `, ${c.vs}` : ''}. ${c.how}`);
       document.getElementById('tonext').onclick = () => api.afterAdventure(A, { stars, gain, wrongs, newPerson });
@@ -358,7 +358,7 @@ H.makeAdventure = (api) => {
         <small>${S.explorer ? (fresh ? `오늘의 탐험 · ${nth} / ${H.adventures.length}번째` : '모든 모험 완료! 별을 더 모아 볼까?') : '탐험대원이 되어 출동!'}</small>
         <b>${pick.emoji} ${esc(pick.title)}</b>
         <i>${fresh ? esc(pick.hook) : `지금 ${'⭐'.repeat(S.adv[pick.id].stars)} · ⭐3에 다시 도전!`}</i>
-        <span class="steps3"><span class="on">① 🎮 모험</span><span>② 🧑 인물 카드</span><span>③ 📅 연표에 놓기</span></span>
+        <span class="steps3"><span class="on">① 🎮 모험</span><span>${pick.person ? '② 🧑 인물 카드' : '② 🏺 보물 카드'}</span><span>③ 📅 연표에 놓기</span></span>
         <span class="go">▶ 출발!</span>
       </button>`;
   };
