@@ -8,7 +8,7 @@ const ROOT = path.join(__dirname, '..');
 const ctx = { window: {} };
 ctx.H = undefined;
 vm.createContext(ctx);
-for (const f of ['eras', 'people', 'facts', 'events', 'stories', 'adventures', 'adventures-2', 'adventures-3', 'adventures-4', 'adventures-5', 'words', 'rulers']) {
+for (const f of ['eras', 'people', 'facts', 'events', 'stories', 'adventures', 'adventures-2', 'adventures-3', 'adventures-4', 'adventures-5', 'adventures-6', 'words', 'rulers']) {
   vm.runInContext(fs.readFileSync(path.join(ROOT, 'data', `${f}.js`), 'utf8').replace('window.H = window.H || {};', 'var H = window.H = window.H || {};'), ctx, { filename: `data/${f}.js` });
 }
 const H = ctx.window.H;
