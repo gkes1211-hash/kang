@@ -616,6 +616,9 @@
   // 왕 카드 판 (rulers.js) 이 쓰는 도구
   const rulerApi = { S, save, addStars, toast, esc, gloss, speak, hush, canSpeak, header, go, $app, shuffle, eraById };
 
+  // 👑 왕 카드 놀이 (rulers.js)
+  if (H.rulerViews) Object.assign(views, H.rulerViews(rulerApi));
+
   // 🎮 역사 속으로 (adventure.js)
   const ADV = H.makeAdventure({ S, save, addStars, toast, esc, gloss, speak, hush, canSpeak, header, go, $app, personById, eraTag, afterAdventure });
   Object.assign(views, ADV.views);

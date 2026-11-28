@@ -2,7 +2,7 @@
 // 파일을 새로 만들면 아래 FILES 에도 넣어 주세요. (tests/run.js 가 빠진 파일이 없는지 확인해요)
 // 기록(별, 도감)은 여기가 아니라 브라우저의 localStorage('history5-v1')에 따로 저장돼요.
 const PREFIX = 'history5-';
-const CACHE = `${PREFIX}v8`;
+const CACHE = `${PREFIX}v9`;
 const FILES = [
   './',
   './index.html',
@@ -12,6 +12,8 @@ const FILES = [
   './data/eras.js',
   './data/people.js',
   './data/facts.js',
+  './data/rulers.js',
+  './rulers.js',
   './data/events.js',
   './data/stories.js',
   './data/adventures.js',

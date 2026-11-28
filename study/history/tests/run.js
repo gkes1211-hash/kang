@@ -8,7 +8,7 @@ const ROOT = path.join(__dirname, '..');
 const ctx = { window: {} };
 ctx.H = undefined;
 vm.createContext(ctx);
-for (const f of ['eras', 'people', 'facts', 'events', 'stories', 'adventures', 'adventures-2', 'words']) {
+for (const f of ['eras', 'people', 'facts', 'events', 'stories', 'adventures', 'adventures-2', 'words', 'rulers']) {
   vm.runInContext(fs.readFileSync(path.join(ROOT, 'data', `${f}.js`), 'utf8').replace('window.H = window.H || {};', 'var H = window.H = window.H || {};'), ctx, { filename: `data/${f}.js` });
 }
 const H = ctx.window.H;
@@ -158,6 +158,32 @@ for (const [w, m] of Object.entries(W)) {
 // 다른 말 속에 섞여 잘못 잡히는 낱말이 없게: 낱말 앞뒤가 흔한 말의 일부인 경우를 몇 가지 확인
 for (const bad of ['이어진', '떨어진', '만들어진']) check('낱말', !Object.keys(W).some((w) => bad.includes(w) && w.length < bad.length), `"${bad}" 안에 사전 낱말이 잘못 잡혀요`);
 console.log(`낱말 사전 ${Object.keys(W).length}개 (글에 나오는 것 ${Object.keys(W).length - unused.length}개${unused.length ? `, 아직 글에 없는 것: ${unused.join(', ')}` : ''})`);
+
+// 왕 카드 판 (data/rulers.js)
+for (const [era, R] of Object.entries(H.rulers || {})) {
+  const w = `왕 ${era}`;
+  check(w, eraIds.has(era), `시대 "${era}" 가 eras.js 에 없어요`);
+  check(w, ['kings', 'presidents'].includes(R.kind), 'kind 는 kings 나 presidents');
+  const list = R.groups.flatMap((g) => g.list);
+  check(w, list.length === R.list.length && list.length > 0, '왕 목록이 비었어요');
+  for (const g of R.groups) check(w, filled(g.name) && filled(g.color) && filled(g.note), `묶음 "${g.name}" 의 name, color, note 를 확인해요`);
+  if (R.kind === 'presidents') { for (const p of list) check(w, filled(p.name) && filled(p.no), '대통령 이름이 비었어요'); continue; }
+  for (const k of list) {
+    const wk = `${w} ${k.no} ${k.name}`;
+    check(wk, filled(k.no) && filled(k.name) && filled(k.em) && filled(k.line) && filled(k.years), 'no, name, em, line, years 가 있어야 해요');
+    check(wk, (k.line || '').length <= 18, `카드 한 줄이 너무 길어요 (${(k.line || '').length}자, 18자까지)`);
+    if (k.person) check(wk, H.people.some((p) => p.id === k.person), `person "${k.person}" 가 people.js 에 없어요`);
+    if (k.adv) check(wk, H.adventures.some((a) => a.id === k.adv), `adv "${k.adv}" 가 모험에 없어요`);
+  }
+  // 앞 글자 묶음은 왕 이름 첫 글자와 하나씩 맞아야 해요
+  if (R.rhyme) {
+    const letters = [...R.rhyme.join('')];
+    check(w, letters.length === list.length, `앞 글자 ${letters.length}개 ≠ 왕 ${list.length}명`);
+    letters.forEach((ch, i) => { if (list[i]) check(w, list[i].name[0] === ch, `앞 글자 ${i + 1}번째 "${ch}" ≠ ${list[i].no} ${list[i].name}`); });
+  }
+}
+check('왕', H.rulers.joseon && H.rulers.joseon.list.length === 27, '조선 왕은 27명이에요');
+check('왕', H.rulers.goryeo && H.rulers.goryeo.list.length === 34, '고려 왕은 34명이에요');
 
 // 인터넷 없이 열기 (sw.js 가 모든 파일을 담는지)
 const sw = fs.readFileSync(path.join(ROOT, 'sw.js'), 'utf8');
